@@ -7,4 +7,4 @@ pluginManagement {
 		kotlin("jvm") version "1.9.24"
 	}
 }
-rootProject.name = "SKT_GIPHTTP_MO"
+rootProject.name = "GIPHTTP_MO"

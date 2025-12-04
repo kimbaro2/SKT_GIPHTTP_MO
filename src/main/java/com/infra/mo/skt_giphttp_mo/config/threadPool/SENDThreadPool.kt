@@ -18,6 +18,8 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MODULEID_GIPALL_C
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.NPDB
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SERVICEID_GIPALL
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SMSMOR
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_SEND
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_SIMPLE
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_TRANS_RESULT
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_STATE_MRMSPAM
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_STATE_PORTEDOUT_KTF
@@ -28,19 +30,44 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_STATE_SPAMERR
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ST_GIPALL_MTTR_SEND_OK
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.TID_NO_SAVE
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.VSMSS_TYPE
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MESSAGE_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_LIMIT
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.QTYPE_SM_REQ
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SUB_QTYPE_RCS_TR
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.TERM_TYPE_KOR
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_KSC5601
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.RCS_RESULT_INCALIDDST
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.Q_INSERT_SUCCESS
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.LT_TRACE
+import java.nio.charset.Charset
 import com.infra.mo.skt_giphttp_mo.config.application.LiveReloadCLibraryFile
 import com.infra.mo.skt_giphttp_mo.config.application.PerformanceSettings
 import com.infra.mo.skt_giphttp_mo.config.application.WitcomLog
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.CallInfoEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.CfgEtcEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpAccessEntity
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.SpcodeEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.repository.CallInfoRepository
 import com.infra.mo.skt_giphttp_mo.dto.TrResultRequest
 import com.infra.mo.skt_giphttp_mo.dto.jna.SMReqTransResult
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.BILLTYPE_SRC
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.GIPEVENT_BLOCK_NOTI_CALLBACK
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.GIPEVENT_BLOCK_NOTI_CID
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MODULEID_GIPEVENT_C
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SERVICEID_GIPEVENT
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ST_GIPEVENT_INSQ_BLOCKNOTI
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ST_GIP_MO_LIMIT
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ST_Q_INSERT_FAIL_BLOCKNOTI
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseRenewVO
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR.DataBody
+import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseMO
+import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseMO.DataBody as MODataBody
+import com.infra.mo.skt_giphttp_mo.dto.smsController.RequestMOTR
+import com.infra.mo.skt_giphttp_mo.dto.smsController.RequestMOTR.DataBody as MOTRDataBody
 import com.infra.mo.skt_giphttp_mo.dto.smsController.Rsv4ProtocolItem
 import com.infra.mo.skt_giphttp_mo.utils.EncryptionExample
 import com.infra.mo.skt_giphttp_mo.utils.cLibrary.QItemServiceUtil
@@ -49,6 +76,8 @@ import com.infra.mo.skt_giphttp_mo.utils.cLibrary.SM_REQ_TRANS_RESULT_PROCESSOR
 import com.infra.mo.skt_giphttp_mo.utils.cLibrary.SmsQLib
 import com.infra.mo.skt_giphttp_mo.utils.cLibrary.impl.SmsQLibImpl
 import io.netty.channel.ChannelOption
+import kotlinx.coroutines.*
+import kotlinx.coroutines.reactive.awaitSingle
 import java.net.URI
 import java.time.Duration
 import java.time.LocalDateTime
@@ -58,10 +87,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import kotlin.system.measureNanoTime
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import javax.annotation.PreDestroy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -80,8 +106,8 @@ import reactor.netty.http.client.HttpClient
 class SENDThreadPool(
     @Qualifier("ApplicationCacheMap") private val cacheMap: ConcurrentHashMap<String, Any>,
     @Qualifier("ApplicationCacheQueue") private val cacheQueue: ConcurrentLinkedQueue<Any>,
-    @Qualifier("GipHttpAccessList")
-    private val gipHttpAccessList: CopyOnWriteArrayList<GipHttpAccessEntity>,
+    @Qualifier("GipHttpMoAccessList")
+    private val gipHttpMoAccessEntityList: CopyOnWriteArrayList<GipHttpMoAccessEntity>,
     @Qualifier("CfgEtcMap") private val cfgEtcMap: HashMap<String, CfgEtcEntity>,
     @Qualifier("SpcodeMap") private val spcodeMap: ConcurrentHashMap<String, SpcodeEntity>,
     private val witcomLog: WitcomLog,
@@ -91,9 +117,14 @@ class SENDThreadPool(
     private val liveReloadCLibraryFile: LiveReloadCLibraryFile,
     private val callInfoRepository: CallInfoRepository,
     private val telePrefixRepository:
-    com.infra.mo.skt_giphttp_mo.db.altibase.repository.TELEPrefixRepository
+    com.infra.mo.skt_giphttp_mo.db.altibase.repository.TELEPrefixRepository,
+    private val msgLimitListRepository:
+    com.infra.mo.skt_giphttp_mo.db.altibase.repository.MsgLimitListRepository
 ) {
     private val log: Logger = LoggerFactory.getLogger(SENDThreadPool::class.java)
+    
+    // 코루틴 스코프 저장 (애플리케이션 종료 시 취소하기 위함)
+    private var coroutineScope: CoroutineScope? = null
 
     /**
      * CFG_SPCODE 캐시에서 CID로 SPCODE를 조회합니다 (C 코드의 DBReadCFG_SPCODE와 동일한 동작)
@@ -195,7 +226,7 @@ class SENDThreadPool(
             witcomLog.p_write(
                 Level.ERROR,
                 String.format(
-                    "[ERROR] DBReadW2PCALLINFO() Altibase Error: msgIdServer(%s), destCallNo(%s), error(%s)",
+                    "DBReadW2PCALLINFO() Altibase Error: msgIdServer(%s), destCallNo(%s), error(%s)",
                     szMsgIdServer,
                     szDestCallNo,
                     e.message
@@ -227,7 +258,7 @@ class SENDThreadPool(
             witcomLog.p_write(
                 Level.DEBUG,
                 String.format(
-                    "[DEBUG] CheckTelecom() TelePrefix[%s] DestCID[%s]",
+                    "CheckTelecom() TelePrefix[%s] DestCID[%s]",
                     szTelePre,
                     szDestCID
                 )
@@ -241,7 +272,7 @@ class SENDThreadPool(
                 witcomLog.p_write(
                     Level.DEBUG,
                     String.format(
-                        "[DEBUG] CheckTelecom() SELECT TELE PREFIX[%s] SUCCESS!!",
+                        "CheckTelecom() SELECT TELE PREFIX[%s] SUCCESS!!",
                         szTelePre
                     )
                 )
@@ -254,7 +285,7 @@ class SENDThreadPool(
                         witcomLog.p_write(
                             Level.DEBUG,
                             String.format(
-                                "[DEBUG] CheckTelecom() SELECT TELE PREFIX[%s] SUCCESS!! (LIKE)",
+                                "CheckTelecom() SELECT TELE PREFIX[%s] SUCCESS!! (LIKE)",
                                 szTelePre
                             )
                         )
@@ -263,7 +294,7 @@ class SENDThreadPool(
                         witcomLog.p_write(
                             Level.WARN,
                             String.format(
-                                "[WARNING] CheckTelecom() No TelePrefix[%s] in table of TELE_PREFIX",
+                                "CheckTelecom() No TelePrefix[%s] in table of TELE_PREFIX",
                                 szTelePre
                             )
                         )
@@ -273,7 +304,7 @@ class SENDThreadPool(
                     witcomLog.p_write(
                         Level.WARN,
                         String.format(
-                            "[WARNING] CheckTelecom() No TelePrefix[%s] in table of TELE_PREFIX",
+                            "CheckTelecom() No TelePrefix[%s] in table of TELE_PREFIX",
                             szTelePre
                         )
                     )
@@ -283,7 +314,7 @@ class SENDThreadPool(
         } catch (e: Exception) {
             witcomLog.p_write(
                 Level.ERROR,
-                String.format("[ERROR] CheckTelecom() SELECT TELE_PREFIX FAIL :: %s", e.message)
+                String.format("CheckTelecom() SELECT TELE_PREFIX FAIL :: %s", e.message)
             )
             ALTI_FAIL
         }
@@ -320,7 +351,7 @@ class SENDThreadPool(
             witcomLog.p_write(
                 Level.DEBUG,
                 String.format(
-                    "[DEBUG] GetTelecom_New() TelePrefix(%s) Prefix(%s)",
+                    "GetTelecom_New() TelePrefix(%s) Prefix(%s)",
                     szTelePrefix,
                     szPrefix
                 )
@@ -334,7 +365,7 @@ class SENDThreadPool(
                 witcomLog.p_write(
                     Level.DEBUG,
                     String.format(
-                        "[DEBUG] GetTelecom_New() SELECT TELECOM[%d] SUCCESS!!",
+                        "GetTelecom_New() SELECT TELECOM[%d] SUCCESS!!",
                         telecom
                     )
                 )
@@ -343,7 +374,7 @@ class SENDThreadPool(
                 witcomLog.p_write(
                     Level.WARN,
                     String.format(
-                        "[WARNING] GetTelecom_New() No prefix <%s> in table of TELE_PREFIX",
+                        "GetTelecom_New() No prefix <%s> in table of TELE_PREFIX",
                         szPrefix
                     )
                 )
@@ -353,7 +384,7 @@ class SENDThreadPool(
             witcomLog.p_write(
                 Level.ERROR,
                 String.format(
-                    "[ERROR] GetTelecom_New() SELECT TELE_PREFIX FAIL Prefix(%s) :: %s",
+                    "GetTelecom_New() SELECT TELE_PREFIX FAIL Prefix(%s) :: %s",
                     if (destCallNo.length >= 4) destCallNo.substring(0, 4) else destCallNo,
                     e.message
                 )
@@ -364,20 +395,33 @@ class SENDThreadPool(
 
     /** TODO Enqueue All 시뮬레이션 및 비지니스 로직을 수행합니다. */
     fun executeEventHandlerTask(poolSize: Int) {
+        // poolSize가 0 이하이면 에러
+        require(poolSize > 0) { "poolSize must be greater than zero" }
+        
         val dispatcher = Executors.newFixedThreadPool(poolSize).asCoroutineDispatcher()
-        val coroutineCacheCheckPool = CoroutineScope(dispatcher)
-        val isActive = true
-        val partitionedList =
-            gipHttpAccessList.chunked((gipHttpAccessList.size + poolSize - 1) / poolSize)
+        coroutineScope = CoroutineScope(dispatcher)
+        val coroutineCacheCheckPool = coroutineScope!!
+        
+        // gipHttpMoAccessEntityList가 비어있어도 스케줄러는 계속 동작해야 함
+        // chunked size가 0이 되지 않도록 최소값을 1로 설정
+        val chunkSize = if (gipHttpMoAccessEntityList.isEmpty()) {
+            1 // 빈 리스트일 때도 chunked(1)로 처리하여 스케줄러는 동작하되 forEach는 실행되지 않음
+        } else {
+            maxOf(1, (gipHttpMoAccessEntityList.size + poolSize - 1) / poolSize)
+        }
+        val partitionedList = gipHttpMoAccessEntityList.chunked(chunkSize)
         val gServerID = System.getenv("SMSS_NO").trim().toInt()
-        println("🔹 Partitioned result:")
+        witcomLog.p_write(Level.DEBUG, "🔹 Partitioned result:")
         partitionedList.forEachIndexed { index, list ->
-            println("  Worker[$index] -> ${list.joinToString()}")
+            witcomLog.p_write(
+                Level.DEBUG,
+                String.format("  Worker[%d] -> %s", index, list.joinToString())
+            )
         }
         repeat(poolSize) { index ->
             val assignedCids = partitionedList.getOrNull(index) ?: emptyList()
             coroutineCacheCheckPool.launch {
-                while (isActive) {
+                while (coroutineCacheCheckPool.isActive) {
                     val smsQLib: SmsQLib = liveReloadCLibraryFile.getPreInitializedLibrary(index)
                     assignedCids.forEach { entity ->
                         val latencyNs: Long
@@ -389,160 +433,329 @@ class SENDThreadPool(
                         val logNo = entity.logNo
                         // 문자매니저 - CFG_SPCODE 캐시에서 CID로 조회
                         val cid = entity.cid
-                        val gSMS_MANAGER: Int = dbReadCfgSpcode(cid)
+                        
+                        // loggerName 생성 (entity 기반)
+                        val loggerName = "${entity.cid}-${entity.ipAddr}-${entity.portNo}"
 
                         // 큐에서 데이터 가져오기
                         val formatted =
-                            String.format("[GIPHTTP_SEND_TR] Get CP Qno(%s) ==", queueNo)
-                        witcomLog.p_write(Level.DEBUG, formatted)
+                            String.format("et CP Qno(%s) ==", queueNo)
+                        witcomLog.c_write(loggerName, Level.DEBUG, formatted, Thread.currentThread().getId())
                         val gstQResultObj: QueueResult =
                             QItemServiceUtil.fetchAndConvert2(queueNo, smsQLib, witcomLog) as
                                     QueueResult // -> ### Print QITEM
                         val gstQItemTrans = gstQResultObj.result
                         var gstQItem = gstQResultObj.qItem as? QITEM
-                        gstQItem = gstQItem?.let { QItemServiceUtil.qItemToMsgHdr(it) }
-
-                        // TR 처리
-                        latencyNs = measureNanoTime {
-                            gstQItemTrans?.let { // 불러온 값이 null이 아니라면
-                                when (gstQItemTrans.msgSubCode.toInt()) {
-                                    SM_REQ_TRANS_RESULT -> {
-                                        // C 코드 LINE 770-773: 메시지 변환 및 전송 준비
-                                        qItem =
-                                            SM_REQ_TRANS_RESULT_PROCESSOR.checking(
-                                                gstQItemTrans,
-                                                qItem,
-                                                entity,
-                                                witcomLog,
-                                                cfgEtcMap
-                                            ) as
-                                                    QITEM.ByReference
-                                        qItem.uMsgSerialNo =
-                                            QItemServiceUtil.getSerialNo(entity.logNo.toInt())
-
-                                        witcomLog.p_write(
-                                            Level.DEBUG,
-                                            String.format(
-                                                "GetSerialNo() : gSerialNo(%s)",
-                                                qItem.uMsgSerialNo
+                        
+                        // null 체크: 큐에서 데이터를 가져오지 못한 경우 처리하지 않음
+                        if (gstQItemTrans == null || gstQItem == null) {
+                            witcomLog.c_write(
+                                loggerName,
+                                Level.DEBUG,
+                                String.format(
+                                    "Queue is empty or failed to get message from queue. queueNo=%d, result=%s, qItem=%s",
+                                    queueNo,
+                                    if (gstQItemTrans == null) "null" else "not null",
+                                    if (gstQItem == null) "null" else "not null"
+                                ),
+                                Thread.currentThread().getId()
+                            )
+                            delay(50L)
+                            return@forEach
+                        }
+                        
+                        gstQItem = QItemServiceUtil.qItemToMsgHdr(gstQItem)
+                        
+                        // C 코드 LINE 892: PrintMsgQueue 호출 (2022.07 KISA 식별코드)
+                        QItemServiceUtil.printQItem3(gstQItem, witcomLog)
+                        
+                        // C 코드 LINE 893: ucServerType 설정
+                        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
+                        
+                        // C 코드 LINE 1173: MakePacketFromQItem에서 SM_REQ_SEND -> SM_REQ_SIMPLE로 변경
+                        // SM_REQ_SEND인 경우 SM_REQ_SIMPLE로 변경 (C 코드와 동일한 흐름)
+                        if (gstQItem.usMsgSubCode == SM_REQ_SEND.toShort()) {
+                            gstQItem.usMsgSubCode = SM_REQ_SIMPLE.toShort()
+                            // gstQItemTrans도 동기화 (나중에 사용하기 위해)
+                            gstQItemTrans.msgSubCode = SM_REQ_SIMPLE.toShort()
+                        }
+                        
+                        // MO 전송을 위한..
+                        latencyNs = measureNanoTime {//LINE 937
+                            // C 코드 LINE 937: switch(ptrMsgHdr->usMsgSubCode) - 이제 SM_REQ_SIMPLE로 switch
+                            when (gstQItem.usMsgSubCode.toInt()) {
+                                    // ========== MO 발송 처리 (SM_REQ_SIMPLE) ==========
+                                    // C 코드 참고: GIPEVENT_c.c LINE 939-1054
+                                    SM_REQ_SIMPLE -> {
+                                        // C 코드 LINE 940: CheckLimitMO 체크 (한도 차단 확인)
+                                        val limitCheckResult = checkLimitMO(gstQItemTrans, entity, witcomLog)
+                                        
+                                        // C 코드 LINE 941: if(nRet == TRUE) - 한도 초과인 경우
+                                        if (limitCheckResult == true) {
+                                            // C 코드 LINE 943-945: QITEM 복사
+                                            val stQItem = QItemServiceUtil.qItemToMsgHdr(gstQItem)
+                                            
+                                            witcomLog.p_write(
+                                                Level.INFO,
+                                                String.format(
+                                                    "LimitMO : %s%s",
+                                                    gstQItemTrans.srcCid,
+                                                    gstQItemTrans.srcMinNo
+                                                )
                                             )
-                                        )
+                                            
+                                            // C 코드 LINE 953: if (gGIPEVENT_BLK_NOTI == TRUE) - 블록 알림 처리
+                                            val gGIPEVENT_BLK_NOTI = cfgEtcMap["GIPEVENT_BLK_NOTI"]?.pvalue ?: 0
+                                            if (gGIPEVENT_BLK_NOTI > 0) { // <<-  CFG_ETC
+                                                // C 코드 LINE 955-979: 블록 알림 메시지 구성
+                                                val nQueueNo = 0
+                                                val currtime = System.currentTimeMillis()
+                                                val dateFormat = java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
+                                                val strtime = dateFormat.format(java.util.Date(currtime))
+                                                
+                                                stQItem.ucTermType = '1'.code.toByte()
+                                                stQItem.usMsgCode = QTYPE_SM_REQ.toShort()
+                                                stQItem.usMsgSubCode = SM_REQ_SIMPLE.toShort()
+                                                
+                                                // 블록 알림 메시지 구성 (C 코드 LINE 967 참고)
+                                                // TODO: CFG_ETC 테이블의 BLOCK_NOTI_MSG는 문자열이어야 하지만, pvalue가 int 타입이므로
+                                                // 실제 구현 시 문자열 필드를 추가하거나 다른 방법을 사용해야 함
+                                                val blockNotiMsgFormat = "[%s] %s로부터 차단된 메시지입니다."
+                                                val blockNotiMsg = String.format(blockNotiMsgFormat, strtime, QItemServiceUtil.byteArrayToKString(stQItem.szCId))
+                                                
+                                                // C 코드 LINE 969-970: Dest와 Src 교환
+                                                val tempCid = stQItem.szCId.clone()
+                                                System.arraycopy(stQItem.szSrcCId, 0, stQItem.szCId, 0, minOf(stQItem.szSrcCId.size, stQItem.szCId.size))
+                                                System.arraycopy(tempCid, 0, stQItem.szSrcCId, 0, minOf(tempCid.size, stQItem.szSrcCId.size))
+                                                
+                                                val tempMin = stQItem.szMinNo.clone()
+                                                System.arraycopy(stQItem.szSrcMinNo, 0, stQItem.szMinNo, 0, minOf(stQItem.szSrcMinNo.size, stQItem.szMinNo.size))
+                                                System.arraycopy(tempMin, 0, stQItem.szSrcMinNo, 0, minOf(tempMin.size, stQItem.szSrcMinNo.size))
 
-                                        val smReqTransResult: SMReqTransResult =
-                                            QItemServiceUtil.fetchAndConvert(qItem)
-                                        val dataBody: DataBody = DataBody()
-                                        dataBody.srcCID = smReqTransResult.srcCid
-                                        dataBody.srcCallNo = smReqTransResult.srcMinNo
-                                        dataBody.destCID = smReqTransResult.destCid
-                                        dataBody.destCallNo = smReqTransResult.destMinNo
-                                        dataBody.msgCode = smReqTransResult.msgCode
-                                        dataBody.msgSubCode = smReqTransResult.msgSubCode
-                                        dataBody.termtype = smReqTransResult.termType.toString()
-                                        dataBody.dataEncoding =
-                                            smReqTransResult.dataEncoding.toInt()
-                                        val converted =
-                                            smReqTransResult.rsv4Protocol.map { value ->
-                                                Rsv4ProtocolItem().apply {
-                                                    data = value.toChar()
+                                                val blockNotiCidBytes = GIPEVENT_BLOCK_NOTI_CID.toByteArray(Charset.forName("CP949"))
+                                                System.arraycopy(blockNotiCidBytes, 0, stQItem.szSrcCId, 0, minOf(blockNotiCidBytes.size, stQItem.szSrcCId.size - 1))
+                                                if (blockNotiCidBytes.size < stQItem.szSrcCId.size) {
+                                                    stQItem.szSrcCId[blockNotiCidBytes.size] = 0x00
+                                                }
+                                                
+                                                stQItem.szSrcMinNo.fill(0x00)
+                                                
+                                                val blockNotiCallbackBytes = GIPEVENT_BLOCK_NOTI_CALLBACK.toByteArray(Charset.forName("CP949"))
+                                                System.arraycopy(blockNotiCallbackBytes, 0, stQItem.szCB, 0, minOf(blockNotiCallbackBytes.size, stQItem.szCB.size - 1))
+                                                if (blockNotiCallbackBytes.size < stQItem.szCB.size) {
+                                                    stQItem.szCB[blockNotiCallbackBytes.size] = 0x00
+                                                }
+                                                
+                                                // C 코드 LINE 977-979: 메시지 길이 및 유효기간 설정
+                                                val blockNotiMsgBytes = blockNotiMsg.toByteArray(Charset.forName("CP949"))
+                                                val msgLen = minOf(blockNotiMsgBytes.size, stQItem.szMsg.size)
+                                                System.arraycopy(blockNotiMsgBytes, 0, stQItem.szMsg, 0, msgLen)
+                                                stQItem.ucMsgLen = msgLen
+                                                stQItem.nVldPrd = 86400
+                                                stQItem.ucRgtDlvFlg = 0
+
+
+                                                // C 코드 LINE 981: InsertIntoSmsQnQNo 호출
+                                                val insertResult = smsQLib.InsertIntoSmsQnQNo(stQItem, nQueueNo) //<- 한도차단 노티 발송 수행
+                                                
+                                                // C 코드 LINE 983: if(ret == Q_INSERT_SUCCESS) - 큐 삽입 성공
+                                                if (insertResult == Q_INSERT_SUCCESS) {
+                                                    witcomLog.p_write(
+                                                        Level.INFO,
+                                                        String.format(
+                                                            "BLOCK_NOTIFICATION Send : SrcCId(%s),SrcCallNo(%s),DestCId(%s),DestCallNo(%s),szCB(%s),nVldPrd(%d),MsgLen(%d)",
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szSrcCId),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szSrcMinNo),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szCId),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szMinNo),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szCB),
+                                                            stQItem.nVldPrd,
+                                                            stQItem.ucMsgLen
+                                                        )
+                                                    )
+                                                    
+                                                    // C 코드 LINE 997-998: InsqStat 호출
+                                                    smsQLib.InsqStat(
+                                                        stQItem,
+                                                        MESSAGE_MO,
+                                                        0,
+                                                        gServerID,
+                                                        MODULEID_GIPEVENT_C,
+                                                        SERVICEID_GIPEVENT,
+                                                        ERRORID_CP_MO_SUCCESS,
+                                                        ST_GIPEVENT_INSQ_BLOCKNOTI,
+                                                        nQueueNo,
+                                                        TID_NO_SAVE,
+                                                        LT_TRACE,
+                                                        0
+                                                    )
+                                                } else {
+                                                    // C 코드 LINE 1000-1017: 큐 삽입 실패
+                                                    witcomLog.p_write(
+                                                        Level.ERROR,
+                                                        String.format(
+                                                            "BLOCK_NOTIFICATION Send Fail : SrcCId(%s),SrcCallNo(%s),DestCId(%s),DestCallNo(%s),szCB(%s),nVldPrd(%d),MsgLen(%d)",
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szSrcCId),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szSrcMinNo),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szCId),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szMinNo),
+                                                            QItemServiceUtil.byteArrayToKString(stQItem.szCB),
+                                                            stQItem.nVldPrd,
+                                                            stQItem.ucMsgLen
+                                                        )
+                                                    )
+                                                    
+                                                    smsQLib.InsqStat(
+                                                        stQItem,
+                                                        MESSAGE_MO,
+                                                        0,
+                                                        gServerID,
+                                                        MODULEID_GIPEVENT_C,
+                                                        SERVICEID_GIPEVENT,
+                                                        ERRORID_CP_MO_SUCCESS,
+                                                        ST_Q_INSERT_FAIL_BLOCKNOTI,
+                                                        nQueueNo,
+                                                        TID_NO_SAVE,
+                                                        LT_TRACE,
+                                                        0
+                                                    )
                                                 }
                                             }
-                                        dataBody.rsv4Protocol = converted
-
-                                        var responseTRTemp: ResponseTR = ResponseTR()
-                                        responseTRTemp.msgVerId = DEFINE_GIPVERID_510
-                                        responseTRTemp.encFlag = smReqTransResult.msgStatus.toInt()
-                                        responseTRTemp.data = dataBody
-                                        val responseRenewVO =
-                                            ResponseRenewVO().apply {
-                                                status = HttpStatus.OK.value()
-                                                //
-                                                // msgStatus =
-                                                // smReqTransResult.msgStatus.toInt() <<- 성공이면
-                                                // 필요가 없음
-                                                msgId = smReqTransResult.msgId
-                                                serverTime =
-                                                    LocalDateTime.now(
-                                                        ZoneId.of("Asia/Seoul")
-                                                    )
-                                                responseTR = responseTRTemp
-                                            }
-                                        val gServerID = System.getenv("SMSS_NO").trim().toInt()
-                                        val formatted =
-                                            String.format(
-                                                """
-                                               SMSS_NO#$gServerID
-                                               ==================HTTP PACKET DATA [MT-TR]=================== 
-                                               ${responseRenewVO.toString()}
-                                               ==================HTTP PACKET DATA END======================
-                                            """.trimIndent()
-                                            )
-                                        witcomLog.p_write(Level.DEBUG, formatted)
-                                        // 출력 확인 후 HTTP 전송 및 응답 정보 출력
-
-                                        // ========== C 코드 실행 순서 ==========
-                                        // 1. LINE 770-772: 메시지 변환 및 전송 준비 (완료)
-                                        // 2. LINE 773: SendTcpMsg 호출 (CP 서버로 HTTP POST 전송)
-                                        val sendSuccess = sendTrResultToCp(responseRenewVO, entity)
-
-                                        // 3. LINE 776-793: SendTcpMsg 호출 후 InsqStat 분기
-                                        if (gstQItemTrans.msgStatus.toInt() == 2 ||
-                                            (gstQItemTrans.szFree2[0].toInt() !=
-                                                    SM_STATE_MRMSPAM &&
-                                                    gstQItemTrans.msgStatus.toInt() ==
-                                                    SM_STATE_SPAMERR)
-                                        ) {
-                                            //InsqStat 호출 필요 (C 코드 LINE 777-789)
-                                            val resultInsqStat = smsQLib.InsqStat(
-                                                gstQItem,
-                                                MESSAGE_TR,
+                                            
+                                            // C 코드 LINE 1020-1024: InsqStat 호출
+                                            smsQLib.InsqStat(
+                                                stQItem,
+                                                MESSAGE_MO,
                                                 0,
                                                 gServerID,
-                                                MODULEID_GIPALL_C,
-                                                SERVICEID_GIPALL,
-                                                ERRORID_CP_TR_SUCCESS,
-                                                ST_GIPALL_MTTR_SEND_OK,
+                                                MODULEID_GIPEVENT_C,
+                                                SERVICEID_GIPEVENT,
+                                                ERRORID_CP_MO_LIMIT,
+                                                ST_GIP_MO_LIMIT,
                                                 IF_NULL,
                                                 TID_NO_SAVE,
                                                 LT_BOTH,
                                                 0
                                             )
 
+                                            //	InsertHistory(gCallHistory, &stQitem, NULL, MODULE_GIPEVENT, MO_LIMIT, __LINE__, 0x00);
+                                            
+                                            // C 코드 LINE 1026: if(strlen(gstQItem.RcsTag) > 0) - RCS 태그 처리
+                                            val rcsTag = QItemServiceUtil.byteArrayToKString(gstQItem.RcsTag)
+                                            
+                                            if (rcsTag.isNotEmpty()) {
+                                                // C 코드 LINE 1028-1048: RCS TR 메시지 구성 및 큐 삽입
+                                                val rcsQItem = QItemServiceUtil.qItemToMsgHdr(gstQItem)
+                                                
+                                                // C 코드 LINE 1032-1038: Dest와 Src 교환
+                                                val tempCidRcs = rcsQItem.szCId.clone()
+                                                System.arraycopy(rcsQItem.szSrcCId, 0, rcsQItem.szCId, 0, minOf(rcsQItem.szSrcCId.size, rcsQItem.szCId.size))
+                                                System.arraycopy(tempCidRcs, 0, rcsQItem.szSrcCId, 0, minOf(tempCidRcs.size, rcsQItem.szSrcCId.size))
+                                                
+                                                val tempMinRcs = rcsQItem.szMinNo.clone()
+                                                System.arraycopy(rcsQItem.szSrcMinNo, 0, rcsQItem.szMinNo, 0, minOf(rcsQItem.szSrcMinNo.size, rcsQItem.szMinNo.size))
+                                                System.arraycopy(tempMinRcs, 0, rcsQItem.szSrcMinNo, 0, minOf(tempMinRcs.size, rcsQItem.szSrcMinNo.size))
+                                                
+                                                // C 코드 LINE 1040-1046: RCS TR 메시지 설정
+                                                rcsQItem.usMsgCode = QTYPE_SM_REQ.toShort()
+                                                rcsQItem.usMsgSubCode = SUB_QTYPE_RCS_TR.toShort()
+                                                rcsQItem.ucTermType = TERM_TYPE_KOR.code.toByte()
+                                                rcsQItem.ucDataEncoding = DCS_TYPE_KSC5601
+                                                rcsQItem.nVldPrd = 43200
+                                                rcsQItem.RcsResult = RCS_RESULT_INCALIDDST.toShort()
+                                                
+                                                val rcsQueueNo = 0
+                                                smsQLib.InsertIntoSmsQnQNo(rcsQItem, rcsQueueNo)
+                                            }
+                                            
+                                            return@measureNanoTime // C 코드 LINE 1050: return 1
+                                        }
+                                        
+                                        // C 코드 LINE 1052: SendTcpMsgSimpleGetQ 호출 (MO 메시지 전송)
+                                        // HTTP POST로 CP 서버에 MO 메시지 전송
+                                        val moSendSuccess = sendMoMessageToCp(gstQItemTrans, entity, gstQItem)
+                                        
+                                        if (moSendSuccess) {
                                             witcomLog.p_write(
                                                 Level.DEBUG,
                                                 String.format(
-                                                    "InsqStat ID --> [%s] resultInsqStat --> [%s]",
-                                                    ERRORID_CP_TR_SUCCESS,
-                                                    resultInsqStat
+                                                    "MO Message Send Success : SrcCId(%s),SrcCallNo(%s),DestCId(%s),DestCallNo(%s)",
+                                                    gstQItemTrans.srcCid,
+                                                    gstQItemTrans.srcMinNo,
+                                                    gstQItemTrans.destCid,
+                                                    gstQItemTrans.destMinNo
                                                 )
                                             )
-                                        } else {
-                                            //InsqStat 호출 필요 (C 코드 LINE 791-792)
+                                        }
+                                        
+                                        // C 코드 LINE 1053: PrintHexa 호출 (로깅)
+                                        QItemServiceUtil.printQItem3(gstQItem, witcomLog)
+                                    }
+                                    
+                                    // ========== MO-TR 결과 전송 처리 (SM_REQ_TRANS_RESULT) ==========
+                                    // C 코드 참고: GIPEVENT_c.c LINE 1309-1470 (MakePacketFromQItem)
+                                    // C 코드 참고: GIPEVENT_c.c LINE 1056-1074 (실제 전송)
+                                    SM_REQ_TRANS_RESULT -> {
+                                        // C 코드 LINE 1313: ptrTransRes = (SMREQTRANSRESPTR)(ptrMsgHdr->ucData)
+                                        // C 코드 LINE 1314: ptrTransRes->ucMsgStatus = ptrQItem->ucMsgStatus
+                                        // C 코드 LINE 1444: ptrTransRes->ucGSMErrCode = ptrQItem->ucGSMErrCode
+                                        // C 코드 LINE 1445: memcpy(ptrTransRes->ucMsgId, ptrQItem->ucMsgId, QITEM_SIZE_MSGID)
+                                        
+                                        // HTTP POST로 CP 서버에 MO-TR 결과 전송
+                                        val moTrSendSuccess = sendMoTrToCp(gstQItem, gstQItemTrans, entity)
+                                        
+                                        if (moTrSendSuccess) {
+                                            witcomLog.p_write(
+                                                Level.INFO,
+                                                String.format(
+                                                    "MO-TR Result Send Success : SrcCId(%s),SrcCallNo(%s),DestCId(%s),DestCallNo(%s),MsgStatus(%d),MsgId(%s)",
+                                                    gstQItemTrans.srcCid,
+                                                    gstQItemTrans.srcMinNo,
+                                                    gstQItemTrans.destCid,
+                                                    gstQItemTrans.destMinNo,
+                                                    gstQItem.ucMsgStatus.toInt(),
+                                                    QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
+                                                )
+                                            )
+                                            
+                                            // C 코드 LINE 1066-1072: InsqStat 호출 (성공/실패에 따라)
+                                            val msgStatus = gstQItem.ucMsgStatus.toInt()
+                                            val isSuccess = (msgStatus == 2) || 
+                                                          (gstQItem.szFree2[0].toInt() != SM_STATE_MRMSPAM && msgStatus == SM_STATE_SPAMERR)
+                                            
                                             smsQLib.InsqStat(
                                                 gstQItem,
                                                 MESSAGE_TR,
                                                 0,
                                                 gServerID,
-                                                MODULEID_GIPALL_C,
-                                                SERVICEID_GIPALL,
-                                                ERRORID_CP_TR_FAIL,
+                                                MODULEID_GIPEVENT_C,
+                                                SERVICEID_GIPEVENT,
+                                                if (isSuccess) ERRORID_CP_TR_SUCCESS else ERRORID_CP_TR_FAIL,
                                                 ST_GIPALL_MTTR_SEND_OK,
                                                 IF_NULL,
                                                 TID_NO_SAVE,
                                                 LT_BOTH,
                                                 0
                                             )
+                                        } else {
                                             witcomLog.p_write(
-                                                Level.DEBUG,
+                                                Level.ERROR,
                                                 String.format(
-                                                    "InsqStat ID --> [%s]",
-                                                    ERRORID_CP_TR_FAIL
+                                                    "MO-TR Result Send Fail : SrcCId(%s),SrcCallNo(%s),DestCId(%s),DestCallNo(%s),MsgStatus(%d),MsgId(%s)",
+                                                    gstQItemTrans.srcCid,
+                                                    gstQItemTrans.srcMinNo,
+                                                    gstQItemTrans.destCid,
+                                                    gstQItemTrans.destMinNo,
+                                                    gstQItem.ucMsgStatus.toInt(),
+                                                    QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
                                                 )
                                             )
                                         }
-                                        /*통계 TR 정보 센터로 전송 완료*/
-                                        // 4. LINE 796-907: SMS Manager 처리 (아래 latencyNs_SMS_MANAGER 블록에서 실행)
+                                        
+                                        // C 코드 LINE 1053: PrintHexa 호출 (로깅)
+                                        QItemServiceUtil.printQItem3(gstQItem, witcomLog)
                                     }
-
+                                    
                                     else -> {
                                         val formatted =
                                             String.format(
@@ -551,468 +764,6 @@ class SENDThreadPool(
                                             )
                                         witcomLog.p_write(Level.ERROR, formatted)
                                     }
-                                }
-                            }
-                        }
-
-                        // ========== C 코드 실행 순서 4단계 ==========
-                        // LINE 796-907: 문자매니저 SMS Manager 처리 (CP SEND 및 InsqStat 후 실행)
-                        latencyNs_SMS_MANAGER = measureNanoTime {
-                            gstQItemTrans?.let {
-                                val gstQItem = it
-                                gstQItem.serverType = VSMSS_TYPE
-                                val msgStatus = gstQItem.msgStatus.toInt()
-                                val gSmsMgrFlag = cfgEtcMap[APPLY_NEW_SMSMANAGER]?.pvalue ?: 0
-                                val usSource = gstQItem.usSource.toInt()
-                                val gOCSQNo = cfgEtcMap["OCS_QNO"]?.pvalue ?: 0
-
-                                when (gstQItemTrans.msgSubCode.toInt()) {
-                                    SM_REQ_TRANS_RESULT -> {
-                                        if ((gSMS_MANAGER == 1 && msgStatus == 2) ||
-                                            (gSMS_MANAGER == 1 &&
-                                                    gSmsMgrFlag > 0 &&
-                                                    (msgStatus != SM_STATE_PORTED_OUT &&
-                                                            msgStatus !=
-                                                            SM_STATE_PORTEDOUT_KTF &&
-                                                            msgStatus !=
-                                                            SM_STATE_PORTEDOUT_LGT &&
-                                                            msgStatus !=
-                                                            SM_STATE_PORTEDOUT_SKT))
-                                        ) {
-                                            //C 코드 LINE 796-907 SMS Manager 블록 내부에는
-                                            // InsqStat 호출이 없음
-                                            // InsqStat은 InsertIntoASPQ 함수 내부에서만 호출됨 (C 코드 LINE
-                                            // 3540, 3737, 3750, 3757)
-                                            // TODO: 문자매니저 CP 처리
-                                            var ret = 0
-                                            var nQNo = 0
-                                            val szFWD_NO = CharArray(21)
-                                            szFWD_NO[21] = '\u0000'
-                                            val callInfoEntity = CallInfoEntity() // <- CallInfo 채우기
-                                            if (usSource != SMSMOR && usSource != gOCSQNo) {
-                                                if (gstQItem.usSource == NPDB) {
-                                                    callInfoEntity.srccallno = gstQItem.srcMinNo
-                                                    callInfoEntity.rgtdlvflag =
-                                                        gstQItem.termType.toInt()
-                                                    callInfoEntity.vldperiod =
-                                                        gstQItem.vldPrd.toLong()
-                                                    callInfoEntity.traceId =
-                                                        gstQItem.msgCodeReserved0.toString()
-                                                    callInfoEntity.msgidserver = gstQItem.msgId
-                                                    callInfoEntity.cb = gstQItem.callback
-                                                    callInfoEntity.msg = gstQItem.msg
-                                                    ret = ALTI_SUCCESS
-                                                } else {
-                                                    // DBReadW2PCALLINFO (C 코드 LINE 834-836)
-                                                    // C 코드 LINE 4063-4072 참고: szTempDestCallNo 생성 및
-                                                    // szVirtualNum 설정
-                                                    // 050 AI Survey Service
-                                                    val szTempDestCallNo =
-                                                        if (gstQItem.destMinNo == "0") {
-                                                            gstQItem.destCid
-                                                        } else {
-                                                            "${gstQItem.destCid}${gstQItem.destMinNo}"
-                                                        }
-
-                                                    // AI_SURVEY_NUMBER로 시작하면 szVirtualNum에 설정
-                                                    val virtualNum =
-                                                        if (szTempDestCallNo.startsWith(
-                                                                AI_SURVEY_NUMBER
-                                                            )
-                                                        ) {
-                                                            witcomLog.p_write(
-                                                                Level.DEBUG,
-                                                                String.format(
-                                                                    "[DEBUG] Check 050 AI Survey Service! DestCID[%s] DestCallNo[%s] ==> VirtualNum[%s]",
-                                                                    gstQItem.destCid,
-                                                                    gstQItem.destMinNo,
-                                                                    szTempDestCallNo
-                                                                )
-                                                            )
-                                                            szTempDestCallNo
-                                                        } else {
-                                                            ""
-                                                        }
-
-                                                    // VirtualNum이 있고 FWD_NO가 비어있으면 VirtualNum을
-                                                    // FWD_NO에 복사
-                                                    val fwdNo = gstQItem.fwdNo
-                                                    if (virtualNum.isNotEmpty() && fwdNo.isEmpty()
-                                                    ) {
-                                                        gstQItem.fwdNo = virtualNum
-                                                    }
-
-                                                    // FWD_NO가 있으면 3번째 인덱스부터, 없으면 srcMinNo 사용
-                                                    val szSrcMinNo =
-                                                        gstQItem.fwdNo
-                                                            .takeIf { it.length > 3 }
-                                                            ?.substring(3)
-                                                            ?: gstQItem.srcMinNo
-
-                                                    /*
-                                                       #DBReadW2PCALLINFO 반환 값 정의
-                                                        const val ALTI_NODATA = 0
-                                                        const val ALTI_SUCCESS = 1
-                                                        const val ALTI_FAIL = -1
-                                                    * */
-                                                    ret =
-                                                        DBReadW2PCALLINFO(
-                                                            gstQItem.msgId,
-                                                            szSrcMinNo,
-                                                            callInfoEntity,
-                                                            szFWD_NO
-                                                        )
-                                                }
-                                            } else {
-                                                // DbReadCallInfo (C 코드 LINE 845-847)
-                                                // C 코드 LINE 4063-4072 참고: szTempDestCallNo 생성 및
-                                                // szVirtualNum 설정
-                                                // 050 AI Survey Service
-                                                val szTempDestCallNo =
-                                                    if (gstQItem.destMinNo == "0") {
-                                                        gstQItem.destCid
-                                                    } else {
-                                                        "${gstQItem.destCid}${gstQItem.destMinNo}"
-                                                    }
-
-                                                // AI_SURVEY_NUMBER로 시작하면 szVirtualNum에 설정
-                                                val virtualNum =
-                                                    if (szTempDestCallNo.startsWith(
-                                                            AI_SURVEY_NUMBER
-                                                        )
-                                                    ) {
-                                                        witcomLog.p_write(
-                                                            Level.DEBUG,
-                                                            String.format(
-                                                                "[DEBUG] Check 050 AI Survey Service! DestCID[%s] DestCallNo[%s] ==> VirtualNum[%s]",
-                                                                gstQItem.destCid,
-                                                                gstQItem.destMinNo,
-                                                                szTempDestCallNo
-                                                            )
-                                                        )
-                                                        szTempDestCallNo
-                                                    } else {
-                                                        ""
-                                                    }
-
-                                                // VirtualNum이 있고 FWD_NO가 비어있으면 VirtualNum을 FWD_NO에
-                                                // 복사
-                                                val fwdNo = gstQItem.fwdNo
-                                                if (virtualNum.isNotEmpty() && fwdNo.isEmpty()) {
-                                                    gstQItem.fwdNo = virtualNum
-                                                }
-
-                                                // FWD_NO가 있으면 3번째 인덱스부터, 없으면 srcMinNo 사용
-                                                val szSrcMinNo =
-                                                    gstQItem.fwdNo
-                                                        .takeIf { it.length > 3 }
-                                                        ?.substring(3)
-                                                        ?: gstQItem.srcMinNo
-
-                                                // CallInfo 테이블에서 조회
-                                                val msgIdServer = gstQItem.msgId
-                                                val srcCId = gstQItem.srcCid
-                                                val foundCallInfo =
-                                                    callInfoRepository
-                                                        .findByMsgIdServerAndSrcCIdAndDestCallNo(
-                                                            msgIdServer,
-                                                            srcCId,
-                                                            szSrcMinNo
-                                                        )
-
-                                                if (foundCallInfo.isPresent) {
-                                                    val dbCallInfo = foundCallInfo.get()
-                                                    // 복합 키 설정 (삭제를 위해 필요)
-                                                    callInfoEntity.msgidcenter =
-                                                        dbCallInfo.msgidcenter
-                                                    callInfoEntity.destcallno =
-                                                        dbCallInfo.destcallno
-                                                    callInfoEntity.srccallno = dbCallInfo.srccallno
-                                                    callInfoEntity.rgtdlvflag =
-                                                        dbCallInfo.rgtdlvflag
-                                                    callInfoEntity.vldperiod = dbCallInfo.vldperiod
-                                                    callInfoEntity.termtype = dbCallInfo.termtype
-                                                    callInfoEntity.traceId = dbCallInfo.traceId
-                                                    callInfoEntity.msgidserver =
-                                                        dbCallInfo.msgidserver
-                                                    callInfoEntity.cb = dbCallInfo.cb
-                                                    callInfoEntity.msg = dbCallInfo.msg
-                                                    nQNo = dbCallInfo.recvQno?.toInt() ?: 0
-                                                    // szFWD_NO에 FWD_SRC 복사
-                                                    if (dbCallInfo.fwdSrc != null &&
-                                                        dbCallInfo.fwdSrc.isNotEmpty()
-                                                    ) {
-                                                        dbCallInfo
-                                                            .fwdSrc
-                                                            .toCharArray()
-                                                            .copyInto(
-                                                                szFWD_NO,
-                                                                0,
-                                                                0,
-                                                                minOf(
-                                                                    dbCallInfo
-                                                                        .fwdSrc
-                                                                        .length,
-                                                                    szFWD_NO.size - 1
-                                                                )
-                                                            )
-                                                    }
-                                                    ret = ALTI_SUCCESS
-                                                } else {
-                                                    ret = ALTI_FAIL // 조회 실패
-                                                    witcomLog.p_write(
-                                                        Level.WARN,
-                                                        String.format(
-                                                            "DbReadCallInfo: CallInfo not found - msgIdServer(%s), srcCId(%s), destCallNo(%s)",
-                                                            msgIdServer,
-                                                            srcCId,
-                                                            szSrcMinNo
-                                                        )
-                                                    )
-                                                }
-                                            } // END -> ALTI_SUCCESS or ALTI_FAIL 결과값 정의
-
-                                            //C 코드 LINE 850에서 ret == ALTI_SUCCESS 분기
-                                            // 이 블록 내부에는 InsqStat 호출이 없음 (InsertIntoASPQ 함수 내부에서 처리)
-                                            if (ret == ALTI_SUCCESS) {
-                                                // C 코드 LINE 852: MakeSPQItem 호출
-                                                val aspQItem = QITEM()
-                                                QItemServiceUtil.makeSPQItem(
-                                                    gstQItemTrans,
-                                                    callInfoEntity,
-                                                    aspQItem,
-                                                    nQNo,
-                                                    szFWD_NO
-                                                )
-
-                                                // C 코드 LINE 853-854: usMsgCode와 usMsgSubCode 설정
-                                                aspQItem.usMsgCode =
-                                                    SmsDef.MSG_CODE_SM_REQ.toShort()
-                                                aspQItem.usMsgSubCode =
-                                                    SmsDef.SM_REQ_SIMPLE.toShort()
-
-                                                /*여기부터 문자매니저 전송 패킷 구성*/
-                                                // C 코드 LINE 856-872: CheckTelecom 및 usMsgSubCode
-                                                // 조건부 변경
-                                                var Ret = 0
-                                                val szDestCID =
-                                                    QItemServiceUtil.byteArrayToKString(
-                                                        aspQItem.szCId
-                                                    )
-
-                                                // C 코드 LINE 859-860: szDestCID 추출 (앞 3자리)
-                                                val szDestCID3 =
-                                                    if (szDestCID.length >= 3) {
-                                                        szDestCID.substring(0, 3)
-                                                    } else {
-                                                        szDestCID
-                                                    }
-
-                                                // C 코드 LINE 862: CheckTelecom 호출
-                                                Ret = checkTelecom(szDestCID3)
-
-                                                // C 코드 LINE 864-872: usMsgSubCode 조건부 변경
-                                                val aspCId =
-                                                    QItemServiceUtil.byteArrayToKString(
-                                                        aspQItem.szCId
-                                                    )
-                                                if ((Ret == ALTI_SUCCESS) ||
-                                                    (aspCId == "011") ||
-                                                    (aspCId == "010") ||
-                                                    (aspCId == "012")
-                                                ) {
-                                                    // C 코드 LINE 866: GetTelecom_New 호출 및 조건 확인
-                                                    val aspMinNo =
-                                                        QItemServiceUtil.byteArrayToKString(
-                                                            aspQItem.szMinNo
-                                                        )
-                                                    val telecom = getTelecomNew(aspCId, aspMinNo)
-                                                    if (((aspCId == "010") ||
-                                                                (aspCId == "012") ||
-                                                                (Ret == ALTI_SUCCESS)) &&
-                                                        (telecom != SmsDef.SKT_TP)
-                                                    ) {
-                                                        aspQItem.usMsgSubCode =
-                                                            SmsDef.SM_REQ_PORTED.toShort()
-                                                    }
-                                                } else if (aspCId == "017") {
-                                                    // C 코드 LINE 869-870: 017인 경우 아무것도 하지 않음
-                                                    // do nothing
-                                                } else {
-                                                    // C 코드 LINE 872: 그 외의 경우 SM_REQ_PORTED로 설정
-                                                    aspQItem.usMsgSubCode =
-                                                        SmsDef.SM_REQ_PORTED.toShort()
-                                                }
-
-                                                // C 코드 LINE 874-882: gstQItem.szFWD_NO가 있으면
-                                                // ASPQItem 재설정
-                                                if (gstQItemTrans.fwdNo.isNotEmpty()) {
-                                                    // C 코드 LINE 877-879: ASPQItem.szSrcMinNo에
-                                                    // destMinNo 설정 (숫자로)
-                                                    val destMinNoInt =
-                                                        gstQItemTrans.destMinNo.toIntOrNull()
-                                                            ?: 0
-                                                    val destMinNoBytes =
-                                                        destMinNoInt
-                                                            .toString()
-                                                            .toByteArray(
-                                                                java.nio.charset.Charset
-                                                                    .forName(
-                                                                        "CP949"
-                                                                    )
-                                                            )
-                                                    System.arraycopy(
-                                                        destMinNoBytes,
-                                                        0,
-                                                        aspQItem.szSrcMinNo,
-                                                        0,
-                                                        minOf(
-                                                            destMinNoBytes.size,
-                                                            aspQItem.szSrcMinNo.size - 1
-                                                        )
-                                                    )
-                                                    // null terminator 설정
-                                                    if (destMinNoBytes.size <
-                                                        aspQItem.szSrcMinNo.size
-                                                    ) {
-                                                        aspQItem.szSrcMinNo[destMinNoBytes.size] =
-                                                            0x00
-                                                    }
-
-                                                    // C 코드 LINE 881: ASPQItem.szSrcCId에
-                                                    // gstQItem.destCid 복사
-                                                    val destCidBytes =
-                                                        gstQItemTrans.destCid.toByteArray(
-                                                            java.nio.charset.Charset
-                                                                .forName("CP949")
-                                                        )
-                                                    System.arraycopy(
-                                                        destCidBytes,
-                                                        0,
-                                                        aspQItem.szSrcCId,
-                                                        0,
-                                                        minOf(
-                                                            destCidBytes.size,
-                                                            aspQItem.szSrcCId.size - 1
-                                                        )
-                                                    )
-                                                    // null terminator 설정
-                                                    if (destCidBytes.size < aspQItem.szSrcCId.size
-                                                    ) {
-                                                        aspQItem.szSrcCId[destCidBytes.size] = 0x00
-                                                    }
-                                                }
-
-                                                // C 코드 LINE 883: PrintMsgQueueForASP 호출
-                                                QItemServiceUtil.printQItem3(aspQItem, witcomLog)
-
-                                                // C 코드 LINE 885-888: InsertIntoASPQ 호출 (조건부)
-                                                val aspSrcMinNoStr =
-                                                    QItemServiceUtil.byteArrayToKString(
-                                                        aspQItem.szSrcMinNo
-                                                    )
-                                                if (aspSrcMinNoStr.length > 1) {
-                                                    // C 코드 LINE 887: InsertIntoASPQ 호출
-                                                    QItemServiceUtil.insertIntoASPQ(
-                                                        aspQItem,
-                                                        smsQLib,
-                                                        witcomLog,
-                                                        gServerID,
-                                                        spcodeMap
-                                                    )
-                                                }
-
-                                                // C 코드 LINE 890-905: CALLINFO 삭제 로직
-                                                if (gstQItemTrans.usSource != SMSMOR) {
-                                                    if (gstQItemTrans.usSource != NPDB) {
-                                                        // C 코드 LINE 895: DBDelW2PCALLINFO 호출
-                                                        try {
-                                                            // CallInfoEntity의 ID가 설정되어 있는지 확인
-                                                            if (callInfoEntity.msgidcenter !=
-                                                                null &&
-                                                                callInfoEntity
-                                                                    .destcallno !=
-                                                                null
-                                                            ) {
-                                                                callInfoRepository.delete(
-                                                                    callInfoEntity
-                                                                )
-                                                                witcomLog.p_write(
-                                                                    Level.DEBUG,
-                                                                    "[DEBUG] DELETE CALLINFO W2P MSG ============="
-                                                                )
-                                                            } else {
-                                                                witcomLog.p_write(
-                                                                    Level.WARN,
-                                                                    "[WARNING] DBDelW2PCALLINFO() Cannot delete: msgidcenter or destcallno is null"
-                                                                )
-                                                            }
-                                                        } catch (e: Exception) {
-                                                            log.error(
-                                                                "DBDelW2PCALLINFO() Delete Error",
-                                                                e
-                                                            )
-                                                            witcomLog.p_write(
-                                                                Level.ERROR,
-                                                                String.format(
-                                                                    "[ERROR] DBDelW2PCALLINFO() Delete Error: %s",
-                                                                    e.message
-                                                                )
-                                                            )
-                                                        }
-                                                    }
-                                                } else {
-                                                    // C 코드 LINE 901: DbDelCallInfo 호출
-                                                    try {
-                                                        // CallInfoEntity의 ID가 설정되어 있는지 확인
-                                                        if (callInfoEntity.msgidcenter != null &&
-                                                            callInfoEntity.destcallno !=
-                                                            null
-                                                        ) {
-                                                            callInfoRepository.delete(
-                                                                callInfoEntity
-                                                            )
-                                                            witcomLog.p_write(
-                                                                Level.DEBUG,
-                                                                "[DEBUG] DELETE CALLINFO ============="
-                                                            )
-                                                            // C 코드 LINE 904: DbCommit() - JPA는 트랜잭션
-                                                            // 커밋이 자동으로 처리되므로 명시적 호출 불필요
-                                                        } else {
-                                                            witcomLog.p_write(
-                                                                Level.WARN,
-                                                                "[WARNING] DbDelCallInfo() Cannot delete: msgidcenter or destcallno is null"
-                                                            )
-                                                        }
-                                                    } catch (e: Exception) {
-                                                        log.error("DbDelCallInfo() Delete Error", e)
-                                                        witcomLog.p_write(
-                                                            Level.ERROR,
-                                                            String.format(
-                                                                "[ERROR] DbDelCallInfo() Delete Error: %s",
-                                                                e.message
-                                                            )
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    else -> {
-                                        val formatted =
-                                            String.format(
-                                                "SMS Manager: Invalid Message SubCode(%s)",
-                                                gstQItemTrans.msgSubCode
-                                            )
-                                        witcomLog.p_write(Level.ERROR, formatted)
-                                        /*
-                                                 Lvdprintf(LOG_ERROR,"[ERROR] << Invalid Message SubCode(%d) >> \n",ptrMsgHdr->usMsgSubCode);
-                                        sprintf(gTempProcessNm,"%s INVALID_MESSAGE_SUBCODE HEADER",szProcessName);
-                                        PrintHeaderBuf((char *)ptrMsgHdr,(char*)gTempProcessNm);
-                                                 */
-                                    }
-                                }
                             }
                         }
                         delay(50L)
@@ -1257,6 +1008,568 @@ class SENDThreadPool(
         }
         return false
     }
+    
+    /**
+     * C 코드의 CheckLimitMO 함수와 동일한 동작을 수행합니다.
+     * MO 메시지 한도 체크를 수행합니다.
+     * 
+     * @param msgHdr SMReqTransResult (GIMSGHDR에 해당)
+     * @param entity GipHttpMoAccessEntity
+     * @param witcomLog WitcomLog
+     * @return true: 한도 초과, false: 정상
+     * 
+     * C 코드 참고: GIPEVENT_c.c LINE 4033-4050 (CheckLimitMO 함수)
+     * C 코드 참고: GIDBLib.c LINE 4646-4772 (GetLimitCheck 함수)
+     * C 코드 참고: GIDBLib.c LINE 4782-4879 (CheckLimitMdn 함수)
+     */
+    private fun checkLimitMO(
+        msgHdr: SMReqTransResult,
+        entity: GipHttpMoAccessEntity,
+        witcomLog: WitcomLog
+    ): Boolean {
+        // C 코드 LINE 4038: if(gMOLimit == TRUE) 확인
+        // GetLimitCheck 로직: LIMIT_CHECK_FLAG == 'Y' && BILL_TYPE == BILLTYPE_SRC(2)이면 gMOLimit = TRUE
+        val gMOLimit = (entity.limitCheckFlag == "Y" || entity.limitCheckFlag == "y") && 
+                       entity.billType == BILLTYPE_SRC.toString()
+        
+        if (!gMOLimit) {
+            // C 코드 LINE 4044-4047: gMOLimit가 FALSE이면 한도 체크 안 함
+            return false
+        }
+        
+        // C 코드 LINE 4040: MDN 생성 (szSrcCId + uSrcCallNo)
+        // C 코드: sprintf(szMdn,"%s%u",ptrGIMsgHdr->szSrcCId,ptrGIMsgHdr->uSrcCallNo);
+        val szMdn = "${msgHdr.srcCid}${msgHdr.srcMinNo}"
+        
+        witcomLog.p_write(
+            Level.DEBUG,
+            String.format(
+                "CheckLimitMO() MDN: %s, limitCheckFlag: %s, billType: %s",
+                szMdn,
+                entity.limitCheckFlag,
+                entity.billType
+            )
+        )
+        
+        // C 코드 LINE 4041: CheckLimitMdn(szMdn) 호출
+        // MSG_LIMIT_LIST 테이블에서 MDN으로 조회
+        return try {
+            val count = msgLimitListRepository.countByMdn(szMdn)
+            
+            // C 코드 LINE 4852-4859: count가 0이면 FALSE, 0이 아니면 TRUE
+            if (count == 0L) {
+                witcomLog.p_write(
+                    Level.DEBUG,
+                    String.format("CheckLimitMO() MDN(%s) not found in MSG_LIMIT_LIST", szMdn)
+                )
+                false // 한도 초과 아님
+            } else {
+                witcomLog.p_write(
+                    Level.INFO,
+                    String.format("CheckLimitMO() MDN(%s) found in MSG_LIMIT_LIST (count=%d)", szMdn, count)
+                )
+                true // 한도 초과
+            }
+        } catch (e: Exception) {
+            // C 코드 LINE 4861-4874: DB 에러 처리
+            witcomLog.p_write(
+                Level.ERROR,
+                String.format("CheckLimitMO() DB Error: MDN(%s), error(%s)", szMdn, e.message)
+            )
+            log.error("CheckLimitMO() DB Error: MDN($szMdn)", e)
+            false // 에러 시 한도 초과로 처리하지 않음
+        }
+    }
+    
+    /**
+     * CP 서버로 MO 메시지를 HTTP POST로 전송합니다.
+     * rc, tc를 활용한 재시도 로직 포함
+     * 
+     * C 코드 참고: GIPEVENT_c.c LINE 1052 (SendTcpMsgSimpleGetQ)
+     * - GIMSGHDR 헤더 + SMPPSIMPLE 데이터를 TCP로 전송하던 것을 HTTP POST로 변환
+     * 
+     * @param moResult SMReqTransResult (MO 메시지 데이터)
+     * @param entity GipHttpMoAccessEntity (CP_URL, rc, tc 포함)
+     * @param qItem QITEM (원본 큐 아이템)
+     * @return 전송 성공 여부
+     * 
+     * rc, tc 처리:
+     * - tc: connectionTimeout 시간 (초)
+     * - rc = 0: 한 번만 요청 (재시도 없음)
+     * - rc > 0: 그 횟수만큼 재시도 (총 rc+1번 시도)
+     * - 성공하면 즉시 종료
+     */
+    private suspend fun sendMoMessageToCp(
+        moResult: SMReqTransResult,
+        entity: GipHttpMoAccessEntity,
+        qItem: QITEM?
+    ): Boolean {
+        val maxRetryCount = entity.rc
+        val connectionTimeoutSeconds = entity.tc
+        
+        // rc = 0인 경우 한 번만 요청
+        val totalAttempts = if (maxRetryCount == 0) 1 else maxRetryCount + 1
+        
+        for (attempt in 1..totalAttempts) {
+            val success = doSendMoMessage(moResult, entity, qItem, connectionTimeoutSeconds, attempt, totalAttempts)
+            
+            if (success) {
+                // 성공하면 즉시 종료
+                return true
+            }
+            
+            // 마지막 시도가 아니면 재시도
+            if (attempt < totalAttempts) {
+                witcomLog.p_write(
+                    Level.WARN,
+                    String.format(
+                        "MO 메시지 전송 재시도: 시도(%d/%d), srcCID(%s), destCID(%s), CP_URL(%s)",
+                        attempt,
+                        totalAttempts,
+                        moResult.srcCid,
+                        moResult.destCid,
+                        entity.cpUrl
+                    )
+                )
+            }
+        }
+        
+        // 모든 시도 실패
+        witcomLog.p_write(
+            Level.ERROR,
+            String.format(
+                "MO 메시지 전송 최종 실패: 총 시도(%d), srcCID(%s), destCID(%s), destCallNo(%s), CP_URL(%s)",
+                totalAttempts,
+                moResult.srcCid,
+                moResult.destCid,
+                moResult.destMinNo,
+                entity.cpUrl
+            )
+        )
+        return false
+    }
+    
+    /**
+     * 실제 MO 메시지 HTTP POST 전송 수행
+     * 
+     * @param moResult SMReqTransResult (MO 메시지 데이터)
+     * @param entity GipHttpMoAccessEntity (CP_URL 포함)
+     * @param qItem QITEM (원본 큐 아이템)
+     * @param connectionTimeoutSeconds connectionTimeout 시간 (초)
+     * @param attempt 현재 시도 횟수
+     * @param totalAttempts 총 시도 횟수
+     * @return 전송 성공 여부
+     */
+    private suspend fun doSendMoMessage(
+        moResult: SMReqTransResult,
+        entity: GipHttpMoAccessEntity,
+        qItem: QITEM?,
+        connectionTimeoutSeconds: Int,
+        attempt: Int,
+        totalAttempts: Int
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // ResponseMO DTO 생성
+                val responseMO = ResponseMO().apply {
+                    msgVerId = moResult.msgVerId
+                    encFlag = 0 // 암호화 플래그 (필요시 entity 설정에서 가져오기)
+                    
+                    data = MODataBody().apply {
+                        // GIMSGHDR 헤더 정보
+                        srcCID = moResult.srcCid
+                        srcCallNo = moResult.srcMinNo
+                        srcAddrRsv = 0 // SrcAddrRsv int (0)
+                        destCID = moResult.destCid
+                        destCallNo = moResult.destMinNo
+                        destAddrRsv = 0 // DestAddrRsv int (0)
+                        msgCode = moResult.msgCode
+                        // C 코드 LINE 1526: SendTcpMsgSimpleGetQ에서 SM_REQ_SEND -> SM_REQ_SIMPLE로 변경
+                        msgSubCode = SM_REQ_SIMPLE.toShort()
+                        bodyDataLen = moResult.msgLen
+                        // C 코드 LINE 1448: ptrMsgHdr->uMsgSerialNo = GetSerialNo(gChildId)
+                        msgSeqNo = if (qItem != null && qItem.uMsgSerialNo > 0) qItem.uMsgSerialNo.toInt() else 0
+                        termtype = moResult.termType.toString()
+                        dataType = 0.toByte() // DataType char (0)
+                        dataEncoding = moResult.dataEncoding.toInt()
+                        
+                        // concatenate 정보 (QITEM에서 가져오기)
+                        concatenateflag = if (qItem != null) {
+                            (qItem.ucRsv[0].toInt() and 0xFF).toString()
+                        } else {
+                            "0"
+                        }
+                        concatenateInfo = if (qItem != null) {
+                            (qItem.ucRsv[1].toInt() and 0xFF).toString()
+                        } else {
+                            "0"
+                        }
+                        
+                        // rsv4Protocol 변환
+                        rsv4Protocol = moResult.rsv4Protocol.map { value ->
+                            // Rsv4ProtocolItem 생성자에 Integer 값을 직접 전달
+                            Rsv4ProtocolItem(value)
+                        }
+                        
+                        // SMPPSIMPLE 데이터 (MO 메시지 전용)
+                        nVldPrd = moResult.vldPrd
+                        ucRgtDlvFlg = moResult.rgtDlvFlg
+                        callback = moResult.callback
+                        msgLen = moResult.msgLen.toByte()
+                        msg = moResult.msg
+                        orgMsgTotalLen = if (qItem != null && qItem.uOrgMsgLen > 0) {
+                            qItem.uOrgMsgLen.toByte()
+                        } else {
+                            1.toByte() // 기본값
+                        }
+                    }
+                }
+                
+                // 암호화 적용 (entity 설정에 따라)
+                if (entity.aesKeyBase64 != null && entity.ivBase64 != null) {
+                    //검증단계에서 일단 보류하자.
+//                    val data = responseMO.data
+//                    data.destCID = EncryptionExample.encryptWithKey(
+//                        data.destCID,
+//                        entity.aesKeyBase64,
+//                        entity.ivBase64
+//                    )
+//                    data.destCallNo = EncryptionExample.encryptWithKey(
+//                        data.destCallNo,
+//                        entity.aesKeyBase64,
+//                        entity.ivBase64
+//                    )
+//                    data.callback = EncryptionExample.encryptWithKey(
+//                        data.callback,
+//                        entity.aesKeyBase64,
+//                        entity.ivBase64
+//                    )
+                    // 메시지 내용도 암호화할지 결정 (필요시)
+                    // data.msg = EncryptionExample.encryptWithKey(...)
+                }
+                
+                // WebClient 생성 (tc를 connectionTimeout으로 사용)
+                val connectionTimeoutMillis = connectionTimeoutSeconds * 1000L
+                val client = WebClient.builder()
+                    .baseUrl(entity.cpUrl)
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .clientConnector(
+                        ReactorClientHttpConnector(
+                            HttpClient.create()
+                                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectionTimeoutMillis?.toInt())
+                                .responseTimeout(Duration.ofSeconds(connectionTimeoutSeconds.toLong()))
+                        )
+                    )
+                    .build()
+                
+                // HTTP POST 전송
+                val response = client.post()
+                    .uri(URI(entity.cpUrl))
+                    .bodyValue(responseMO)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .awaitSingle()
+                
+                val success = response.statusCode.is2xxSuccessful
+                
+                if (success) {
+                    witcomLog.p_write(
+                        Level.INFO,
+                        String.format(
+                            "MO 메시지 전송 성공: 시도(%d/%d), srcCID(%s), srcCallNo(%s), destCID(%s), destCallNo(%s), CP_URL(%s), timeout(%d초)",
+                            attempt,
+                            totalAttempts,
+                            moResult.srcCid,
+                            moResult.srcMinNo,
+                            moResult.destCid,
+                            moResult.destMinNo,
+                            entity.cpUrl,
+                            connectionTimeoutSeconds
+                        )
+                    )
+                } else {
+                    witcomLog.p_write(
+                        Level.ERROR,
+                        String.format(
+                            "MO 메시지 전송 실패: 시도(%d/%d), HTTP Status(%s), srcCID(%s), srcCallNo(%s), destCID(%s), destCallNo(%s), CP_URL(%s), timeout(%d초)",
+                            attempt,
+                            totalAttempts,
+                            response.statusCode,
+                            moResult.srcCid,
+                            moResult.srcMinNo,
+                            moResult.destCid,
+                            moResult.destMinNo,
+                            entity.cpUrl,
+                            connectionTimeoutSeconds
+                        )
+                    )
+                }
+                
+                success
+            } catch (e: Exception) {
+                witcomLog.p_write(
+                    Level.ERROR,
+                    String.format(
+                        "MO 메시지 전송 중 예외 발생: 시도(%d/%d), srcCID(%s), srcCallNo(%s), destCID(%s), destCallNo(%s), CP_URL(%s), timeout(%d초), error(%s)",
+                        attempt,
+                        totalAttempts,
+                        moResult.srcCid,
+                        moResult.srcMinNo,
+                        moResult.destCid,
+                        moResult.destMinNo,
+                        entity.cpUrl,
+                        connectionTimeoutSeconds,
+                        e.message
+                    )
+                )
+                log.error("MO 메시지 전송 중 예외 발생: CP_URL(${entity.cpUrl}), 시도($attempt/$totalAttempts)", e)
+                false
+            }
+        }
+    }
+
+    /**
+     * CP 서버로 MO-TR 결과를 HTTP POST로 전송합니다.
+     * rc, tc를 활용한 재시도 로직 포함
+     * 
+     * C 코드 참고: GIPEVENT_c.c LINE 1309-1470 (MakePacketFromQItem - SM_REQ_TRANS_RESULT 케이스)
+     * - LINE 1314: ptrTransRes->ucMsgStatus = ptrQItem->ucMsgStatus (MsgStatus 설정)
+     * - LINE 1444: ptrTransRes->ucGSMErrCode = ptrQItem->ucGSMErrCode (Rsv 설정)
+     * - LINE 1445: memcpy(ptrTransRes->ucMsgId, ptrQItem->ucMsgId, QITEM_SIZE_MSGID) (MsgId 복사)
+     * 
+     * @param qItem QITEM (원본 큐 아이템, ucMsgStatus, ucGSMErrCode, ucMsgId 포함)
+     * @param moResult SMReqTransResult (헤더 정보)
+     * @param entity GipHttpMoAccessEntity (CP_URL, rc, tc 포함)
+     * @return 전송 성공 여부
+     * 
+     * rc, tc 처리:
+     * - tc: connectionTimeout 시간 (초)
+     * - rc = 0: 한 번만 요청 (재시도 없음)
+     * - rc > 0: 그 횟수만큼 재시도 (총 rc+1번 시도)
+     * - 성공하면 즉시 종료
+     */
+    private suspend fun sendMoTrToCp(
+        qItem: QITEM,
+        moResult: SMReqTransResult,
+        entity: GipHttpMoAccessEntity
+    ): Boolean {
+        val maxRetryCount = entity.rc
+        val connectionTimeoutSeconds = entity.tc
+        
+        // rc = 0인 경우 한 번만 요청
+        val totalAttempts = if (maxRetryCount == 0) 1 else maxRetryCount + 1
+        
+        for (attempt in 1..totalAttempts) {
+            val success = doSendMoTr(qItem, moResult, entity, connectionTimeoutSeconds, attempt, totalAttempts)
+            
+            if (success) {
+                // 성공하면 즉시 종료
+                return true
+            }
+            
+            // 마지막 시도가 아니면 재시도
+            if (attempt < totalAttempts) {
+                witcomLog.p_write(
+                    Level.WARN,
+                    String.format(
+                        "MO-TR 결과 전송 재시도: 시도(%d/%d), srcCID(%s), destCID(%s), msgId(%s), CP_URL(%s)",
+                        attempt,
+                        totalAttempts,
+                        moResult.srcCid,
+                        moResult.destCid,
+                        QItemServiceUtil.byteArrayToKString(qItem.ucMsgId),
+                        entity.cpUrl
+                    )
+                )
+            }
+        }
+        
+        // 모든 시도 실패
+        witcomLog.p_write(
+            Level.ERROR,
+            String.format(
+                "MO-TR 결과 전송 최종 실패: 총 시도(%d), srcCID(%s), destCID(%s), destCallNo(%s), msgStatus(%d), msgId(%s), CP_URL(%s)",
+                totalAttempts,
+                moResult.srcCid,
+                moResult.destCid,
+                moResult.destMinNo,
+                qItem.ucMsgStatus.toInt(),
+                QItemServiceUtil.byteArrayToKString(qItem.ucMsgId),
+                entity.cpUrl
+            )
+        )
+        return false
+    }
+    
+    /**
+     * 실제 MO-TR 결과 HTTP POST 전송 수행
+     * 
+     * @param qItem QITEM (원본 큐 아이템)
+     * @param moResult SMReqTransResult (헤더 정보)
+     * @param entity GipHttpMoAccessEntity (CP_URL 포함)
+     * @param connectionTimeoutSeconds connectionTimeout 시간 (초)
+     * @param attempt 현재 시도 횟수
+     * @param totalAttempts 총 시도 횟수
+     * @return 전송 성공 여부
+     */
+    private suspend fun doSendMoTr(
+        qItem: QITEM,
+        moResult: SMReqTransResult,
+        entity: GipHttpMoAccessEntity,
+        connectionTimeoutSeconds: Int,
+        attempt: Int,
+        totalAttempts: Int
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // RequestMOTR DTO 생성
+                val requestMOTR = RequestMOTR().apply {
+                    msgVerId = moResult.msgVerId
+                    encFlag = 0 // 암호화 플래그 (필요시 entity 설정에서 가져오기)
+                    
+                    data = MOTRDataBody().apply {
+                        // GIMSGHDR 헤더 정보
+                        srcCID = moResult.srcCid
+                        srcCallNo = moResult.srcMinNo
+                        srcAddrRsv = 0 // SrcAddrRsv int (0)
+                        destCID = moResult.destCid
+                        destCallNo = moResult.destMinNo
+                        destAddrRsv = 0 // DestAddrRsv int (0)
+                        msgCode = SM_REQ_MO.toShort() // C 코드 LINE 1130: MSG_CODE_SM_REQ = 11
+                        msgSubCode = SM_REQ_SEND.toShort() // C 코드 LINE 1309: SM_REQ_TRANS_RESULT
+                        bodyDataLen = 11 // MsgStatus(1) + Rsv(1) + MsgId(9) = 11
+                        // C 코드 LINE 1448: ptrMsgHdr->uMsgSerialNo = GetSerialNo(gChildId)
+                        msgSeqNo = if (qItem.uMsgSerialNo > 0) qItem.uMsgSerialNo.toInt() else 0
+                        termtype = moResult.termType.toString()
+                        dataType = 0.toByte() // DataType char (0)
+                        dataEncoding = moResult.dataEncoding.toInt()
+                        
+                        // concatenate 정보 (QITEM에서 가져오기)
+                        concatenateflag = (qItem.ucRsv[0].toInt() and 0xFF).toString()
+                        concatenateInfo = (qItem.ucRsv[1].toInt() and 0xFF).toString()
+                        
+                        // rsv4Protocol 변환
+                        rsv4Protocol = moResult.rsv4Protocol.map { value ->
+                            Rsv4ProtocolItem(value).apply {
+                                data = if (value in 0..65535) {
+                                    value.toChar()
+                                } else {
+                                    (value and 0xFFFF).toChar()
+                                }
+                            }
+                        }
+                        
+                        // TIME 필드 설정 (YYMMDDHHMM 형식)
+                        val now = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
+                        time = String.format(
+                            "%02d%02d%02d%02d%02d",
+                            now.year % 100,
+                            now.monthValue,
+                            now.dayOfMonth,
+                            now.hour,
+                            now.minute
+                        )
+                        
+                        // Body 필드 (MO-TR 전송용)
+                        // C 코드 LINE 1314: ptrTransRes->ucMsgStatus = ptrQItem->ucMsgStatus
+                        msgStatus = qItem.ucMsgStatus
+                        
+                        // C 코드 LINE 1444: ptrTransRes->ucGSMErrCode = ptrQItem->ucGSMErrCode
+                        rsv = qItem.ucGSMErrCode
+                        
+                        // C 코드 LINE 1445: memcpy(ptrTransRes->ucMsgId, ptrQItem->ucMsgId, QITEM_SIZE_MSGID)
+                        msgId = QItemServiceUtil.byteArrayToKString(qItem.ucMsgId)
+                    }
+                }
+                
+                // 암호화 적용 (entity 설정에 따라)
+                if (entity.aesKeyBase64 != null && entity.ivBase64 != null) {
+                    // TODO: 필요시 암호화 로직 추가
+                }
+                
+                // WebClient 생성 (tc를 connectionTimeout으로 사용)
+                val connectionTimeoutMillis = connectionTimeoutSeconds * 1000L
+                val client = WebClient.builder()
+                    .baseUrl(entity.cpUrl)
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .clientConnector(
+                        ReactorClientHttpConnector(
+                            HttpClient.create()
+                                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectionTimeoutMillis?.toInt())
+                                .responseTimeout(Duration.ofSeconds(connectionTimeoutSeconds.toLong()))
+                        )
+                    )
+                    .build()
+
+                // HTTP POST 전송
+                val response = client.post()
+                    .uri(URI(entity.cpUrl))
+                    .bodyValue(requestMOTR)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .awaitSingle()
+                
+                val success = response.statusCode.is2xxSuccessful
+                
+                if (success) {
+                    witcomLog.p_write(
+                        Level.INFO,
+                        String.format(
+                            "MO-TR 결과 전송 성공: 시도(%d/%d), srcCID(%s), srcCallNo(%s), destCID(%s), destCallNo(%s), msgStatus(%d), msgId(%s), CP_URL(%s), timeout(%d초)",
+                            attempt,
+                            totalAttempts,
+                            moResult.srcCid,
+                            moResult.srcMinNo,
+                            moResult.destCid,
+                            moResult.destMinNo,
+                            qItem.ucMsgStatus.toInt(),
+                            QItemServiceUtil.byteArrayToKString(qItem.ucMsgId),
+                            entity.cpUrl,
+                            connectionTimeoutSeconds
+                        )
+                    )
+                } else {
+                    witcomLog.p_write(
+                        Level.ERROR,
+                        String.format(
+                            "MO-TR 결과 전송 실패: 시도(%d/%d), HTTP Status(%s), srcCID(%s), srcCallNo(%s), destCID(%s), destCallNo(%s), msgStatus(%d), msgId(%s), CP_URL(%s), timeout(%d초)",
+                            attempt,
+                            totalAttempts,
+                            response.statusCode,
+                            moResult.srcCid,
+                            moResult.srcMinNo,
+                            moResult.destCid,
+                            moResult.destMinNo,
+                            qItem.ucMsgStatus.toInt(),
+                            QItemServiceUtil.byteArrayToKString(qItem.ucMsgId),
+                            entity.cpUrl,
+                            connectionTimeoutSeconds
+                        )
+                    )
+                }
+                
+                success
+            } catch (e: Exception) {
+                witcomLog.p_write(
+                    Level.ERROR,
+                    String.format(
+                        "MO-TR 결과 전송 중 예외 발생: 시도(%d/%d), srcCID(%s), srcCallNo(%s), destCID(%s), destCallNo(%s), CP_URL(%s), timeout(%d초), error(%s)",
+                        attempt,
+                        totalAttempts,
+                        moResult.srcCid,
+                        moResult.srcMinNo,
+                        moResult.destCid,
+                        moResult.destMinNo,
+                        entity.cpUrl,
+                        connectionTimeoutSeconds,
+                        e.message
+                    )
+                )
+                log.error("MO-TR 결과 전송 중 예외 발생: CP_URL(${entity.cpUrl}), 시도($attempt/$totalAttempts)", e)
+                false
+            }
+        }
+    }
 
     // Mock: 실제 HTTP 요청 대체용 함수
     fun mockHttpSendTrListener(
@@ -1300,5 +1613,15 @@ class SENDThreadPool(
             log.error("mockHttpSend 요청 중 예외 발생: ${e.message}")
             false
         }
+    }
+    
+    /**
+     * 애플리케이션 종료 시 코루틴 스코프를 취소하여 리소스 정리
+     */
+    @PreDestroy
+    fun cleanup() {
+        log.info("SENDThreadPool cleanup: 코루틴 스코프 취소 중...")
+        coroutineScope?.cancel()
+        coroutineScope = null
     }
 }

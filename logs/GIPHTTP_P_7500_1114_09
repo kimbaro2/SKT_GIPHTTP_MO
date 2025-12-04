@@ -1,0 +1,8 @@
+[09:15:50.375] [INFO ] Receive SMS Result: msgCode(12), msgSubCode(9), srcCID(010), destCID(1571707589), ackResult(0)
+[09:15:50.569] [ERROR] Error processing SMS Result: msgCode(12), msgSubCode(9), error(Cannot invoke "com.infra.mo.skt_giphttp_mo.config.application.WitcomLog.p_write(ch.qos.logback.classic.Level, String)" because "this.witcomLog" is null)
+[09:17:12.556] [INFO ] Receive SMS Result: msgCode(12), msgSubCode(9), srcCID(010), destCID(1571707589), ackResult(0)
+[09:17:12.774] [ERROR] Error processing SMS Result: msgCode(12), msgSubCode(9), error(Cannot invoke "com.infra.mo.skt_giphttp_mo.config.application.WitcomLog.p_write(ch.qos.logback.classic.Level, String)" because "this.witcomLog" is null)
+[09:19:23.347] [INFO ] Receive SMS Result: msgCode(12), msgSubCode(9), srcCID(010), destCID(1571707589), ackResult(0)
+[09:19:23.562] [ERROR] Error processing SMS Result: msgCode(12), msgSubCode(9), error(Cannot invoke "com.infra.mo.skt_giphttp_mo.config.application.WitcomLog.p_write(ch.qos.logback.classic.Level, String)" because "this.witcomLog" is null)
+[09:28:00.363] [INFO ] Receive SMS Result: msgCode(12), msgSubCode(9), srcCID(010), destCID(1571707589), ackResult(0)
+[09:28:00.878] [ERROR] Error processing SMS Result: msgCode(12), msgSubCode(9), error(Cannot invoke "com.infra.mo.skt_giphttp_mo.config.application.WitcomLog.p_write(ch.qos.logback.classic.Level, String)" because "this.witcomLog" is null)

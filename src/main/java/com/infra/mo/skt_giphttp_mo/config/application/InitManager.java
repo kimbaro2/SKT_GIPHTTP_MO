@@ -1,9 +1,7 @@
 package com.infra.mo.skt_giphttp_mo.config.application;
 
-import com.infra.mo.skt_giphttp_mo.config.application.LiveReloadCLibraryFile;
-import com.infra.mo.skt_giphttp_mo.config.application.PerformanceSettings;
 import com.infra.mo.skt_giphttp_mo.config.threadPool.CfgEtcMap_ThreadPool;
-import com.infra.mo.skt_giphttp_mo.config.threadPool.GipHttpAccessList_ThreadPool;
+import com.infra.mo.skt_giphttp_mo.config.threadPool.GipHttpMoAccessList_ThreadPool;
 import com.infra.mo.skt_giphttp_mo.config.threadPool.SENDThreadPool;
 import com.infra.mo.skt_giphttp_mo.config.threadPool.SpcodeMap_ThreadPool;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +36,7 @@ public class InitManager {
 
         SENDThreadPool sendThreadPool = applicationContext.getBean("SENDThreadPool", SENDThreadPool.class);
         CfgEtcMap_ThreadPool cfgEtcMap_threadPool = applicationContext.getBean("CfgEtcMap_ThreadPool", CfgEtcMap_ThreadPool.class);
-        GipHttpAccessList_ThreadPool gipHttpAccessList_threadPool = applicationContext.getBean("GipHttpAccessList_ThreadPool", GipHttpAccessList_ThreadPool.class);
+        GipHttpMoAccessList_ThreadPool gipHttpMoAccessList_threadPool = applicationContext.getBean("GipHttpMoAccessList_ThreadPool", GipHttpMoAccessList_ThreadPool.class);
         SpcodeMap_ThreadPool spcodeMap_threadPool = applicationContext.getBean("SpcodeMap_ThreadPool", SpcodeMap_ThreadPool.class);
 
         if (performanceSettings.getLoop()) {
@@ -52,7 +50,7 @@ public class InitManager {
 //        val threadCount = (cpuCoreCount / cpuCoreCount).toInt()
             try {
                 cfgEtcMap_threadPool.executeEventHandlerTask(1); //CFGETC 맵 재구성 프로세스
-                gipHttpAccessList_threadPool.executeEventHandlerTask(1);
+                gipHttpMoAccessList_threadPool.executeEventHandlerTask(1);
                 spcodeMap_threadPool.executeEventHandlerTask(1); //CFG_SPCODE 맵 재구성 프로세스
                 log.info(liveReloadCLibraryFile.rebuildCLibraryCopies(performanceSettings.getCLibraryFilePath(), threadCount80)); //스레드개수만큼 so 파일 구성
                 sendThreadPool.executeEventHandlerTask(currentThreadCount);

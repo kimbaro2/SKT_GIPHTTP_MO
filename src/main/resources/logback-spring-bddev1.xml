@@ -3,7 +3,7 @@
 
     <property name="PORT" value="7500"/>
 
-    <springProperty name="P_FILE_PATH" source="witcom.performance.pFilePath" defaultValue="/home3/sms/log/"/>
+    <springProperty name="P_FILE_PATH" source="witcom.performance.pFilePath" defaultValue="/log/BRTBV-SMSS-APP01/"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>

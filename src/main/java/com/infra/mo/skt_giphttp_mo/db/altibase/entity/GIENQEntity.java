@@ -22,32 +22,32 @@ import java.util.List;
 public class GIENQEntity extends Search {
     @Id
     @Column(name = "SERVERTYPE", length = 5)
-    private String serverType;                      //LINE :: VSMSS/HSMSS 구분
+    public String serverType;                      //LINE :: VSMSS/HSMSS 구분
 
     @Id
     @Column(name = "CID", length = 16)
-    private String cid;                             //LINE :: CP를 구별하는 식별자
+    public String cid;                             //LINE :: CP를 구별하는 식별자
 
     @Column(name = "TR_QUEUE_NO", columnDefinition = "NUMERIC(10)")
-    private long trQueueNo;                         //LINE :: TR 전송 시 Queue 번호
+    public long trQueueNo;                         //LINE :: TR 전송 시 Queue 번호
 
     @Column(name = "MO_QUEUE_NO", columnDefinition = "NUMERIC(10)")
-    private long moQueueNo;                         //LINE :: MO 전송 시 Queue 번호
+    public long moQueueNo;                         //LINE :: MO 전송 시 Queue 번호
 
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Column(name = "REGI_DATE")
     @Temporal(TemporalType.TIMESTAMP)
     //@CreationTimestamp
-    private Date regiDate;                          //LINE :: Config 등록 날짜
+    public Date regiDate;                          //LINE :: Config 등록 날짜
 
     @Column(name = "CP_DESCRIPTION", length = 40)
-    private String cpDescription;                   //LINE :: CP 설명
+    public String cpDescription;                   //LINE :: CP 설명
 
     @Transient
-    private String changeCode;
+    public String changeCode;
 
     @Transient
-    private GIENQId idClass;             //LINE :: 복합키
+    public GIENQId idClass;             //LINE :: 복합키
     @Transient
-    private List<GIENQId> idList;   //LINE :: 복합키 리스트
+    public List<GIENQId> idList;   //LINE :: 복합키 리스트
 }

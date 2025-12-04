@@ -1023,6 +1023,22 @@ object SmsDef {
 
     const val ERRORID_CP_MO_SUCCESS = 15
 
+    const val GIPEVENT_BLOCK_NOTI_CID =	"3333333310"
+    const val GIPEVENT_BLOCK_NOTI_CALLBACK =	"114"
+
+    const val ST_GIPEVENT_INSQ_POLL = 87
+
+    const val ST_GIP_MO_LIMIT = -155
+
+    const val ST_Q_INSERT_FAIL_BLOCKNOTI = -248
+
+    const val ST_GIPEVENT_INSQ_BLOCKNOTI =88
+
+    const val MODULEID_GIPEVENT_C = 31
+    const val SERVICEID_GIPEVENT = 45
+    const val ERRORID_CP_MO_FAIL = 16
+    const val ST_Q_INSERT_FAIL_POLL = -299
+
     const val MODULEID_GIPALL_C = 27
 
     const val SERVICEID_GIPALL = 43
@@ -1036,6 +1052,15 @@ object SmsDef {
     const val ERRORID_CP_TR_FAIL = 19
     const val ST_GIP_SOCK_SEND_FAIL = -160
     const val ST_GIPALL_MTTR_SEND_OK = 81            /*전송(MTTR)*//*MsgStatus*/
+    
+    // ProcessSMRes 관련 상수
+    const val ERRORID_CP_MO_NODATA = 25              /* MO 데이터 없음 */
+    const val ST_GIPEVENT_MORS_OK = 89               /* MO 응답 성공 */
+    const val ST_GIP_MORS_FAIL = -156                /* MO 응답 실패 */
+    const val ST_GIPEVENT_MTTR_OK = 90               /* MT TR 성공 */
+    const val ST_DB_NO_DATA_GIPMOCALLINFO = -157     /* DB 데이터 없음 */
+    const val ST_GIPEVENT_MOACK_BILL_OK = 91         /* MO ACK 과금 성공 */
+    const val ST_GIP_INVALID_CID = -158              /* Invalid CID */
 
     const val SM_STATE_EXPIRED = 3                        /* validity period expired */
 

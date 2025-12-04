@@ -13,7 +13,7 @@ import java.util.List;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-public class ResponseTR {
+public class ResponseMO {
 
     @NotNull
     public Integer msgVerId;
@@ -71,7 +71,7 @@ public class ResponseTR {
 
         @NotNull
         public List<Rsv4ProtocolItem> rsv4Protocol;
-        
+
         // Header 추가 필드
         public Short teleServiceID = 0; // TeleServiceID
 
@@ -80,12 +80,25 @@ public class ResponseTR {
         public List<Integer> reserved2; // reserved2 Int[2]
 
         public String time = ""; // TIME Char[11] - 'YYMMDDHHMM' 형식
-        
-        // Body 필드
-        // SM_REQ_SIMPLE (10) 케이스: ACK 결과 코드
-        public Integer ackResult = 0; // GI_RES_NO_ERR = 0 (성공), 그 외는 실패
-        
-        // SM_REQ_TRANS_RESULT (9) 케이스: MO-TR ACK 결과
-        public Integer result = 0; // Result (int) - 0이면 성공, 0이 아니면 오류 종류
+
+        // MO 메시지 전용 필드 (SMPPSIMPLE 구조체에서)
+        @NotNull
+        public Integer nVldPrd = 0;              // 유효기간
+
+        @NotNull
+        public Byte ucRgtDlvFlg = 0;             // Right Delivery Flag
+
+        @NotBlank
+        public String callback = "";             // Callback 번호 (szCB[21])
+
+        @NotNull
+        public Byte msgLen = 0;                  // 메시지 길이 (ucMsgLen)
+
+        @NotBlank
+        public String msg = "";                  // 메시지 내용 (szMsg)
+
+        @NotNull
+        public Byte orgMsgTotalLen = 0;          // 원본 메시지 전체 길이
     }
 }
+

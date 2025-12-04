@@ -38,6 +38,8 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
         witcomLog: WitcomLog,
         cfgEtcMap: HashMap<String, CfgEtcEntity>
     ): QITEM {
+        // loggerName 생성 (entity 기반)
+        val loggerName = "${entity.cid}-${entity.ipAddr}-${entity.portNo}"
         /*1.*/
         when (ptrQItem.msgStatus.toInt()) { /*LINE 1107*/
             SM_STATE_PORTEDOUT_KTF,
@@ -80,7 +82,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                         ptrQItem.msgStatus,
                         ptrTransRes.ucMsgStatus
                     )
-                    witcomLog.p_write(Level.INFO, formatted)
+                    witcomLog.c_write(loggerName, Level.INFO, formatted)
                 } else {
                     ptrTransRes.ucMsgStatus = 2;
 //                    println("[NORMAL] TRANS_RESULT_CHANGE : SourceCID(${ptrQItem.srcCid}) SourceCallNo(${ptrQItem.srcMinNo}) " +
@@ -96,7 +98,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                         ptrQItem.msgStatus,
                         ptrTransRes.ucMsgStatus
                     )
-                    witcomLog.p_write(Level.INFO, formatted)
+                    witcomLog.c_write(loggerName, Level.INFO, formatted)
 
                     ptrQItem.msgStatus = 2
                 }
@@ -113,7 +115,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                     ptrQItem.msgStatus,
                     ptrTransRes.ucMsgStatus
                 )
-                witcomLog.p_write(Level.INFO, formatted)
+                witcomLog.c_write(loggerName, Level.INFO, formatted)
             }
 
             else -> {
@@ -129,7 +131,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                     ptrQItem.msgStatus,
                     ptrTransRes.ucMsgStatus
                 )
-                witcomLog.p_write(Level.INFO, formatted)
+                witcomLog.c_write(loggerName, Level.INFO, formatted)
             }
         }
         ptrTransRes.ucGSMErrCode = ptrQItem.gsmErrCode;

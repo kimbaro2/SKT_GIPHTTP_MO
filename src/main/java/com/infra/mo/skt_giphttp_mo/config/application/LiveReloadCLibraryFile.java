@@ -74,7 +74,7 @@ public class LiveReloadCLibraryFile {
                 SmsQLib smsQLib = (SmsQLib) Native.load(newFilePath.toString(), SmsQLib.class, options);
 
                 // 🔹 미리 초기화 수행 (P 로그 명칭 패턴 사용)
-                String pLogName = String.format("GIPHTTP_P_%s",
+                String pLogName = String.format("GIPHTTPMO_P_%s",
                         context.getEnvironment().getProperty("server.port")
                 );
                 smsQLib.LvDprintfInit(

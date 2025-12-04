@@ -170,7 +170,7 @@ object QItemServiceUtil {
 
     data class QueueResult(val result: SMReqTransResult?, val qItem: QITEM?)
 
-    fun fetchAndConvert2(queueNo: Int, smsQLib: SmsQLib, witcomLog: WitcomLog): QueueResult {
+    fun  fetchAndConvert2(queueNo: Int, smsQLib: SmsQLib, witcomLog: WitcomLog): QueueResult {
         val qItem = QITEM()
         val result = smsQLib.GetAMsgFromSmsQ(queueNo, qItem)
 
@@ -194,103 +194,11 @@ object QItemServiceUtil {
                 val printBuffer = printQItem3(qItem, witcomLog)
                 witcomLog.p_write(Level.INFO, printBuffer.toString())
 
+                witcomLog.p_write(Level.INFO, "== Get CP Qno($queueNo) ==")
+
                 QueueResult(smReqTransResult, qItem)
             }
         }
-    }
-
-    private fun printQItem2(qItem: QITEM) {
-        println("================== Print QITEM  ==================")
-        println("Server Type             : ${qItem.ucServerType.toChar()}")
-        println("Message VersionID       : ${qItem.nMsgVerId}")
-        println("=========== Source Address ============")
-        println("SourceCID               : ${qItem.szSrcCId.toKString()}")
-        println("SourceCallNo            : ${qItem.szSrcMinNo.toKString().toIntOrNull() ?: 0}")
-        println("Source Return QNO       : ${qItem.ReturnQ_No}")
-        println("========= Destination Address =========")
-        println("DestCID                 : ${qItem.szCId.toKString()}")
-        println("DestCallNo              : ${qItem.szMinNo.toKString().toIntOrNull() ?: 0}")
-        println("ModuleNo                : ${qItem.nModuleNo}")
-        println("============= Message Code =============")
-        println("Message Code            : ${qItem.usMsgCode}")
-        println("Message SubCode         : ${qItem.usMsgSubCode}")
-        println("TeleService ID          : ${qItem.usMsgCodeReserved.getOrNull(0) ?: 0}")
-        println("usMsgCodeReserved[1]    : ${qItem.usMsgCodeReserved.getOrNull(1) ?: 0}")
-        println("Msg Length              : ${qItem.ucMsgLen}")
-        println("MsgSerialNo             : ${qItem.uMsgSerialNo}")
-        println("TermType                : ${qItem.ucTermType}")
-        println("SplitSeq                : ${qItem.uSplitSeq}")
-        println("DataEnconding           : ${qItem.ucDataEncoding}:CP949")
-        qItem.nRsv4Protocol.forEachIndexed { i, v ->
-            val label =
-                    when (i) {
-                        10 -> "nRsv4Protocol[10] / RD / Roaming PMN"
-                        11 -> "nRsv4Protocol[11] / EsmClass"
-                        else -> "nRsv4Protocol[$i]"
-                    }
-            println("$label   : $v")
-        }
-        println("=========== Sending Flags ============")
-        println("VldPrd                  : ${qItem.nVldPrd}")
-        println("Priority                : ${qItem.ucPriority}")
-        println("RepFlag                 : ${qItem.ucRepFlag}")
-        println("RgtDlvFlg TR/Receipt flag   : ${qItem.ucRgtDlvFlg}")
-        println("SmDefaultMsgID / callforward count   : ${qItem.ucMsgId.firstOrNull() ?: 0}")
-        println("=========== Receive Flags ============")
-        println("Message Status          : ${qItem.ucMsgStatus}")
-        println("GSMErrCode              : ${qItem.ucGSMErrCode}")
-        println(
-                "FlagReserved[0] / Center Number(VSMSS)   : ${qItem.ucFlagReserved.getOrNull(0) ?: 0}"
-        )
-        println("FlagReserved[1]         : ${qItem.ucFlagReserved.getOrNull(1) ?: 0}")
-        println("FlagReserved[2]         : ${qItem.ucMsgId.getOrNull(0) ?: 0}")
-        println("SRC_TYPE(1:Phone, 2:Web): ${qItem.ucMsgId.getOrNull(0) ?: 0}")
-        println("DoNotForward            : ${qItem.ucDoNotFwd}")
-        println("MessageID               : ${qItem.ucMsgId.toHexString()}")
-        println("Rsv4Dlv[1] / W-Zone Flag: ${qItem.ucRsv4Dlv.getOrNull(1) ?: 0}")
-        println("Rsv4Dlv[2] / NCHANGE    : ${qItem.ucRsv4Dlv.getOrNull(2) ?: 0}")
-        println("Message                 : ${qItem.szMsg.toKString()}")
-        println("CreateTime              : ${qItem.tCreateTime}")
-        println("CallBack                : ${qItem.szCB.toKString()}")
-        qItem.szFree2.forEachIndexed { i, v ->
-            val label = if (i == 0) "szFree2[0] / MRM SM_STATE_MRMSPAM(1)" else "szFree2[$i]"
-            println("$label              : $v")
-        }
-        println("ucLocation              : ${qItem.ucLocation.toKString()}")
-        println("ucRsvLocation           : ${qItem.ucRsvLocation}")
-        println("Foward No               : ${qItem.szFWD_NO.toKString()}")
-        println("Foward No2              : ${qItem.szFWD_NO2.toKString()}")
-        println("ReturnQ_No              : ${qItem.ReturnQ_No}")
-        println("ConcatenateFlag         : ${qItem.totalSeg}")
-        println("ConcatenateInfo         : ${qItem.segSeq}")
-        println(
-                "OSFI[1~8]               : ${qItem.szOSFI.joinToString("/") { "0x%02X".format(it) }}"
-        )
-        println("OrgCallingNumber        : ${qItem.szOrgCallingNumber.toKString()}")
-        println("OrigMvnoInformation     : ${qItem.szOrigMvnoInformation.toKString()}")
-        println("DestMvnoInformation     : ${qItem.szDestMvnoInformation.toKString()}")
-        println("BillType                : ${qItem.cBillType.toChar()}")
-        println("FullRN                  : ${qItem.szFullRN.toKString()}")
-        println("RcsTag                  : ${qItem.RcsTag.toKString()}")
-        println("RcsResult               : ${qItem.RcsResult}")
-        println("MsgAddNum               : ${qItem.unMsgAddNum}")
-        println("sar_msg_ref_num         : ${qItem.msgRefID}")
-        println("sar_total_segment       : ${qItem.totalSeg}")
-        println("sar_segment_seqnum      : ${qItem.segSeq}")
-        println("CallBack_Noti           : ${qItem.callback_noti}")
-        println("010Plus                 : ${qItem.n010_plus}")
-        println("Message Origin          : ${qItem.msg_org}")
-        println("CallBack_Check          : ${qItem.callback_check}")
-        println("TraceID                 : ${qItem.szTraceId.toKString()}")
-        println("OrgMsgLen               : ${qItem.uOrgMsgLen}")
-        println("ChildNumOrd(Multinumber Service)  : ${qItem.ChildNumOrd}")
-        println("Auth_Flag               : ${qItem.usAuthFlag}")
-        println(
-                "SMS_OSFI[1~5]           : ${qItem.szSMS_OSFI.take(5).joinToString("/") { "0x%02X".format(it) }}"
-        )
-        println("MoRecvTime              : ${qItem.szMoRecvTime.toKString()}")
-        println("VirtualNum              : ${qItem.szRelayCID.toKString()}")
-        println("================== Print QITEM  END ==================")
     }
 
     fun printQItem3(qItem: QITEM, witcomLog: WitcomLog) {
@@ -348,7 +256,7 @@ object QItemServiceUtil {
         sb.appendLine("### Print QITEM END #################################################")
 
         // 🔹 WitcomLog 로 최종 출력
-        //        witcomLog.p_write(Level.DEBUG, sb.toString())
+        witcomLog.p_write(Level.DEBUG, sb.toString())
     }
 
     private fun formatQItem4(q: QITEM): String {
@@ -539,6 +447,156 @@ object QItemServiceUtil {
         destQItem.nVldPrd = ptrQItem.nVldPrd
 
         return destQItem
+    }
+    
+    /**
+     * QITEM을 다른 QITEM으로 복사합니다.
+     * 
+     * @param source 원본 QITEM
+     * @param dest 대상 QITEM
+     */
+    fun copyQItem(source: QITEM, dest: QITEM) {
+        // 기본 필드 복사
+        dest.nMsgVerId = source.nMsgVerId
+        dest.ucServerType = source.ucServerType
+        dest.nModuleNo = source.nModuleNo
+        dest.usSource = source.usSource
+        dest.usMsgCode = source.usMsgCode
+        dest.usMsgSubCode = source.usMsgSubCode
+        dest.ucMsgLen = source.ucMsgLen
+        dest.uMsgSerialNo = source.uMsgSerialNo
+        dest.ucTermType = source.ucTermType
+        dest.ucDataEncoding = source.ucDataEncoding
+        dest.uOrgMsgLen = source.uOrgMsgLen
+        dest.nVldPrd = source.nVldPrd
+        dest.ucPriority = source.ucPriority
+        dest.ucRepFlag = source.ucRepFlag
+        dest.ucRgtDlvFlg = source.ucRgtDlvFlg
+        dest.totalSeg = source.totalSeg
+        dest.segSeq = source.segSeq
+        dest.usAuthFlag = source.usAuthFlag
+        dest.ReturnQ_No = source.ReturnQ_No
+        dest.RcsResult = source.RcsResult
+        
+        // ByteArray 필드 복사
+        System.arraycopy(source.szSrcCId, 0, dest.szSrcCId, 0, minOf(source.szSrcCId.size, dest.szSrcCId.size))
+        System.arraycopy(source.szSrcMinNo, 0, dest.szSrcMinNo, 0, minOf(source.szSrcMinNo.size, dest.szSrcMinNo.size))
+        System.arraycopy(source.szCId, 0, dest.szCId, 0, minOf(source.szCId.size, dest.szCId.size))
+        System.arraycopy(source.szMinNo, 0, dest.szMinNo, 0, minOf(source.szMinNo.size, dest.szMinNo.size))
+        System.arraycopy(source.szMsg, 0, dest.szMsg, 0, minOf(source.szMsg.size, dest.szMsg.size))
+        System.arraycopy(source.szCB, 0, dest.szCB, 0, minOf(source.szCB.size, dest.szCB.size))
+        System.arraycopy(source.szTraceId, 0, dest.szTraceId, 0, minOf(source.szTraceId.size, dest.szTraceId.size))
+        System.arraycopy(source.szOrigMvnoInformation, 0, dest.szOrigMvnoInformation, 0, minOf(source.szOrigMvnoInformation.size, dest.szOrigMvnoInformation.size))
+        System.arraycopy(source.szDestMvnoInformation, 0, dest.szDestMvnoInformation, 0, minOf(source.szDestMvnoInformation.size, dest.szDestMvnoInformation.size))
+        System.arraycopy(source.RcsTag, 0, dest.RcsTag, 0, minOf(source.RcsTag.size, dest.RcsTag.size))
+        System.arraycopy(source.usMsgCodeReserved, 0, dest.usMsgCodeReserved, 0, minOf(source.usMsgCodeReserved.size, dest.usMsgCodeReserved.size))
+        System.arraycopy(source.nRsv4Protocol, 0, dest.nRsv4Protocol, 0, minOf(source.nRsv4Protocol.size, dest.nRsv4Protocol.size))
+        System.arraycopy(source.ucRsv, 0, dest.ucRsv, 0, minOf(source.ucRsv.size, dest.ucRsv.size))
+        System.arraycopy(source.ucMsgId, 0, dest.ucMsgId, 0, minOf(source.ucMsgId.size, dest.ucMsgId.size))
+    }
+    
+    /**
+     * ResponseTR DTO를 QITEM으로 변환합니다.
+     * C 코드의 MsgHdrToQItem 함수와 동일한 로직 수행
+     * 
+     * C 코드 참고: GIPEVENT_c.c LINE 1978 (MsgHdrToQItem)
+     * 
+     * @param responseTR ResponseTR DTO
+     * @return 변환된 QITEM
+     */
+    fun responseTRToQItem(responseTR: com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR): QITEM {
+        val qItem = QITEM()
+        val data = responseTR.data
+        
+        // C 코드 LINE 1978: MsgHdrToQItem 로직
+        // msgVerId 설정
+        qItem.nMsgVerId = responseTR.msgVerId ?: DEFINE_GIPVERID_510
+        
+        // srcCID 복사
+        val srcCIdBytes = data.srcCID.toByteArray(Charset.forName("CP949"))
+        System.arraycopy(
+            srcCIdBytes,
+            0,
+            qItem.szSrcCId,
+            0,
+            minOf(srcCIdBytes.size, qItem.szSrcCId.size - 1)
+        )
+        if (srcCIdBytes.size < qItem.szSrcCId.size) {
+            qItem.szSrcCId[srcCIdBytes.size] = 0x00
+        }
+        
+        // srcCallNo 복사 (String -> ByteArray)
+        val srcCallNoStr = data.srcCallNo
+        val srcCallNoBytes = srcCallNoStr.toByteArray(Charset.forName("CP949"))
+        System.arraycopy(
+            srcCallNoBytes,
+            0,
+            qItem.szSrcMinNo,
+            0,
+            minOf(srcCallNoBytes.size, qItem.szSrcMinNo.size - 1)
+        )
+        if (srcCallNoBytes.size < qItem.szSrcMinNo.size) {
+            qItem.szSrcMinNo[srcCallNoBytes.size] = 0x00
+        }
+        
+        // destCID 복사
+        val destCIdBytes = data.destCID.toByteArray(Charset.forName("CP949"))
+        System.arraycopy(
+            destCIdBytes,
+            0,
+            qItem.szCId,
+            0,
+            minOf(destCIdBytes.size, qItem.szCId.size - 1)
+        )
+        if (destCIdBytes.size < qItem.szCId.size) {
+            qItem.szCId[destCIdBytes.size] = 0x00
+        }
+        
+        // destCallNo 복사
+        val destCallNoStr = data.destCallNo
+        val destCallNoBytes = destCallNoStr.toByteArray(Charset.forName("CP949"))
+        System.arraycopy(
+            destCallNoBytes,
+            0,
+            qItem.szMinNo,
+            0,
+            minOf(destCallNoBytes.size, qItem.szMinNo.size - 1)
+        )
+        if (destCallNoBytes.size < qItem.szMinNo.size) {
+            qItem.szMinNo[destCallNoBytes.size] = 0x00
+        }
+        
+        // msgCode, msgSubCode 설정
+        qItem.usMsgCode = data.msgCode
+        qItem.usMsgSubCode = data.msgSubCode
+        
+        // termtype 설정
+        if (data.termtype.isNotEmpty()) {
+            qItem.ucTermType = data.termtype[0].code.toByte()
+        }
+        
+        // dataEncoding 설정
+        qItem.ucDataEncoding = data.dataEncoding.toByte()
+        
+        // concatenate 정보 설정
+        if (data.concatenateflag.isNotEmpty()) {
+            qItem.totalSeg = data.concatenateflag.toIntOrNull()?.toByte() ?: 0
+        }
+        if (data.concatenateInfo.isNotEmpty()) {
+            qItem.segSeq = data.concatenateInfo.toIntOrNull()?.toByte() ?: 0
+        }
+        
+        // rsv4Protocol 설정
+        if (data.rsv4Protocol != null && data.rsv4Protocol.isNotEmpty()) {
+            data.rsv4Protocol.forEachIndexed { index, item ->
+                if (index < qItem.nRsv4Protocol.size) {
+                    // Rsv4ProtocolItem의 data가 char이므로 int로 변환
+                    qItem.nRsv4Protocol[index] = item.data.code
+                }
+            }
+        }
+        
+        return qItem
     }
 
     /**

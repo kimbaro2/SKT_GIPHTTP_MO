@@ -7,26 +7,26 @@ import java.util.List;
 
 @Data
 public class Search extends Paging {
-    @Transient private String searchType;
-    @Transient private String searchTxt;
-    @Transient private String searchStartDate;
-    @Transient private String searchEndDate;
+    @Transient public String searchType;
+    @Transient public String searchTxt;
+    @Transient public String searchStartDate;
+    @Transient public String searchEndDate;
 
     /** Common Search Param **/
-    @Transient private String searchTxt1;
-    @Transient private String searchTxt2;
-    @Transient private String searchTxt3;
-    @Transient private String searchTxt4;
-    @Transient private String searchTxt5;
-    @Transient private String searchTxt6;
+    @Transient public String searchTxt1;
+    @Transient public String searchTxt2;
+    @Transient public String searchTxt3;
+    @Transient public String searchTxt4;
+    @Transient public String searchTxt5;
+    @Transient public String searchTxt6;
 
     /** Common Sort Param **/
-    @Transient private String sort;
-    @Transient private String sort2;
-    @Transient private List<String> sortList;
-    @Transient private String historySort;
+    @Transient public String sort;
+    @Transient public String sort2;
+    @Transient public List<String> sortList;
+    @Transient public String historySort;
 
-    @Transient private String saveType;
+    @Transient public String saveType;
 
     public String getSearchStartDate(){
         return searchStartDate == null ? null : searchStartDate;
