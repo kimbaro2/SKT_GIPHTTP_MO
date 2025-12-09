@@ -686,6 +686,87 @@ class SENDThreadPool(
                                                     gstQItemTrans.destMinNo
                                                 )
                                             )
+                                        } else {
+                                            // ========== HTTP 전송 실패 시 Queue 재저장 ==========
+                                            witcomLog.c_write(
+                                                loggerName,
+                                                Level.ERROR,
+                                                String.format(
+                                                    "MO 메시지 전송 최종 실패 (rc=%d 회 시도 완료). QITEM을 Queue에 재저장합니다. srcCID(%s), destCID(%s)",
+                                                    entity.rc,
+                                                    gstQItemTrans.srcCid,
+                                                    gstQItemTrans.destCid
+                                                ),
+                                                Thread.currentThread().getId()
+                                            )
+
+                                            // 원본 QITEM을 Queue에 재저장
+                                            val originalQItemForRequeue = gstQResultObj.qItem as? QITEM
+                                            if (originalQItemForRequeue != null) {
+                                                // 처음 GetAMsgFromSmsQ() 호출 시 사용한 queueNo 로 그대로 재저장
+                                                // (CP사로 전송이 모두 실패한 경우 동일 큐에서 재처리하기 위함)
+                                                val targetQueueNo = queueNo
+
+                                                witcomLog.c_write(
+                                                    loggerName,
+                                                    Level.INFO,
+                                                    String.format(
+                                                        "MO 메시지 Queue 재저장 시도: targetQueueNo=%d, ReturnQ_No=%d, srcCID(%s), destCID(%s)",
+                                                        targetQueueNo,
+                                                        originalQItemForRequeue.ReturnQ_No,
+                                                        gstQItemTrans.srcCid,
+                                                        gstQItemTrans.destCid
+                                                    ),
+                                                    Thread.currentThread().getId()
+                                                )
+
+                                                // QITEM write 후 InsertIntoSmsQWithQNo 호출
+                                                originalQItemForRequeue.write()
+                                                val requeueResult = smsQLib.InsertIntoSmsQWithQNo(
+                                                    originalQItemForRequeue,
+                                                    targetQueueNo
+                                                )
+
+                                                if (requeueResult >= 0) {
+                                                    witcomLog.c_write(
+                                                        loggerName,
+                                                        Level.INFO,
+                                                        String.format(
+                                                            "MO 메시지 Queue 재저장 성공: result=%d, targetQueueNo=%d, srcCID(%s), destCID(%s)",
+                                                            requeueResult,
+                                                            targetQueueNo,
+                                                            gstQItemTrans.srcCid,
+                                                            gstQItemTrans.destCid
+                                                        ),
+                                                        Thread.currentThread().getId()
+                                                    )
+                                                } else {
+                                                    witcomLog.c_write(
+                                                        loggerName,
+                                                        Level.ERROR,
+                                                        String.format(
+                                                            "MO 메시지 Queue 재저장 실패: result=%d, targetQueueNo=%d, srcCID(%s), destCID(%s)",
+                                                            requeueResult,
+                                                            targetQueueNo,
+                                                            gstQItemTrans.srcCid,
+                                                            gstQItemTrans.destCid
+                                                        ),
+                                                        Thread.currentThread().getId()
+                                                    )
+                                                }
+                                            } else {
+                                                witcomLog.c_write(
+                                                    loggerName,
+                                                    Level.ERROR,
+                                                    String.format(
+                                                        "MO 메시지 Queue 재저장 불가: 원본 QITEM이 null입니다. srcCID(%s), destCID(%s)",
+                                                        gstQItemTrans.srcCid,
+                                                        gstQItemTrans.destCid
+                                                    ),
+                                                    Thread.currentThread().getId()
+                                                )
+                                            }
+                                            // ========== Queue 재저장 처리 완료 ==========
                                         }
                                         
                                         // C 코드 LINE 1053: PrintHexa 호출 (로깅)
@@ -750,6 +831,82 @@ class SENDThreadPool(
                                                     QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
                                                 )
                                             )
+                                            
+                                            // ========== HTTP 전송 실패 시 Queue 재저장 ==========
+                                            witcomLog.c_write(
+                                                loggerName,
+                                                Level.ERROR,
+                                                String.format(
+                                                    "MO-TR 결과 전송 최종 실패 (rc=%d 회 시도 완료). QITEM을 Queue에 재저장합니다. msgId=%s",
+                                                    entity.rc,
+                                                    QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
+                                                ),
+                                                Thread.currentThread().getId()
+                                            )
+
+                                            // 원본 QITEM을 Queue에 재저장
+                                            val originalQItemForRequeue = gstQResultObj.qItem as? QITEM
+                                            if (originalQItemForRequeue != null) {
+                                                // 처음 GetAMsgFromSmsQ() 호출 시 사용한 queueNo 로 그대로 재저장
+                                                // (CP사로 전송이 모두 실패한 경우 동일 큐에서 재처리하기 위함)
+                                                val targetQueueNo = queueNo
+
+                                                witcomLog.c_write(
+                                                    loggerName,
+                                                    Level.INFO,
+                                                    String.format(
+                                                        "MO-TR 결과 Queue 재저장 시도: targetQueueNo=%d, ReturnQ_No=%d, msgId=%s",
+                                                        targetQueueNo,
+                                                        originalQItemForRequeue.ReturnQ_No,
+                                                        QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
+                                                    ),
+                                                    Thread.currentThread().getId()
+                                                )
+
+                                                // QITEM write 후 InsertIntoSmsQWithQNo 호출
+                                                originalQItemForRequeue.write()
+                                                val requeueResult = smsQLib.InsertIntoSmsQWithQNo(
+                                                    originalQItemForRequeue,
+                                                    targetQueueNo
+                                                )
+
+                                                if (requeueResult >= 0) {
+                                                    witcomLog.c_write(
+                                                        loggerName,
+                                                        Level.INFO,
+                                                        String.format(
+                                                            "MO-TR 결과 Queue 재저장 성공: result=%d, targetQueueNo=%d, msgId=%s",
+                                                            requeueResult,
+                                                            targetQueueNo,
+                                                            QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
+                                                        ),
+                                                        Thread.currentThread().getId()
+                                                    )
+                                                } else {
+                                                    witcomLog.c_write(
+                                                        loggerName,
+                                                        Level.ERROR,
+                                                        String.format(
+                                                            "MO-TR 결과 Queue 재저장 실패: result=%d, targetQueueNo=%d, msgId=%s",
+                                                            requeueResult,
+                                                            targetQueueNo,
+                                                            QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
+                                                        ),
+                                                        Thread.currentThread().getId()
+                                                    )
+                                                }
+                                            } else {
+                                                witcomLog.c_write(
+                                                    loggerName,
+                                                    Level.ERROR,
+                                                    String.format(
+                                                        "MO-TR 결과 Queue 재저장 불가: 원본 QITEM이 null입니다. msgId=%s",
+                                                        QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
+                                                    ),
+                                                    Thread.currentThread().getId()
+                                                )
+                                            }
+                                            // ========== Queue 재저장 처리 완료 ==========
                                         }
                                         
                                         // C 코드 LINE 1053: PrintHexa 호출 (로깅)

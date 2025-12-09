@@ -12,15 +12,9 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 
 @Component
 @RequiredArgsConstructor
@@ -33,71 +27,70 @@ public class LiveReloadCLibraryFile {
     private final Map<Integer, SmsQLib> preInitializedLibraries = new ConcurrentHashMap<>();
 
     public String rebuildCLibraryCopies(String originalLibPath, int threadCount) throws IOException {
-        File originalFile = new File(originalLibPath);
-
-        if (!originalFile.exists()) {
-            throw new IllegalArgumentException("Original .so file does not exist: " + originalLibPath);
+        // cLibraryFilePath 읽기 (절대 경로 기준)
+        String cLibraryFilePath = context.getEnvironment().getProperty("witcom.performance.cLibraryFilePath");
+        if (cLibraryFilePath == null || cLibraryFilePath.isEmpty()) {
+            throw new IllegalArgumentException("witcom.performance.cLibraryFilePath is not set");
         }
-
-        String parentDir = originalFile.getParent();
-        String fileName = originalFile.getName();
-        int dotIndex = fileName.lastIndexOf('.');
-
-        String baseName = (dotIndex != -1) ? fileName.substring(0, dotIndex) : fileName;
-        String extension = (dotIndex != -1) ? fileName.substring(dotIndex) : "";
-
-        // /SO 디렉토리 경로
-        Path soDirPath = Paths.get(parentDir, "SO_SEND");
-
-        // 기존 디렉토리 삭제 후 재생성
-        deleteDirectoryRecursively(soDirPath);
-        Files.createDirectories(soDirPath);
-
+        
+        // cLibraryFilePath를 절대 경로로 변환하여 원본 파일 확인
+        File originalFile = new File(cLibraryFilePath);
+        if (!originalFile.isAbsolute()) {
+            originalFile = originalFile.getAbsoluteFile();
+        }
+        
+        if (!originalFile.exists()) {
+            throw new IllegalArgumentException("Original .so file does not exist: " + originalFile.getAbsolutePath());
+        }
+        
         // 기존 초기화된 라이브러리 맵 클리어
         preInitializedLibraries.clear();
+        
+        // 원본 파일 정보 확인
+        log.info("Original library file: {} (exists: {}, readable: {}, size: {} bytes)", 
+            originalFile.getAbsolutePath(),
+            originalFile.exists(),
+            originalFile.canRead(),
+            originalFile.length());
 
-        // 새 복사본 생성 및 미리 초기화
-        for (int i = 0; i < threadCount; i++) {
-            String newFileName = baseName + i + extension;
-            Path newFilePath = soDirPath.resolve(newFileName);
-            Files.copy(originalFile.toPath(), newFilePath, StandardCopyOption.REPLACE_EXISTING);
+        // 🔹 원본 파일을 Native.load()로 직접 로드
+        try {
+            Map<String, Object> options = new HashMap<>();
+            options.put(Library.OPTION_OPEN_FLAGS, LibC.RTLD_LAZY | LibC.RTLD_LOCAL);
+            options.put(Library.OPTION_STRUCTURE_ALIGNMENT, 1);
+            options.put(Library.OPTION_STRING_ENCODING, "CP949");
 
-            log.info("Created: {}", newFilePath);
+            // 원본 파일 경로 직접 사용
+            String originalAbsolutePath = originalFile.getAbsolutePath();
+            log.info("Loading native library from original: {}", originalAbsolutePath);
+            
+            SmsQLib smsQLib = (SmsQLib) Native.load(originalAbsolutePath, SmsQLib.class, options);
+            log.info("Native.load() successful for: {}", originalAbsolutePath);
 
-            // 🔹 SO 파일 생성 후 즉시 Native.load 및 초기화
-            try {
-                Map<String, Object> options = new HashMap<>();
-                options.put(Library.OPTION_OPEN_FLAGS, LibC.RTLD_LAZY | LibC.RTLD_LOCAL);
-                options.put(Library.OPTION_STRUCTURE_ALIGNMENT, 1);
-                options.put(Library.OPTION_STRING_ENCODING, "CP949");
+            // 🔹 미리 초기화 수행 (한 번만)
+            String pLogName = String.format("GIPHTTPMO_P_%s",
+                    context.getEnvironment().getProperty("server.port")
+            );
+            smsQLib.LvDprintfInit(
+                    pLogName,
+                    SmsDef.DPRINTF_LOG_PERIOD_DAILY,
+                    3
+            );
 
-                SmsQLib smsQLib = (SmsQLib) Native.load(newFilePath.toString(), SmsQLib.class, options);
+            int initResult = smsQLib.InitQInfo();
+            log.info("🔹 InitQInfo() 결과: {}", initResult);
 
-                // 🔹 미리 초기화 수행 (P 로그 명칭 패턴 사용)
-                String pLogName = String.format("GIPHTTPMO_P_%s",
-                        context.getEnvironment().getProperty("server.port")
-                );
-                smsQLib.LvDprintfInit(
-                        pLogName,
-                        SmsDef.DPRINTF_LOG_PERIOD_DAILY,
-                        3
-                );
+            // 초기화된 라이브러리 인스턴스를 맵에 저장 (인덱스 0)
+            preInitializedLibraries.put(0, smsQLib);
 
-                int initResult = smsQLib.InitQInfo();
-                log.info("🔹[Thread-{}] InitQInfo() 결과: {}", i, initResult);
+            log.info("✅ SO 파일 초기화 완료: {}", originalAbsolutePath);
 
-                // 초기화된 라이브러리 인스턴스를 맵에 저장
-                preInitializedLibraries.put(i, smsQLib);
-
-                log.info("✅ [Thread-{}] SO 파일 생성 및 초기화 완료: {}", i, newFilePath);
-
-            } catch (Exception e) {
-                log.error("❌ [Thread-{}] SO 파일 초기화 실패: {}", i, e.getMessage(), e);
-                throw new RuntimeException("Failed to initialize SO file for thread " + i, e);
-            }
+        } catch (Exception e) {
+            log.error("❌ SO 파일 초기화 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to initialize SO file", e);
         }
 
-        log.info("총 {}개의 SO 파일 생성 및 초기화 완료", threadCount);
+        log.info("SO 파일 초기화 완료 (단일 공유 인스턴스)");
         return "rebuildCLibraryCopies() file batch success with pre-initialization";
     }
 
@@ -116,16 +109,4 @@ public class LiveReloadCLibraryFile {
         return library;
     }
 
-    private void deleteDirectoryRecursively(Path dirPath) throws IOException {
-        if (!Files.exists(dirPath)) return;
-
-        Files.walk(dirPath)
-                .sorted(Comparator.reverseOrder()) // 파일 → 하위폴더 → 디렉토리 순으로 삭제
-                .map(Path::toFile)
-                .forEach(file -> {
-                    if (!file.delete()) {
-                        System.err.println("Failed to delete: " + file.getAbsolutePath());
-                    }
-                });
-    }
 }

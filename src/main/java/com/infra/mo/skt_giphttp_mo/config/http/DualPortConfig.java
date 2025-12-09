@@ -37,6 +37,9 @@ public class DualPortConfig {
     @Value("${server.port}")
     private int serverPort;  // 이 포트는 HTTPS로 사용 (필수 파라미터)
 
+    @Value("${server.ssl.enabled:false}")
+    private boolean sslEnabled;
+
     @Value("${server.ssl.key-store:classpath:ssl/keystore.p12}")
     private String keyStorePath;
 
