@@ -1,80 +1,19 @@
-# curl -X POST "http://localhost:8080/sms/receiveTR"
-#  -H "Content-Type: application/json"
-#  -d '{
-#    "msgVerId": 0,
-#    "encFlag": 0,
-#    "data": {
-#      "srcCID": "010",
-#      "srcCallNo": "41941115",
-#      "srcAddrRsv": 0,
-#      "destCID": "1571707589",
-#      "destCallNo": "0",
-#      "destAddrRsv": 0,
-#      "msgCode": 31,
-#      "msgSubCode": 2,
-#      "bodyDataLen": 14,
-#      "msgSeqNo": 0,
-#      "termtype": "0",
-#      "dataType": 0,
-#      "dataEncoding": 949,
-#      "concatenateflag": "0",
-#      "concatenateInfo": "0",
-#      "rsv4Protocol": [0,0,0,0,0,0,0,0,0,0,11,1],
-#      "teleServiceID": 0,
-#      "msgCodeRsv": 0,
-#      "reserved2": [0,0],
-#      "time": "2511131506",
-#      "ackResult": 0,
-#      "result": 0
-#    }
-#  }'
-POST http://121.124.125.212:7500/sms/mo-ack
+POST http://121.124.125.212:7500/sms/mo-report
 Content-Type: application/json
 
 {
-  "msgVerId": 5,
+  "msgVerId": 0,
   "encFlag": 0,
   "data": {
-    "srcCID": "010",
-    "srcCallNo": "41941115",
-    "srcAddrRsv": 0,
-    "destCID": "1571707589",
-    "destCallNo": "0",
-    "destAddrRsv": 0,
-    "msgCode": 12,
-    "msgSubCode": 10,
-    "bodyDataLen": 4,
-    "msgSeqNo": 0,
-    "termtype": "0",
-    "dataType": 0,
-    "dataEncoding": 949,
-    "concatenateflag": "0",
-    "concatenateInfo": "0",
-    "rsv4Protocol": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      11,
-      1
-    ],
-    "teleServiceID": 0,
-    "msgCodeRsv": 0,
-    "reserved2": [
-      0,
-      0
-    ],
-    "time": "2511131506",
-    "ackResult": 0,
-    "result": 0
+    "srcCallNo": "48004113",
+    "destCID": "1570501699",
+    "msgCode": 11,
+    "msgSubCode": 9,
+    "msgId": "3B6A962A",
+    "result": 0,
+    "msgStatus" : 2
   }
 }
-
 ###
+/*MsgStatus (int) - 2:DELIVERED, 3:EXPIRED, 5:UNDELIVERED 등*/
 

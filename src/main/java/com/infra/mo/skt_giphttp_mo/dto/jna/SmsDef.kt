@@ -313,6 +313,9 @@ object SmsDef {
     const val CALL_TYPE_WEBTOPHONE = 3
 
     const val MSG_DELEVER_OK = 2
+    const val SEND_OK = 2  // VBILL_MO용
+    const val SEND_FAIL = -1  // VBILL_MO용
+    const val NOTI_TIMEOUT = 3  // VBILL_MO용 (분 단위)
 
     const val IOND_START = 65527    /* 단말기->SMS Server:단말기 최초 접속 */
 
@@ -1023,6 +1026,15 @@ object SmsDef {
 
     const val ERRORID_CP_MO_SUCCESS = 15
 
+    const val ERRORID_MO_SUCCESS = 35
+
+    // MO-TR 관련 통계/에러 코드 (C inc/StatDef.h, inc/TraceDef.h 기준)
+    const val ERRORID_CP_MO_TR_FAIL = 28            /* MO-TR 과금/처리 실패 */
+    const val ERRORID_CP_MO_TR_SUCCESS = 27         /* MO-TR 과금 성공 */
+    const val ST_GIPEVENT_MOTR_OK = 66              /* 성공(MO TR) */
+    const val ST_Q_INSERT_FAIL_VBILLMO = -316       /* 큐 입력 오류(VBILLMO) */
+
+
     const val GIPEVENT_BLOCK_NOTI_CID =	"3333333310"
     const val GIPEVENT_BLOCK_NOTI_CALLBACK =	"114"
 
@@ -1035,8 +1047,12 @@ object SmsDef {
     const val ST_GIPEVENT_INSQ_BLOCKNOTI =88
 
     const val MODULEID_GIPEVENT_C = 31
+    const val MODULEID_VBILLMO = 39  // VBILL MO 모듈 ID
+    const val MODULEID_SMSMOR = 13  // SMSMOR 모듈 ID
     const val SERVICEID_GIPEVENT = 45
+    const val SERVICEID_GIPM = 41  // GIPM 서비스 ID
     const val ERRORID_CP_MO_FAIL = 16
+    const val ERRORID_CENTER_MO_SUCCESS = 35  // Center MO 성공
     const val ST_Q_INSERT_FAIL_POLL = -299
 
     const val MODULEID_GIPALL_C = 27
@@ -1054,13 +1070,22 @@ object SmsDef {
     const val ST_GIPALL_MTTR_SEND_OK = 81            /*전송(MTTR)*//*MsgStatus*/
     
     // ProcessSMRes 관련 상수
+    // C 오리지널 기준(inc/TraceDef.h):
+    // - ST_GIPEVENT_MO_OK = 56 (성공(MO))
+    // - ST_GIPEVENT_MORS_OK = 61 (성공(MO RES))
+    // - ST_GIPEVENT_MTTR_OK = 71 (성공(MT TR))
+    // - ST_GIPEVENT_MOACK_BILL_OK = 80 (과금성공(MOACK))
+    // - ST_DB_NO_DATA_GIPMOCALLINFO = -125
+    // - ST_GIP_MORS_FAIL = -154
+    // - ST_GIP_INVALID_CID = -144
     const val ERRORID_CP_MO_NODATA = 25              /* MO 데이터 없음 */
-    const val ST_GIPEVENT_MORS_OK = 89               /* MO 응답 성공 */
-    const val ST_GIP_MORS_FAIL = -156                /* MO 응답 실패 */
-    const val ST_GIPEVENT_MTTR_OK = 90               /* MT TR 성공 */
-    const val ST_DB_NO_DATA_GIPMOCALLINFO = -157     /* DB 데이터 없음 */
-    const val ST_GIPEVENT_MOACK_BILL_OK = 91         /* MO ACK 과금 성공 */
-    const val ST_GIP_INVALID_CID = -158              /* Invalid CID */
+    const val ST_GIPEVENT_MO_OK = 56                 /* 성공(MO) */
+    const val ST_GIPEVENT_MORS_OK = 61               /* 성공 (MO RES) */
+    const val ST_GIP_MORS_FAIL = -154                /* MO RES 실패 */
+    const val ST_GIPEVENT_MTTR_OK = 71               /* 성공 (MT TR) */
+    const val ST_DB_NO_DATA_GIPMOCALLINFO = -125     /* DB NO DATA(GIPMOCALLINFO) */
+    const val ST_GIPEVENT_MOACK_BILL_OK = 80         /* 과금성공(MOACK) */
+    const val ST_GIP_INVALID_CID = -144              /* Invalid CID */
 
     const val SM_STATE_EXPIRED = 3                        /* validity period expired */
 

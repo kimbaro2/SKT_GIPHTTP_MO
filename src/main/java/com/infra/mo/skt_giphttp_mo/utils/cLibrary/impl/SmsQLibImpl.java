@@ -46,6 +46,11 @@ public class SmsQLibImpl implements SmsQLib {
     }
 
     @Override
+    public int bprintf(String strFormat, Object... args) {
+        return getINSTANCE().bprintf(strFormat, args);
+    }
+
+    @Override
     public void CloseFDForLogAsync() {
         getINSTANCE().CloseFDForLogAsync();
     }
@@ -109,8 +114,7 @@ public class SmsQLibImpl implements SmsQLib {
 
     @Override
     public int GetAMsgFromSmsQ(int nQNo, QITEM ptrQItem) {
-        getINSTANCE().GetAMsgFromSmsQ(nQNo, ptrQItem);
-        return 0;
+        return getINSTANCE().GetAMsgFromSmsQ(nQNo, ptrQItem);
     }
 
     @Override

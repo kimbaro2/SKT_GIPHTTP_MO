@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
 
 /**
  * MOCALLINFO 테이블 Repository
@@ -27,9 +26,14 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
      *        ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME
      * FROM MOCALLINFO
      * WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ?
+     * 
+     * 주의: 동일한 조합이 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
+     * Altibase는 서브쿼리를 사용하여 ORDER BY 후 ROWNUM 적용
+     * ROWNUM은 서브쿼리 내부에서 ORDER BY 전에 평가되므로, 외부 서브쿼리로 감싸서 처리
      */
-    @Query("SELECT m FROM MOCallInfoEntity m WHERE m.srcCallNo = :srcCallNo AND m.destCId = :destCId AND m.msgId = :msgId")
-    Optional<MOCallInfoEntity> findBySrcCallNoAndDestCIdAndMsgId(
+    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
+            nativeQuery = true)
+    MOCallInfoEntity findBySrcCallNoAndDestCIdAndMsgId(
             @Param("srcCallNo") String srcCallNo,
             @Param("destCId") String destCId,
             @Param("msgId") String msgId
@@ -58,6 +62,23 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
             nativeQuery = true)
     int insertFromExisting(
             @Param("ackMsgId") String ackMsgId,
+            @Param("srcCallNo") String srcCallNo,
+            @Param("destCId") String destCId,
+            @Param("msgId") String msgId
+    );
+    
+    /**
+     * UpdateGIPMOCallInfo 함수 - 원본 레코드 삭제
+     * 
+     * C 코드: GIDBLib.c LINE 3884-3899
+     * DELETE FROM MOCALLINFO
+     * WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId
+     */
+    @Modifying
+    @Query(value = "DELETE FROM SMS.MOCALLINFO " +
+            "WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId",
+            nativeQuery = true)
+    int deleteBySrcCallNoAndDestCIdAndMsgId(
             @Param("srcCallNo") String srcCallNo,
             @Param("destCId") String destCId,
             @Param("msgId") String msgId

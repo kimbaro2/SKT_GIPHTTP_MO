@@ -18,14 +18,13 @@ public class Rsv4ProtocolItem {
     // Jackson이 int를 직접 char로 deserialize할 수 없으므로 Integer로 받고 변환
     private Integer value;
     
-    // JSON 직렬화 시 char로 변환
+    // JSON 직렬화 시 Integer로 반환
     @JsonValue
-    public char getData() {
+    public Integer getData() {
         if (value == null) {
             return 0;
         }
-        // int 값을 char로 안전하게 변환
-        return (char) (value & 0xFFFF);
+        return value;
     }
     
     // 기본 생성자와 함께 사용할 수 있도록 Integer를 받는 생성자 추가

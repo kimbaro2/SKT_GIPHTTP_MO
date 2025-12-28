@@ -49,13 +49,42 @@ public class WitcomLog {
     // WorkerThread 번호를 매개변수로 받는 메서드
     public void c_write(String loggerName, Level logLevel, String message, long workerThreadId) {
         GipHttpAccessEntity e = gipHttpAccessMap.get(loggerName);
-        if (e == null) return;
-
+        
+        // loggerName에서 직접 찾지 못한 경우, loggerName에서 cid를 추출해서 검색
+        if (e == null && loggerName != null && loggerName.contains("-")) {
+            // loggerName 형식: "${cid}-${ipAddr}-${portNo}"
+            String cid = loggerName.substring(0, loggerName.indexOf("-"));
+            // gipHttpAccessMap의 모든 엔티티를 순회하면서 cid로 매칭
+            for (GipHttpAccessEntity entity : gipHttpAccessMap.values()) {
+                if (entity != null && cid.equals(entity.getCid())) {
+                    e = entity;
+                    break;
+                }
+            }
+        }
+        
+        // 엔티티를 찾지 못한 경우: GIPHTTP_MO_ACCESS에 등록된 IP, 포트 조합이 일치하지 않음
+        if (e == null) {
+            System.err.println("ERROR: loggerName not found in gipHttpAccessMap: " + loggerName + 
+                " (GIPHTTP_MO_ACCESS 테이블에 등록된 IP, 포트 조합이 일치하지 않습니다)");
+            // 에러 로그를 p_write로 기록하고 조기 반환
+            try {
+                p_write(Level.ERROR, String.format(
+                    "c_write 실패: loggerName(%s)을 gipHttpAccessMap에서 찾을 수 없습니다. GIPHTTP_MO_ACCESS 테이블에 등록된 IP, 포트 조합을 확인하세요.",
+                    loggerName
+                ));
+            } catch (Exception ex) {
+                System.err.println("Failed to write error log: " + ex.getMessage());
+            }
+            return; // 조기 반환 - 로그 파일 생성하지 않음
+        }
+        
+        // 엔티티를 찾은 경우 정상 처리
         int logGradeFlag = e.getLogFlag();
-        THREAD_LOG_GRADE.set(logGradeFlag);
-
         NumberFormat formatter = new DecimalFormat("0000");
         String logNo = formatter.format(Long.valueOf(e.getLogNo()));
+        
+        THREAD_LOG_GRADE.set(logGradeFlag);
 
         // 전달받은 WorkerThread 번호 사용
         String threadNo = String.valueOf(workerThreadId);

@@ -83,9 +83,13 @@ public class ResponseTR {
         
         // Body 필드
         // SM_REQ_SIMPLE (10) 케이스: ACK 결과 코드
-        public Integer ackResult = 0; // GI_RES_NO_ERR = 0 (성공), 그 외는 실패
+        public Integer ackResult; // GI_RES_NO_ERR = 0 (성공), 그 외는 실패
         
         // SM_REQ_TRANS_RESULT (9) 케이스: MO-TR ACK 결과
-        public Integer result = 0; // Result (int) - 0이면 성공, 0이 아니면 오류 종류
+        public Integer result; // Result (int) - 0이면 성공, 0이 아니면 오류 종류
+        
+        // SM_REQ_TRANS_RESULT (9) 케이스: MO-TR 상태 및 메시지 ID
+        public Integer msgStatus = 0; // MsgStatus (int) - 2:DELIVERED, 3:EXPIRED, 5:UNDELIVERED 등
+        public String msgId; // MsgId (String) - 메시지 ID
     }
 }

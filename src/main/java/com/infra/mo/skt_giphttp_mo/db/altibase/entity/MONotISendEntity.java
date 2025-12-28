@@ -1,33 +1,32 @@
 package com.infra.mo.skt_giphttp_mo.db.altibase.entity;
 
-import com.infra.mo.skt_giphttp_mo.db.altibase.entity.idClass.MOCallInfoId;
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.idClass.MONotISendId;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicUpdate;
 
 import javax.persistence.*;
+import java.util.Date;
 
 /**
- * MOCALLINFO 테이블 Entity
+ * MO_NOTISEND 테이블 Entity
  * 
- * 실제 테이블 Primary Key: MSGID, SRCCID, DESTCID
  * C 코드 참고: GIDBLib.c
- * - InsertGIPMOCallInfo: LINE 2228-2231 (INSERT INTO MOCALLINFO)
- * - SelectGIPMOCallInfo: LINE 2607, 2623 (WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ?)
- * - UpdateGIPMOCallInfo: LINE 3458 (WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ?)
+ * - InsertMO_NOTISEND: LINE 4054-4070 (INSERT INTO MO_NOTISEND)
+ * - UpdateMO_NOTISEND: LINE 4418-4425 (INSERT INTO ... SELECT FROM MO_NOTISEND)
+ * - DbReadMO_NOTISEND: LINE 2274-2280 (SELECT FROM MO_NOTISEND WHERE MSGID = ? AND DESTCID = ? AND SRCCID = ? AND SERVERTYPE = 'H')
  * 
- * 주의: C 코드는 WHERE 조건으로 SRCCALLNO, DESTCID, MSGID를 사용하지만,
- * 실제 테이블의 Primary Key는 MSGID, SRCCID, DESTCID입니다.
+ * Primary Key: MSGID, SRCCID, DESTCID, SERVERTYPE (추정)
  */
 @Entity
-@Table(name = "MOCALLINFO", schema = "SMS")
-@IdClass(MOCallInfoId.class)
+@Table(name = "MO_NOTISEND", schema = "SMS")
+@IdClass(MONotISendId.class)
 @DynamicUpdate
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MOCallInfoEntity {
+public class MONotISendEntity {
     
     @Id
     @Column(name = "MSGID", length = 10, nullable = false)
@@ -41,27 +40,38 @@ public class MOCallInfoEntity {
     @Column(name = "DESTCID", length = 32, nullable = false)
     public String destCId;
     
-    // 일반 컬럼 (WHERE 조건에 사용되지만 PK 아님)
+    @Id
+    @Column(name = "SERVERTYPE", length = 1, nullable = false)
+    public String serverType;  // 'V' 또는 'H'
+    
+    @Column(name = "NODE", length = 20)
+    public String node;
+    
+    @Column(name = "MOSUBTIME")
+    @Temporal(TemporalType.TIMESTAMP)
+    public Date moSubTime;  // MO 제출 시간
+    
     @Column(name = "SRCCALLNO", length = 11)
     public String srcCallNo;
     
     @Column(name = "DESTCALLNO", length = 11)
     public String destCallNo;
     
-    @Column(name = "MOSUBTIME", length = 16)
-    public String moSubTime;  // MO 제출 시간
+    @Column(name = "EXPIRETIME")
+    @Temporal(TemporalType.TIMESTAMP)
+    public Date expireTime;  // 만료 시간
     
-    @Column(name = "MSGLEN", columnDefinition = "NUMERIC(3)")
-    public Integer msgLen;  // 메시지 길이
+    @Column(name = "SEGMENT", columnDefinition = "NUMERIC(10)")
+    public Integer segment;  // 세그먼트 정보
     
-    @Column(name = "ROAMINGID", columnDefinition = "NUMERIC(38)")
-    public Long roamingId;  // 로밍 ID (NUMERIC(38)이므로 Long 타입)
+    @Column(name = "TID", length = 6)
+    public String tid;  // TID
     
     @Column(name = "CB", length = 32)
     public String cb;  // Callback
     
-    @Column(name = "ROAMPMN", length = 8)
-    public String roamPMN;  // Roaming PMN
+    @Column(name = "ESMCLASS", columnDefinition = "NUMERIC(3)")
+    public Integer esmClass;  // ESM Class
     
     @Column(name = "W_ZONE", length = 1)
     public String wZone;  // W-Zone
@@ -75,8 +85,8 @@ public class MOCallInfoEntity {
     @Column(name = "DEST_MVNO_INFO", length = 26)
     public String destMvnoInfo;  // 목적지 MVNO 정보
     
-    @Column(name = "RCS", length = 15)
-    public String rcs;  // RCS 태그
+    @Column(name = "MSGLEN", columnDefinition = "NUMERIC(3)")
+    public Integer msgLen;  // 메시지 길이
     
     @Column(name = "DCS_TYPE", columnDefinition = "NUMERIC(3)")
     public Integer dcsType;  // DCS Type
@@ -86,8 +96,5 @@ public class MOCallInfoEntity {
     
     @Column(name = "MORECVTIME", length = 16)
     public String moRecvTime;  // MO 수신 시간 (2020 1Q 추가)
-    
-    @Column(name = "VIRTUAL_NUM", length = 20)
-    public String virtualNum;  // Virtual Number (AI Survey 등에서 사용)
 }
 

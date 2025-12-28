@@ -90,7 +90,7 @@ open class QITEM : Structure() {
     @JvmField var szFWD_NO2 = ByteArray(21)
     @JvmField var ReturnQ_No: Int = 0
 
-    @JvmField var szOSFI = ByteArray(OSFI_SIZE)
+    @JvmField var  szOSFI = ByteArray(OSFI_SIZE)
     @JvmField var szOrgCallingNumber = ByteArray(21)
     @JvmField var unMsgAddNum: Int = 0
 

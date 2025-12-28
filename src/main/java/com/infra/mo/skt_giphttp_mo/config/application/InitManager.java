@@ -1,9 +1,6 @@
 package com.infra.mo.skt_giphttp_mo.config.application;
 
-import com.infra.mo.skt_giphttp_mo.config.threadPool.CfgEtcMap_ThreadPool;
-import com.infra.mo.skt_giphttp_mo.config.threadPool.GipHttpMoAccessList_ThreadPool;
-import com.infra.mo.skt_giphttp_mo.config.threadPool.SENDThreadPool;
-import com.infra.mo.skt_giphttp_mo.config.threadPool.SpcodeMap_ThreadPool;
+import com.infra.mo.skt_giphttp_mo.config.threadPool.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -34,10 +31,12 @@ public class InitManager {
         log.info("setup performance settings -> [{}]", performanceSettings.getCLibraryFilePath());
         log.info("setup performance settings -> [{}]", performanceSettings.getPer());
 
-        SENDThreadPool sendThreadPool = applicationContext.getBean("SENDThreadPool", SENDThreadPool.class);
+        MOThreadPool moThreadPool = applicationContext.getBean("MOThreadPool", MOThreadPool.class);
+
         CfgEtcMap_ThreadPool cfgEtcMap_threadPool = applicationContext.getBean("CfgEtcMap_ThreadPool", CfgEtcMap_ThreadPool.class);
         GipHttpMoAccessList_ThreadPool gipHttpMoAccessList_threadPool = applicationContext.getBean("GipHttpMoAccessList_ThreadPool", GipHttpMoAccessList_ThreadPool.class);
         SpcodeMap_ThreadPool spcodeMap_threadPool = applicationContext.getBean("SpcodeMap_ThreadPool", SpcodeMap_ThreadPool.class);
+
 
         if (performanceSettings.getLoop()) {
             Integer cpuCoreCount = Runtime.getRuntime().availableProcessors();
@@ -57,7 +56,8 @@ public class InitManager {
                 gipHttpMoAccessList_threadPool.executeEventHandlerTask(1);
                 spcodeMap_threadPool.executeEventHandlerTask(1); //CFG_SPCODE 맵 재구성 프로세스
                 log.info(liveReloadCLibraryFile.rebuildCLibraryCopies(performanceSettings.getCLibraryFilePath(), libraryThreadCount)); //단일 공유 인스턴스로 so 파일 구성
-                sendThreadPool.executeEventHandlerTask(threadCount80.intValue()); //SMSS 큐 전달 프로세스
+//                sendThreadPool.executeEventHandlerTask(threadCount80.intValue()); //SMSS 큐 전달 프로세스
+                moThreadPool.executeEventHandlerTask(threadCount80.intValue()); //SMSS 큐 전달 프로세스
             } catch (IOException e) {
                 log.info("⚠️ error! File Not Found Exception");
             }

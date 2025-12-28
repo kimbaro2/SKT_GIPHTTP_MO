@@ -99,6 +99,9 @@ public class ResponseMO {
 
         @NotNull
         public Byte orgMsgTotalLen = 0;          // 원본 메시지 전체 길이
+
+        @NotBlank
+        public String msgId = "";                // MsgId (String) - 메시지 ID (MOCALLINFO 저장 시 사용된 msgId)
     }
 }
 

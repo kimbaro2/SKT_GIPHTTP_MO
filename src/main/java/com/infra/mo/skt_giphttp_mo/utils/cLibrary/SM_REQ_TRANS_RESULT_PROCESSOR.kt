@@ -82,7 +82,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                         ptrQItem.msgStatus,
                         ptrTransRes.ucMsgStatus
                     )
-                    witcomLog.c_write(loggerName, Level.INFO, formatted)
+                    witcomLog.c_write(loggerName, Level.INFO, formatted, Thread.currentThread().getId())
                 } else {
                     ptrTransRes.ucMsgStatus = 2;
 //                    println("[NORMAL] TRANS_RESULT_CHANGE : SourceCID(${ptrQItem.srcCid}) SourceCallNo(${ptrQItem.srcMinNo}) " +
@@ -98,7 +98,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                         ptrQItem.msgStatus,
                         ptrTransRes.ucMsgStatus
                     )
-                    witcomLog.c_write(loggerName, Level.INFO, formatted)
+                    witcomLog.c_write(loggerName, Level.INFO, formatted, Thread.currentThread().getId())
 
                     ptrQItem.msgStatus = 2
                 }
@@ -115,7 +115,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                     ptrQItem.msgStatus,
                     ptrTransRes.ucMsgStatus
                 )
-                witcomLog.c_write(loggerName, Level.INFO, formatted)
+                witcomLog.c_write(loggerName, Level.INFO, formatted, Thread.currentThread().getId())
             }
 
             else -> {
@@ -131,7 +131,7 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
                     ptrQItem.msgStatus,
                     ptrTransRes.ucMsgStatus
                 )
-                witcomLog.c_write(loggerName, Level.INFO, formatted)
+                witcomLog.c_write(loggerName, Level.INFO, formatted, Thread.currentThread().getId())
             }
         }
         ptrTransRes.ucGSMErrCode = ptrQItem.gsmErrCode;

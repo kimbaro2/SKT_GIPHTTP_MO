@@ -67,8 +67,8 @@ open class GipHttpMoAccessList_ThreadPool(
                             log.warn("🔹[Worker-$index] Spring 컨텍스트가 비활성화됨 - DB 접근 스킵, 계속 실행: ${Thread.currentThread().name}")
                         } else {
                             // 컨텍스트가 활성화되어 있으면 DB 접근
-                            // 일반 쿼리 사용 (List 반환)
-                            val gipHttpMoAccessToEntityList = gipHttpMoAccessRepository.findAllEntity()
+                            // MO 메시지 전송용이므로 MSG_TYPE='1' (MO)만 조회
+                            val gipHttpMoAccessToEntityList = gipHttpMoAccessRepository.findAllByMsgType("1")
 //                            val gipHttpAccessToEntityList = gipHttpAccessRepository.findAllGroupByCid()
                             if (gipHttpMoAccessToEntityList.isPresent) {
                                 gipHttpMoAccessList.clear()

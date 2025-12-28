@@ -55,9 +55,7 @@ public interface SmsQLib extends Library {
 
     int SendW2P(QITEM ptrQItem, int[] nQueueNo);
 
-
-
-
+    int bprintf(String strFormat, Object... args);
 
 }
 

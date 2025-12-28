@@ -1,0 +1,448 @@
+# ESMClass 처리 규칙 (20, 21, 90, 91)
+
+## 1. ESMClass 정의
+
+```kotlin
+// SmsDef.kt
+const val NOTI_PLUS_NORMAL_MO = 20    // 안심문자 일반
+const val NOTI_PLUS_PORTED_MO = 21    // 안심문자 번호이동
+const val NOTI_NORMAL_MO = 90         // 등기문자 일반
+const val NOTI_PORTED_MO = 91         // 등기문자 번호이동
+```
+
+## 2. MO 전송 시점 처리 규칙
+
+### 규칙: ESMClass 20, 21, 90, 91은 모두 MO_NOTISEND 테이블에 저장해야 함
+
+**현재 잘못된 구현:**
+```kotlin
+// MOThreadPool.kt:464-527
+if (gBILLTYPE != '1' && isNotiPlusType) {  // ESMClass 20, 21만
+    insertMO_NOTISEND(...)  // MO_NOTISEND에 저장
+} else {
+    insertGIPMOCallInfo(...)  // ESMClass 90, 91도 여기로 처리됨 (잘못됨)
+}
+```
+
+**올바른 구현:**
+```kotlin
+val isNotiPlusType = gESMCLASS == NOTI_PLUS_NORMAL_MO || gESMCLASS == NOTI_PLUS_PORTED_MO  // 20, 21
+val isNotiType = gESMCLASS == NOTI_NORMAL_MO || gESMCLASS == NOTI_PORTED_MO  // 90, 91
+
+if (gBILLTYPE != '1' && (isNotiPlusType || isNotiType)) {
+    // ESMClass 20, 21, 90, 91 모두 MO_NOTISEND에 저장
+    insertMO_NOTISEND(...)  // SERVERTYPE='V'로 INSERT
+} else if (isRelayMo) {
+    insertRelayMOCallInfo(...)
+} else {
+    // 그 외 ESMClass (예: 1, 57 등)
+    insertGIPMOCallInfo(...)  // MOCALLINFO에 저장
+}
+```
+
+**핵심 규칙:**
+- ESMClass 20, 21, 90, 91: `MO_NOTISEND` 테이블에 `SERVERTYPE='V'`로 INSERT
+- 그 외 ESMClass: `MOCALLINFO` 테이블에 INSERT
+
+## 3. TR 결과 수신 시점 처리 규칙
+
+### 규칙: ESMClass 20, 21, 90, 91은 모두 updateMO_NOTISEND() 호출해야 함
+
+**현재 잘못된 구현:**
+```kotlin
+// SmsResServiceImpl.kt:936-972
+val isNotiPlusType = rsv4Protocol11 == NOTI_PLUS_NORMAL_MO || 
+                     rsv4Protocol11 == NOTI_PLUS_PORTED_MO  // 20, 21만 체크
+if (isNotiPlusType) {
+    updateMO_NOTISEND(request)  // ESMClass 20, 21만
+} else {
+    updateGIPMOCallInfo(request)  // ESMClass 90, 91도 여기로 처리됨 (잘못됨)
+}
+```
+
+**올바른 구현:**
+```kotlin
+val rsv4Protocol11 = request.data.rsv4Protocol?.getOrNull(11)?.data ?: 0
+val isNotiPlusType = rsv4Protocol11 == NOTI_PLUS_NORMAL_MO || 
+                     rsv4Protocol11 == NOTI_PLUS_PORTED_MO  // 20, 21
+val isNotiType = rsv4Protocol11 == NOTI_NORMAL_MO || 
+                 rsv4Protocol11 == NOTI_PORTED_MO  // 90, 91
+
+if (isNotiPlusType || isNotiType) {
+    // ESMClass 20, 21, 90, 91 모두 updateMO_NOTISEND 호출
+    updateMO_NOTISEND(request)
+} else {
+    // 그 외 ESMClass
+    updateGIPMOCallInfo(request)
+}
+```
+
+**핵심 규칙:**
+- ESMClass 20, 21, 90, 91: `updateMO_NOTISEND()` 호출
+- 그 외 ESMClass: `updateGIPMOCallInfo()` 호출
+
+## 4. SERVERTYPE 처리 규칙
+
+### 규칙: C 코드는 SERVERTYPE을 그대로 복사함
+
+**C 코드 동작 (GIDBLib.c LINE 4421):**
+```c
+"SELECT NODE, SERVERTYPE, '%s' AS MSGID, ..."
+"  FROM MO_NOTISEND "
+" WHERE ... AND SERVERTYPE = 'V'"
+```
+
+**핵심 규칙:**
+- `SERVERTYPE='V'`에서 SELECT하면 새 레코드도 `SERVERTYPE='V'`가 됨
+- C 코드는 `SERVERTYPE`을 그대로 복사하며, `'H'`로 변경하지 않음
+- `SERVERTYPE='V'`는 VSMSS 서버, `SERVERTYPE='H'`는 HSMSS 서버를 의미
+- HBILL과는 직접 관련 없음 (HBILL은 `billType='1'`로 구분)
+
+**Java/Kotlin 구현:**
+```sql
+-- MONotISendRepository.java:48-52
+INSERT INTO SMS.MO_NOTISEND (..., SERVERTYPE, ...)
+SELECT ..., SERVERTYPE, ...  -- SERVERTYPE을 그대로 복사 (C 코드와 동일)
+FROM SMS.MO_NOTISEND
+WHERE ... AND SERVERTYPE = 'V'
+```
+
+**중요:**
+- `updateMO_NOTISEND()`는 `SERVERTYPE='V'`에서 SELECT하여 `SERVERTYPE='V'`로 새 레코드 생성
+- `SERVERTYPE='H'`로 변경하는 로직은 없음
+- VBILL_MO의 `SelectTRMO_NOTISEND`는 `SERVERTYPE='V'`로 조회함
+
+## 5. updateMO_NOTISEND() DELETE 규칙
+
+### 규칙: INSERT 후 원본 레코드(SERVERTYPE='V') 삭제 필수
+
+**현재 잘못된 구현:**
+```kotlin
+// SmsResServiceImpl.kt:1427-1433
+val result = moNotISendRepository.insertFromExisting(...)  // INSERT만 수행
+// DELETE 로직 없음!
+```
+
+**올바른 구현:**
+```kotlin
+// 1. SERVERTYPE='V'에서 SELECT하여 SERVERTYPE='V'로 새 레코드 생성 (MSGID = ackMsgId)
+val result = moNotISendRepository.insertFromExisting(ackMsgId, srcCallNo, destCId, msgId)
+
+if (result > 0) {
+    // 2. 원본 레코드(SERVERTYPE='V', MSGID = 원본 msgId) 삭제
+    moNotISendRepository.deleteBySrcCallNoAndDestCIdAndMsgIdAndServerType(
+        srcCallNo, destCId, msgId, "V"
+    )
+}
+```
+
+**핵심 규칙:**
+- `updateMO_NOTISEND()`는 `updateGIPMOCallInfo()`와 동일하게 INSERT 후 DELETE 수행
+- 원본 레코드(`SERVERTYPE='V'`, 원본 `MSGID`)는 반드시 삭제해야 함
+- 새 레코드는 `MSGID = ackMsgId`로 생성됨
+
+## 6. 과금 처리 후 ESM 분기 처리 규칙
+
+### 규칙: processMOBilling() 완료 후 ESMClass별로 DB 삭제 + 메시지 전송/라우팅 수행
+
+**현재 미구현:**
+```kotlin
+// SmsResServiceImpl.kt:992
+processMOBilling(qItem, request, gipHttpMoAccess, smsQLib)
+// 이후 ESM 분기 처리 없음!
+```
+
+**올바른 구현:**
+```kotlin
+// 1. 과금 처리
+processMOBilling(qItem, request, gipHttpMoAccess, smsQLib)
+
+// 2. ESMClass별 분기 처리
+val rsv4Protocol11 = request.data.rsv4Protocol?.getOrNull(11)?.data ?: 0
+
+when {
+    // ESMClass 90, 91: 등기문자
+    rsv4Protocol11 == NOTI_NORMAL_MO || rsv4Protocol11 == NOTI_PORTED_MO -> {
+        // DB 삭제: MO_NOTISEND에서 SERVERTYPE='V', MSGID=msgId 레코드 삭제
+        dbDelMO_NOTISEND(request)
+        // 메시지 전송: 등기문자 전송
+        mt_NOTISending(qItem, request)
+    }
+    // ESMClass 20, 21: 안심문자
+    rsv4Protocol11 == NOTI_PLUS_NORMAL_MO || rsv4Protocol11 == NOTI_PLUS_PORTED_MO -> {
+        // DB 삭제: MO_NOTISEND에서 SERVERTYPE='V', MSGID=msgId 레코드 삭제
+        dbDelMO_NOTISEND(request)
+        // 메시지 전송: 안심문자 전송
+        mt_NOTI_PLUS_Sending(qItem, request)
+    }
+    // 그 외 ESMClass
+    else -> {
+        // DB 삭제: MOCALLINFO에서 레코드 삭제
+        dbDelMOCallInfo(request)
+        // 메시지 라우팅: PCS로 라우팅
+        routeTRMsg2PCS(qItem, request)
+    }
+}
+```
+
+**핵심 규칙:**
+- ESMClass 90/91: `DBDELMO_NOTISEND` + `MT_NOTISending`
+- ESMClass 20/21: `DBDELMO_NOTISEND` + `MT_NOTI_PLUS_Sending`
+- 그 외: `DBDELMOCallInfo` + `RouteTRMsg2PCS`
+
+## 7. 미과금 대상 MOCALLINFO 처리 규칙
+
+### 규칙: MOCALLINFO 업데이트는 과금 처리와 독립적으로 먼저 수행됨
+
+**TR 결과 수신 시점 처리 순서:**
+```kotlin
+// SmsResServiceImpl.kt:927-1010
+// 1. HBILL 체크 (가장 먼저)
+if (gBILLTYPE == '1') {
+    return  // MOCALLINFO 업데이트 안 함, 즉시 종료
+}
+
+// 2. MOCALLINFO/MO_NOTISEND 업데이트 (과금 처리 전에 먼저 수행)
+if (isNotiPlusType || isNotiType) {
+    updateMO_NOTISEND(request)  // ESMClass 20, 21, 90, 91
+} else {
+    updateGIPMOCallInfo(request)  // 그 외 ESMClass
+}
+
+// 3. 과금 처리 분기
+if (!gMOTRBILL) {
+    processMOBilling(...)  // 즉시 과금 처리
+} else {
+    enqueueVbillMoTR(...)  // VBILL_MO 큐로 전송
+}
+```
+
+**핵심 규칙:**
+
+1. **HBILL (billType='1')**:
+   - MOCALLINFO 업데이트 안 함 (return으로 즉시 종료)
+   - 서드파티에서 처리하므로 여기서는 스킵
+
+2. **VBILL_MO (gMOTRBILL='Y')**:
+   - MOCALLINFO/MO_NOTISEND는 업데이트됨 (과금 처리 전에 먼저 수행)
+   - 과금은 VBILL_MO 큐로 전송 (`enqueueVbillMoTR()`)
+   - **MOCALLINFO는 업데이트되지만, 과금은 별도 큐에서 처리**
+
+3. **일반 과금 (!gMOTRBILL)**:
+   - MOCALLINFO/MO_NOTISEND는 업데이트됨
+   - 과금은 즉시 처리 (`processMOBilling()`)
+   - **MOCALLINFO 업데이트 후 즉시 과금 처리**
+
+**중요:**
+- MOCALLINFO 업데이트는 과금 처리와 **독립적**으로 수행됨
+- gMOTRBILL='Y'인 경우에도 MOCALLINFO는 반드시 업데이트됨
+- HBILL인 경우만 MOCALLINFO 업데이트를 스킵함
+
+## 8. updateGIPMOCallInfo() 처리 규칙 (HTTP 환경)
+
+### 규칙: MO와 MO-TR이 동일한 msgID를 사용하므로 새 레코드 생성 불필요
+
+**배경:**
+- C 코드의 `UpdateGIPMOCallInfo()`는 MO-ACK 처리용으로 새 레코드(ackMsgId)를 생성함
+- HTTP 환경에서는 MO-ACK를 생략하고 MO-TR로 통합했으므로, MO와 MO-TR이 동일한 msgID를 사용함
+- 따라서 새 레코드를 만들 필요가 없고, 원본 레코드를 그대로 사용하면 됨
+
+**msgID 처리 규칙:**
+- **MO 전송 시점**: `msgId`를 전송 → MOCALLINFO에 `MSGID = msgId`로 저장
+- **MO-TR 수신 시점**: 동일한 `msgId`로 응답 → 원본 레코드를 그대로 사용
+
+**현재 잘못된 구현:**
+```kotlin
+// SmsResServiceImpl.kt:1214-1221
+val ackMsgId = request.data.msgSeqNo.toString()  // 불필요
+val msgId = request.data.msgId ?: ""  // 원본 MSGID
+
+// INSERT INTO ... SELECT FROM ... WHERE MSGID = 원본 msgId
+// 새 레코드(ackMsgId) 생성 - 불필요!
+val insertResult = moCallInfoRepository.insertFromExisting(ackMsgId, srcCallNo, destCId, msgId)
+```
+
+**올바른 구현:**
+```kotlin
+// HTTP 환경에서는 MO-ACK를 생략하고 MO-TR로 통합했으므로,
+// MO와 MO-TR이 동일한 msgID를 사용함
+// 따라서 새 레코드를 만들 필요가 없고, 원본 레코드를 그대로 사용
+// updateGIPMOCallInfo()는 실제로 아무 작업도 하지 않거나,
+// 단순히 레코드 존재 여부만 확인하면 됨
+
+val msgId = request.data.msgId ?: ""  // MO와 MO-TR 모두 동일한 msgID
+
+// 원본 레코드가 존재하는지 확인만 하면 됨
+val moCallInfo = moCallInfoRepository.findBySrcCallNoAndDestCIdAndMsgId(
+    request.data.srcCallNo,
+    request.data.destCID,
+    msgId
+)
+
+if (moCallInfo == null) {
+    // 레코드가 없으면 에러 처리
+    witcomLog.c_write(loggerName, Level.ERROR,
+        String.format("UpdateGIPMOCallInfo() 레코드 없음: SourceCallNo(%s) DestCID(%s) MsgId(%s)",
+            request.data.srcCallNo, request.data.destCID, msgId),
+        Thread.currentThread().getId()
+    )
+}
+```
+
+**핵심 규칙:**
+1. **MO-ACK 생략**: HTTP 환경에서는 MO-ACK를 별도로 처리하지 않고 MO-TR로 통합
+2. **동일한 msgID 사용**: MO와 MO-TR이 동일한 msgID를 사용하므로 새 레코드 생성 불필요
+3. **원본 레코드 사용**: 원본 레코드를 그대로 사용하여 과금 처리
+4. **조회 후 삭제**: `selectGIPMOCallInfo()`에서 조회 후 해당 레코드(msgId)를 삭제함
+
+**처리 흐름:**
+```
+MO 전송 시점
+  ↓
+MOCALLINFO에 MSGID = msgId로 저장
+  ↓
+MO-TR 수신 시점
+  ↓
+updateGIPMOCallInfo() 호출 (레코드 존재 여부 확인만)
+  ↓
+원본 레코드 유지 (MSGID = msgId)
+  ↓
+processMOBilling() 호출
+  ↓
+selectGIPMOCallInfo() 호출 (MSGID = msgId로 조회)
+  ↓
+조회 후 해당 레코드(msgId) 삭제
+```
+
+**중요:**
+- C 코드의 `UpdateGIPMOCallInfo()`는 MO-ACK 처리용이므로 INSERT 후 DELETE를 수행
+- HTTP 환경의 `updateGIPMOCallInfo()`는 MO-TR 통합용이므로 새 레코드 생성 불필요
+- 원본 레코드(msgId) 삭제는 `selectGIPMOCallInfo()`에서 처리함
+
+## 9. VBILL_MO 큐 처리 규칙
+
+### 규칙: VBILL_MO ThreadPool 불필요, C 프로세스가 자동 처리
+
+**배경:**
+- C 프로세스(VBILLMO_c.c)가 이미 실행 중이며, `GetAMsgFromSmsQ`로 VBILL_MO 큐에서 데이터를 가져와서 `ProcessTR`을 처리함
+- Java/Kotlin에서는 별도의 ThreadPool을 구성할 필요 없이, 큐에 데이터만 넣어주면 됨
+
+**현재 구현 (올바름):**
+```kotlin
+// SmsResServiceImpl.kt:1022-1096
+private suspend fun enqueueVbillMoTR(
+    qItem: QITEM,
+    request: ResponseTR,
+    gipHttpMoAccess: GipHttpMoAccessEntity
+) {
+    // 1. VBILL용 QITEM 생성
+    val trQItem = QITEM()
+    // ... QITEM 설정 ...
+    
+    // 2. VBILL_MO Queue 번호 획득 (CFG_VBILL.PROC_TYPE='MO'의 QUEUE_NO)
+    val vbillMoQueueNo = getVbillMoQueueNo()
+    
+    // 3. 큐 적재
+    val ret = smsQLib.InsertIntoSmsQWithQNo(trQItem, vbillMoQueueNo)
+    
+    // 4. 통계 처리
+    // ...
+}
+```
+
+**C 프로세스 처리 (자동):**
+```c
+// VBILLMO_c.c:272-291
+int ProcessSMRepQ()
+{
+    QITEM   stQItem;
+    int     nRet=0;
+    
+    // CFG_VBILL.QUEUE_NO에서 데이터 가져오기
+    if ((nRet = GetAMsgFromSmsQ(gQNo, &stQItem)) == Q_DELETE_FAIL_Q_EMPTY) {
+        return 0;
+    }
+    
+    // ProcessTR 자동 처리
+    ProcessTR(&stQItem);
+    
+    return 1;
+}
+```
+
+**핵심 규칙:**
+1. **ThreadPool 불필요**: Java/Kotlin에서 별도의 VBILL_MO ThreadPool을 구성할 필요 없음
+2. **큐 적재만 수행**: `enqueueVbillMoTR()`에서 `CFG_VBILL(PROC_TYPE='MO').QUEUE_NO`에 데이터를 넣어주면 됨
+3. **C 프로세스 자동 처리**: C 프로세스(VBILLMO_c.c)가 `GetAMsgFromSmsQ`로 큐에서 가져와서 `ProcessTR`을 자동 처리
+4. **큐 번호 조회**: `getVbillMoQueueNo()`로 `CFG_VBILL` 테이블에서 `PROC_TYPE='MO'`인 레코드의 `QUEUE_NO`를 조회
+
+**처리 흐름:**
+```
+MO-TR 수신 (gMOTRBILL='Y')
+  ↓
+enqueueVbillMoTR() 호출
+  ↓
+getVbillMoQueueNo() → CFG_VBILL(PROC_TYPE='MO').QUEUE_NO 조회
+  ↓
+InsertIntoSmsQWithQNo(trQItem, vbillMoQueueNo) → 큐에 삽입
+  ↓
+[C 프로세스: VBILLMO_c.c]
+  ↓
+GetAMsgFromSmsQ(gQNo, &stQItem) → 큐에서 가져오기
+  ↓
+ProcessTR(&stQItem) → 과금 처리 (bprintf)
+```
+
+**중요:**
+- VBILL_MO ThreadPool을 Java/Kotlin에서 구현할 필요 없음
+- C 프로세스가 이미 실행 중이므로 큐에 데이터만 넣어주면 자동 처리됨
+- `GetAMsgFromSmsQ`는 C 함수이지만, 큐 처리 자체는 C 프로세스가 담당
+
+## 10. 전체 처리 흐름 요약
+
+### MO 전송 시점
+1. ESMClass 확인
+2. ESMClass 20, 21, 90, 91 → `MO_NOTISEND`에 `SERVERTYPE='V'`로 INSERT (MSGID = msgId)
+3. 그 외 → `MOCALLINFO`에 INSERT (MSGID = msgId)
+
+### TR 결과 수신 시점
+1. **HBILL 체크**: billType='1'이면 return (MOCALLINFO 업데이트 안 함)
+2. **MOCALLINFO/MO_NOTISEND 업데이트** (과금 처리 전에 먼저 수행)
+   - ESMClass 20, 21, 90, 91 → `updateMO_NOTISEND()` 호출
+     - `SERVERTYPE='V'`, `MSGID = msgId`에서 SELECT하여 `SERVERTYPE='V'`, `MSGID = ackMsgId`로 새 레코드 생성
+     - 원본 레코드(`SERVERTYPE='V'`, 원본 MSGID) 삭제
+   - 그 외 → `updateGIPMOCallInfo()` 호출
+     - 새 레코드 생성 불필요 (MO와 MO-TR이 동일한 msgID 사용)
+     - 원본 레코드 존재 여부 확인만 수행
+3. **과금 처리 분기**:
+   - !gMOTRBILL → `processMOBilling()` (즉시 과금 처리, `MSGID = msgId`로 조회)
+   - gMOTRBILL='Y' → `enqueueVbillMoTR()` (VBILL_MO 큐로 전송, C 프로세스가 자동 처리)
+
+### 과금 처리 후
+1. `processMOBilling()` 수행 (또는 VBILL_MO 큐에서 C 프로세스가 처리)
+2. ESMClass별 분기:
+   - 90/91: `DBDELMO_NOTISEND` + `MT_NOTISending`
+   - 20/21: `DBDELMO_NOTISEND` + `MT_NOTI_PLUS_Sending`
+   - 그 외: `DBDELMOCallInfo` + `RouteTRMsg2PCS`
+
+## 11. 체크리스트
+
+코드 수정 시 다음 사항을 반드시 확인:
+
+- [ ] ESMClass 90, 91이 MO 전송 시 `MO_NOTISEND`에 저장되는가?
+- [ ] ESMClass 90, 91이 TR 수신 시 `updateMO_NOTISEND()`를 호출하는가?
+- [ ] `updateMO_NOTISEND()`에서 `SERVERTYPE='V'`를 그대로 복사하는가? (C 코드와 동일)
+- [ ] `updateMO_NOTISEND()`에서 원본 레코드(`SERVERTYPE='V'`, 원본 MSGID)를 삭제하는가?
+- [ ] `processMOBilling()` 완료 후 ESMClass별 분기 처리가 구현되어 있는가?
+- [ ] ESMClass 90/91 분기에서 `DBDELMO_NOTISEND` + `MT_NOTISending`이 호출되는가?
+- [ ] ESMClass 20/21 분기에서 `DBDELMO_NOTISEND` + `MT_NOTI_PLUS_Sending`이 호출되는가?
+- [ ] 그 외 ESMClass 분기에서 `DBDELMOCallInfo` + `RouteTRMsg2PCS`가 호출되는가?
+- [ ] HBILL (billType='1')인 경우 MOCALLINFO 업데이트를 스킵하는가?
+- [ ] VBILL_MO (gMOTRBILL='Y')인 경우에도 MOCALLINFO가 업데이트되는가?
+- [ ] MOCALLINFO 업데이트가 과금 처리 전에 먼저 수행되는가?
+- [ ] `updateGIPMOCallInfo()`에서 새 레코드를 생성하지 않고, 원본 레코드 존재 여부만 확인하는가?
+- [ ] MO와 MO-TR이 동일한 msgID를 사용하는가?
+- [ ] `selectGIPMOCallInfo()`에서 msgId로 조회 후 해당 레코드(msgId)만 삭제하는가?
+- [ ] VBILL_MO ThreadPool을 별도로 구성하지 않고, `enqueueVbillMoTR()`만 사용하는가?
+- [ ] `getVbillMoQueueNo()`로 CFG_VBILL(PROC_TYPE='MO').QUEUE_NO를 올바르게 조회하는가?
+- [ ] C 프로세스(VBILLMO_c.c)가 실행 중이면 자동으로 큐에서 가져가서 처리하는가?

@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "../../../SKT/SMSS/project/smsslib.20250710/src_temp"
+		},
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../SKT/SMSS/project/smssslib.main/javaDir"
+		},
+		{
+			"path": "C:/Users/WITCOM/Desktop/검증/Regression검증_20250825"
+		},
+		{
+			"path": "../../../SKT_GIPHTTP_RECV"
+		},
+		{
+			"path": "../../../SKT_GIPHTTP_SEND"
+		}
+	],
+	"settings": {
+		"java.compile.nullAnalysis.mode": "automatic",
+		"java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable"
+	}
+}

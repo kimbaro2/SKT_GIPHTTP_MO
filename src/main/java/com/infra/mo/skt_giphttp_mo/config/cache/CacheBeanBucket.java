@@ -49,4 +49,10 @@ public class CacheBeanBucket {
     public ConcurrentHashMap<String, SpcodeEntity> spcodeMap() {
         return new ConcurrentHashMap<String, SpcodeEntity>();
     }
+
+    /*MSGID 캐시 맵 - IP-PORT별 MSGID 캐시 관리*/
+    @Bean("MsgIdCacheMap")
+    public ConcurrentHashMap<String, String> msgIdCacheMap() {
+        return new ConcurrentHashMap<String, String>();
+    }
 }

@@ -14,6 +14,8 @@ interface SmsResService {
      * C 코드의 ProcessSMRes() 함수와 동일한 로직 수행
      * 
      * @param request ResponseTR (CP 서버로부터 받은 결과)
+     * @param clientIp 클라이언트 IP 주소 (선택사항, GIPHTTP_MO_ACCESS 조회용)
+     * @param serverPort 서버 리스닝 포트 (선택사항, GIPHTTP_MO_ACCESS 조회용)
      */
-    suspend fun processSMRes(request: ResponseTR)
+    suspend fun processSMRes(request: ResponseTR, clientIp: String? = null, serverPort: Int? = null)
 }

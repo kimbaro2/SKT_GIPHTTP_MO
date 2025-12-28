@@ -32,51 +32,51 @@ object QItemServiceUtil {
 
     // GSM 7bit 기본 문자셋 (GSM 03.38)
     private val gsm7bitMap: Map<Char, Int> =
-            mapOf(
-                    '@' to 0x00,
-                    '£' to 0x01,
-                    '$' to 0x02,
-                    '¥' to 0x03,
-                    'è' to 0x04,
-                    'é' to 0x05,
-                    'ù' to 0x06,
-                    'ì' to 0x07,
-                    'ò' to 0x08,
-                    'Ç' to 0x09,
-                    '\n' to 0x0A,
-                    'Ø' to 0x0B,
-                    'ø' to 0x0C,
-                    '\r' to 0x0D,
-                    'Å' to 0x0E,
-                    'å' to 0x0F,
-                    'Δ' to 0x10,
-                    '_' to 0x11,
-                    'Φ' to 0x12,
-                    'Γ' to 0x13,
-                    'Λ' to 0x14,
-                    'Ω' to 0x15,
-                    'Π' to 0x16,
-                    'Ψ' to 0x17,
-                    'Σ' to 0x18,
-                    'Θ' to 0x19,
-                    'Ξ' to 0x1A,
-                    'Æ' to 0x1C,
-                    'æ' to 0x1D,
-                    'ß' to 0x1E,
-                    'É' to 0x1F,
-                    // 0x20 ~ 0x7A: ASCII 호환 문자들
-                    *(' '.code..'z'.code).map { it.toChar() to it }.toTypedArray(),
-                    // 특수문자
-                    '^' to 0x1B,
-                    '{' to 0x28,
-                    '}' to 0x29,
-                    '\\' to 0x2F,
-                    '[' to 0x3C,
-                    '~' to 0x3D,
-                    ']' to 0x3E,
-                    '|' to 0x40,
-                    '€' to 0x65
-            )
+        mapOf(
+            '@' to 0x00,
+            '£' to 0x01,
+            '$' to 0x02,
+            '¥' to 0x03,
+            'è' to 0x04,
+            'é' to 0x05,
+            'ù' to 0x06,
+            'ì' to 0x07,
+            'ò' to 0x08,
+            'Ç' to 0x09,
+            '\n' to 0x0A,
+            'Ø' to 0x0B,
+            'ø' to 0x0C,
+            '\r' to 0x0D,
+            'Å' to 0x0E,
+            'å' to 0x0F,
+            'Δ' to 0x10,
+            '_' to 0x11,
+            'Φ' to 0x12,
+            'Γ' to 0x13,
+            'Λ' to 0x14,
+            'Ω' to 0x15,
+            'Π' to 0x16,
+            'Ψ' to 0x17,
+            'Σ' to 0x18,
+            'Θ' to 0x19,
+            'Ξ' to 0x1A,
+            'Æ' to 0x1C,
+            'æ' to 0x1D,
+            'ß' to 0x1E,
+            'É' to 0x1F,
+            // 0x20 ~ 0x7A: ASCII 호환 문자들
+            *(' '.code..'z'.code).map { it.toChar() to it }.toTypedArray(),
+            // 특수문자
+            '^' to 0x1B,
+            '{' to 0x28,
+            '}' to 0x29,
+            '\\' to 0x2F,
+            '[' to 0x3C,
+            '~' to 0x3D,
+            ']' to 0x3E,
+            '|' to 0x40,
+            '€' to 0x65
+        )
 
     // gsm7bitMap의 역매핑 (code -> char)
     private val gsm7bitReverseMap = gsm7bitMap.entries.associate { (k, v) -> v to k }
@@ -145,13 +145,17 @@ object QItemServiceUtil {
     private fun decode(bytes: ByteArray, type: SmsEncodingTypeAnalyzer.MessageType): String {
         return when (type) {
             SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN ->
-                    String(bytes, Charset.forName("UTF-16BE"))
+                String(bytes, Charset.forName("UTF-16BE"))
+            // C 원본에서 KSC5601/CP949 사용 → 여기서는 CP949로 통일
             SmsEncodingTypeAnalyzer.MessageType.KSC5601_CP949 ->
-                    String(bytes, Charset.forName("EUC-KR"))
+                String(bytes, Charset.forName("CP949"))
+
             SmsEncodingTypeAnalyzer.MessageType.ASCII_7BIT ->
-                    String(bytes, StandardCharsets.US_ASCII)
+                String(bytes, StandardCharsets.US_ASCII)
+
             SmsEncodingTypeAnalyzer.MessageType.BINARY_8BIT ->
-                    String(bytes, StandardCharsets.ISO_8859_1)
+                String(bytes, StandardCharsets.ISO_8859_1)
+
             else -> String(bytes, Charset.forName("UTF-16BE")) // 기본값
         }
     }
@@ -164,145 +168,168 @@ object QItemServiceUtil {
     }
 
     fun fetchAndConvert3(qItem: QITEM, witcomLog: WitcomLog) {
-        val printBuffer = printQItem3(qItem, witcomLog)
-        witcomLog.p_write(Level.INFO, printBuffer.toString())
+        printQItem3(qItem, witcomLog, null) // loggerName이 없으면 p_write 사용
     }
 
     data class QueueResult(val result: SMReqTransResult?, val qItem: QITEM?)
 
-    fun  fetchAndConvert2(queueNo: Int, smsQLib: SmsQLib, witcomLog: WitcomLog): QueueResult {
+    fun fetchAndConvert2(queueNo: Int, smsQLib: SmsQLib, witcomLog: WitcomLog): QueueResult {
         val qItem = QITEM()
         val result = smsQLib.GetAMsgFromSmsQ(queueNo, qItem)
 
         return when (result) {
             SmsDef.Q_DELETE_FAIL_Q_EMPTY -> {
-                witcomLog.p_write(Level.INFO, "Q_EMPTY for queueNo=$queueNo")
+//                witcomLog.p_write(Level.INFO, "Q_EMPTY for queueNo=$queueNo")
                 QueueResult(null, null)
             }
+
             SmsDef.SMS_Q_LOCK_FAIL_TRY_AGAIN -> {
                 witcomLog.p_write(Level.INFO, "LOCK_FAIL_TRY_AGAIN for queueNo=$queueNo")
                 QueueResult(null, null)
             }
+
             SmsDef.SMS_Q_LOCK_FAIL_INVALID_SEMID -> {
                 witcomLog.p_write(Level.INFO, "LOCK_FAIL_INVALID_SEMID for queueNo=$queueNo")
                 QueueResult(null, null)
             }
+
             else -> {
                 qItem.read()
                 val smReqTransResult = QItemConverter.toSMReqTransResult(qItem)
                 //                printQItem2(qItem)
-                val printBuffer = printQItem3(qItem, witcomLog)
-                witcomLog.p_write(Level.INFO, printBuffer.toString())
+//                printQItem3(qItem, witcomLog, null) // loggerName이 없으면 p_write 사용
 
-                witcomLog.p_write(Level.INFO, "== Get CP Qno($queueNo) ==")
 
                 QueueResult(smReqTransResult, qItem)
             }
         }
     }
 
-    fun printQItem3(qItem: QITEM, witcomLog: WitcomLog) {
+    fun printQItem3(qItem: QITEM, witcomLog: WitcomLog, loggerName: String? = null, workerThreadId: Long? = null) {
         val sb = StringBuilder()
 
         fun log(msg: String) = sb.appendLine("### $msg")
-
         sb.appendLine("### Print QITEM  ####################################################")
         log("ServerType<${qItem.ucServerType.toChar()}> MsgVerID<${qItem.nMsgVerId}>")
         log(
-                "Source Address : SrcCID<${qItem.szSrcCId.toKString()}> SrcCallNo<${
-                qItem.szSrcMinNo.toKString().toIntOrNull() ?: 0
+            "Source Address : SrcCID<${qItem.szSrcCId.decodeCP949()}> SrcCallNo<${
+                qItem.szSrcMinNo.decodeCP949().toIntOrNull() ?: 0
             }> Source ReturnQNo<${qItem.ReturnQ_No}>"
         )
         log(
-                "Destination Address : DestCID<${qItem.szCId.toKString()}> DestCallNo<${
-                qItem.szMinNo.toKString().toIntOrNull() ?: 0
+            "Destination Address : DestCID<${qItem.szCId.decodeCP949()}> DestCallNo<${
+                qItem.szMinNo.decodeCP949().toIntOrNull() ?: 0
             }> ModuleNo<${qItem.nModuleNo}>"
         )
         log(
-                "Message Code : MessageCode<${qItem.usMsgCode}> MessageSubCode<${qItem.usMsgSubCode}> MsgCodeReserved[0](TID)<${
+            "Message Code : MessageCode<${qItem.usMsgCode}> MessageSubCode<${qItem.usMsgSubCode}> MsgCodeReserved[0](TID)<${
                 qItem.usMsgCodeReserved.getOrNull(
                     0
                 ) ?: 0
             }>"
         )
+
+        // ✅ 실제 DataEncoding 값에 따라 인코딩 이름 결정
+        val dataEncodingValue = qItem.ucDataEncoding.toInt()
+        val encodingType = SmsEncodingTypeAnalyzer.analyze(dataEncodingValue)
+        val dataEncodingStr = when (encodingType) {
+            SmsEncodingTypeAnalyzer.MessageType.KSC5601_CP949 -> "CP949"
+            SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN -> "UCS2"
+            SmsEncodingTypeAnalyzer.MessageType.GSM_7BIT -> "GSM7"
+            SmsEncodingTypeAnalyzer.MessageType.ASCII_7BIT -> "ASCII7"
+            SmsEncodingTypeAnalyzer.MessageType.BINARY_8BIT -> "8BIT"
+            else -> "UNKNOWN($dataEncodingValue)"
+        }
         log(
-                "MsgLen<${qItem.ucMsgLen}> MsgSerialNo<${qItem.uMsgSerialNo}> TermType<${qItem.ucTermType}> DataEncoding<CP949>"
+            "MsgLen<${qItem.ucMsgLen}> MsgSerialNo<${qItem.uMsgSerialNo}> TermType<${qItem.ucTermType}> DataEncoding<$dataEncodingStr>"
         )
         log(
-                "Sending Flags : VldPrd<${qItem.nVldPrd}> Priority<${qItem.ucPriority}> RepFlag<${qItem.ucRepFlag}> RgtDlvFlg<${qItem.ucRgtDlvFlg}>"
+            "Sending Flags : VldPrd<${qItem.nVldPrd}> Priority<${qItem.ucPriority}> RepFlag<${qItem.ucRepFlag}> RgtDlvFlg<${qItem.ucRgtDlvFlg}>"
         )
         log(
-                "ConcatenateFlag<${qItem.totalSeg}> ConcatenateInfo<${qItem.segSeq}> SmDefaultMsgID/CALLFW count<${qItem.ucMsgId.firstOrNull() ?: 0}>"
+            "ConcatenateFlag<${qItem.totalSeg}> ConcatenateInfo<${qItem.segSeq}> SmDefaultMsgID/CALLFW count<${qItem.ucMsgId.firstOrNull() ?: 0}>"
         )
 
-        val msg = qItem.szMsg.toKString()
+        // ✅ 실제 인코딩 타입에 맞게 메시지 디코딩
+        val szOSFI = qItem.szOSFI.decodeCP949()
+        val szSmsOSFI = qItem.szSMS_OSFI.decodeCP949()
+
+
+
+
+        val msgBytes = qItem.szMsg.sliceArray(0 until qItem.ucMsgLen)
+        val msg = msgBytes.decodeMessage(encodingType)
         log("Message : <${if (msg.isBlank()) "*".repeat(100) else msg}>")
-        sb.appendLine("[MSG_DEBUG] Message<${msg}>")
+        sb.appendLine("[MSG_DEBUG] Message")
 
         log(
-                "CallBack<${qItem.szCB.toKString()}> CallBack_Noti<${qItem.callback_noti}> CallBack_Check<${qItem.callback_check}> Location<${qItem.ucLocation.toKString()}>"
+            "szOSFI<${szOSFI}> szSmsOSFI<${szSmsOSFI}> CallBack<${qItem.szCB.decodeCP949()}> CallBack_Noti<${qItem.callback_noti}> CallBack_Check<${qItem.callback_check}> Location<${qItem.ucLocation.decodeCP949()}>"
         )
         log(
-                "OrigCID<${qItem.szSrcCId.toKString()}> RelayCID<${qItem.szRelayCID.toKString()}> FowardNo<${qItem.szFWD_NO.toKString()}> ForwardNo2<${qItem.szFWD_NO2.toKString()}> ReturnQ_No<${qItem.ReturnQ_No}> OrgMsgLen<${qItem.uOrgMsgLen}> AuthFlag<${qItem.usAuthFlag}> VirtualNum<${qItem.szRelayCID.toKString()}>"
+            "OrigCID<${qItem.szSrcCId.decodeCP949()}> RelayCID<${qItem.szRelayCID.decodeCP949()}> FowardNo<${qItem.szFWD_NO.decodeCP949()}> ForwardNo2<${qItem.szFWD_NO2.decodeCP949()}> ReturnQ_No<${qItem.ReturnQ_No}> OrgMsgLen<${qItem.uOrgMsgLen}> AuthFlag<${qItem.usAuthFlag}> VirtualNum<${qItem.szRelayCID.decodeCP949()}>"
         )
 
         // ✅ Rsv4Protocol 배열 상세 출력
-        qItem.nRsv4Protocol.forEachIndexed { i, v ->
-            val label = "nRsv4Protocol[$i]"
-
-            log("$label   : $v")
-        }
+        val rsv4ProtocolStr = qItem.nRsv4Protocol.joinToString(")(") { it.toString() }
+        log("Rsv4protocol ($rsv4ProtocolStr)")
 
         sb.appendLine("### Print QITEM END #################################################")
 
-        // 🔹 WitcomLog 로 최종 출력
-        witcomLog.p_write(Level.DEBUG, sb.toString())
+        // 🔹 WitcomLog 로 최종 출력 - loggerName이 있으면 c_write, 없으면 p_write
+        // workerThreadId가 제공되면 재사용, 없으면 현재 스레드 ID 사용
+        val logContent = sb.toString()
+        if (loggerName != null) {
+            val threadId = workerThreadId ?: Thread.currentThread().getId()
+            witcomLog.c_write(loggerName, Level.DEBUG, logContent, threadId)
+        } else {
+            witcomLog.p_write(Level.DEBUG, logContent)
+        }
     }
 
     private fun formatQItem4(q: QITEM): String {
         val time = SimpleDateFormat("HH:mm:ss:SSSS").format(Date())
 
         fun bArrToStr(bytes: ByteArray): String =
-                String(bytes, Charset.forName("CP949")).trim { it <= ' ' || it == '\u0000' }
+            String(bytes, Charset.forName("CP949")).trim { it <= ' ' || it == '\u0000' }
 
         val sb = StringBuffer()
 
         sb.appendLine(
-                "[$time] [DEBUG] ### Print QITEM  ####################################################"
+            "[$time] [DEBUG] ### Print QITEM  ####################################################"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### ServerType<${
+            "[$time] [DEBUG] ### ServerType<${
                 q.ucServerType.toInt().toChar()
             }> MsgVerID<${DEFINE_GIPVERID_510}>"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### Source Address : SrcCID<${bArrToStr(q.szSrcCId)}> SrcCallNo<${bArrToStr(q.szSrcMinNo)}> Source ReturnQNo<${q.usSource}>"
+            "[$time] [DEBUG] ### Source Address : SrcCID<${bArrToStr(q.szSrcCId)}> SrcCallNo<${bArrToStr(q.szSrcMinNo)}> Source ReturnQNo<${q.usSource}>"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### Destination Address : DestCID<${bArrToStr(q.szCId)}> DestCallNo<${bArrToStr(q.szMinNo)}> ModuleNo<${q.nModuleNo}>"
+            "[$time] [DEBUG] ### Destination Address : DestCID<${bArrToStr(q.szCId)}> DestCallNo<${bArrToStr(q.szMinNo)}> ModuleNo<${q.nModuleNo}>"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### Message Code : MessageCode<${q.usMsgCode}> MessageSubCode<${q.usMsgSubCode}> MsgCodeReserved[0](TID)<${q.usMsgCodeReserved[0]}>"
+            "[$time] [DEBUG] ### Message Code : MessageCode<${q.usMsgCode}> MessageSubCode<${q.usMsgSubCode}> MsgCodeReserved[0](TID)<${q.usMsgCodeReserved[0]}>"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### MsgLen<${q.ucMsgLen}> MsgSerialNo<${q.uMsgSerialNo}> TermType<${q.ucTermType.toInt()}> DataEncoding<${q.ucDataEncoding}>"
+            "[$time] [DEBUG] ### MsgLen<${q.ucMsgLen}> MsgSerialNo<${q.uMsgSerialNo}> TermType<${q.ucTermType.toInt()}> DataEncoding<${q.ucDataEncoding}>"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### Sending Flags : VldPrd<${q.nVldPrd}> Priority<${q.ucPriority}> RepFlag<${q.ucRepFlag}> RgtDlvFlg<${q.ucRgtDlvFlg}>"
+            "[$time] [DEBUG] ### Sending Flags : VldPrd<${q.nVldPrd}> Priority<${q.ucPriority}> RepFlag<${q.ucRepFlag}> RgtDlvFlg<${q.ucRgtDlvFlg}>"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### ConcatenateFlag<${q.totalSeg}> ConcatenateInfo<${q.segSeq}> SmDefaultMsgID/CALLFW count<${q.ucFlagReserved[1].toInt()}>"
+            "[$time] [DEBUG] ### ConcatenateFlag<${q.totalSeg}> ConcatenateInfo<${q.segSeq}> SmDefaultMsgID/CALLFW count<${q.ucFlagReserved[1].toInt()}>"
         )
         sb.appendLine("[$time] [DEBUG] ### Message : <${bArrToStr(q.szMsg)}>")
         sb.appendLine(
-                "[$time] [DEBUG] ### CallBack<${bArrToStr(q.szCB)}> CallBack_Noti<${q.callback_noti}> CallBack_Check<${q.callback_check}> Location<${
+            "[$time] [DEBUG] ### CallBack<${bArrToStr(q.szCB)}> CallBack_Noti<${q.callback_noti}> CallBack_Check<${q.callback_check}> Location<${
                 bArrToStr(
                     q.ucLocation
                 )
             }>"
         )
         sb.appendLine(
-                "[$time] [DEBUG] ### OrigCID<${bArrToStr(q.szOrigCID)}> RelayCID<${bArrToStr(q.szRelayCID)}> FowardNo<${
+            "[$time] [DEBUG] ### OrigCID<${bArrToStr(q.szOrigCID)}> RelayCID<${bArrToStr(q.szRelayCID)}> FowardNo<${
                 bArrToStr(
                     q.szFWD_NO
                 )
@@ -310,7 +337,7 @@ object QItemServiceUtil {
         )
         sb.appendLine("[$time] [DEBUG] ### Rsv4protocol (${q.nRsv4Protocol.joinToString(")(")})")
         sb.appendLine(
-                "[$time] [DEBUG] ### Print QITEM END ####################################################"
+            "[$time] [DEBUG] ### Print QITEM END ####################################################"
         )
 
         return sb.toString()
@@ -319,12 +346,45 @@ object QItemServiceUtil {
     private fun ByteArray.toKString(): String = String(this, Charsets.UTF_8).trimEnd('\u0000')
 
     /**
+     * CP949 인코딩으로 ByteArray를 String으로 변환
+     * CID, CallNo, Callback 등 일반 필드용
+     */
+    private fun ByteArray.decodeCP949(): String {
+        val bytes = this.takeWhile { it != 0.toByte() }.toByteArray()
+        return try {
+            String(bytes, Charset.forName("CP949"))
+        } catch (e: Exception) {
+            // 디코딩 실패 시 UTF-8로 폴백
+            String(bytes, Charsets.UTF_8)
+        }.trimEnd('\u0000')
+    }
+
+    /**
+     * 인코딩 타입에 맞게 메시지를 디코딩
+     * @param encodingType 인코딩 타입
+     * @return 디코딩된 문자열
+     */
+    private fun ByteArray.decodeMessage(encodingType: SmsEncodingTypeAnalyzer.MessageType): String {
+        val msgBytes = this.takeWhile { it != 0.toByte() }.toByteArray()
+        return try {
+            decode(msgBytes, encodingType)
+        } catch (e: Exception) {
+            // 디코딩 실패 시 CP949로 폴백
+            try {
+                String(msgBytes, Charset.forName("CP949"))
+            } catch (e2: Exception) {
+                String(msgBytes, Charsets.UTF_8)
+            }
+        }.trimEnd('\u0000')
+    }
+
+    /**
      * ByteArray를 String으로 변환합니다 (null 문자 제거)
      * @param byteArray 변환할 ByteArray
      * @return 변환된 String
      */
     fun byteArrayToKString(byteArray: ByteArray): String =
-            String(byteArray, Charsets.UTF_8).trimEnd('\u0000')
+        String(byteArray, Charsets.UTF_8).trimEnd('\u0000')
 
     private fun ByteArray.toHexString(): String = joinToString("") { "%02X".format(it) }
 
@@ -360,20 +420,20 @@ object QItemServiceUtil {
 
         // C 코드 LINE 4100-4101: szSrcCId 복사
         System.arraycopy(
-                ptrQItem.szSrcCId,
-                0,
-                destQItem.szSrcCId,
-                0,
-                minOf(ptrQItem.szSrcCId.size, destQItem.szSrcCId.size)
+            ptrQItem.szSrcCId,
+            0,
+            destQItem.szSrcCId,
+            0,
+            minOf(ptrQItem.szSrcCId.size, destQItem.szSrcCId.size)
         )
 
         // C 코드 LINE 4103: szSrcMinNo 복사 (strtoul 변환 없이 그대로 복사)
         System.arraycopy(
-                ptrQItem.szSrcMinNo,
-                0,
-                destQItem.szSrcMinNo,
-                0,
-                minOf(ptrQItem.szSrcMinNo.size, destQItem.szSrcMinNo.size)
+            ptrQItem.szSrcMinNo,
+            0,
+            destQItem.szSrcMinNo,
+            0,
+            minOf(ptrQItem.szSrcMinNo.size, destQItem.szSrcMinNo.size)
         )
 
         // C 코드 LINE 4105: usSource 복사
@@ -381,20 +441,20 @@ object QItemServiceUtil {
 
         // C 코드 LINE 4108-4109: szCId (DestCId) 복사
         System.arraycopy(
-                ptrQItem.szCId,
-                0,
-                destQItem.szCId,
-                0,
-                minOf(ptrQItem.szCId.size, destQItem.szCId.size)
+            ptrQItem.szCId,
+            0,
+            destQItem.szCId,
+            0,
+            minOf(ptrQItem.szCId.size, destQItem.szCId.size)
         )
 
         // C 코드 LINE 4111: szMinNo (DestMinNo) 복사 (strtoul 변환 없이 그대로 복사)
         System.arraycopy(
-                ptrQItem.szMinNo,
-                0,
-                destQItem.szMinNo,
-                0,
-                minOf(ptrQItem.szMinNo.size, destQItem.szMinNo.size)
+            ptrQItem.szMinNo,
+            0,
+            destQItem.szMinNo,
+            0,
+            minOf(ptrQItem.szMinNo.size, destQItem.szMinNo.size)
         )
 
         // C 코드 LINE 4112: nModuleNo 복사
@@ -406,11 +466,11 @@ object QItemServiceUtil {
 
         // C 코드 LINE 4116-4117: usMsgCodeReserved 배열 복사
         System.arraycopy(
-                ptrQItem.usMsgCodeReserved,
-                0,
-                destQItem.usMsgCodeReserved,
-                0,
-                minOf(ptrQItem.usMsgCodeReserved.size, destQItem.usMsgCodeReserved.size)
+            ptrQItem.usMsgCodeReserved,
+            0,
+            destQItem.usMsgCodeReserved,
+            0,
+            minOf(ptrQItem.usMsgCodeReserved.size, destQItem.usMsgCodeReserved.size)
         )
 
         // C 코드 LINE 4119: ucMsgLen 복사
@@ -427,31 +487,49 @@ object QItemServiceUtil {
 
         // C 코드 LINE 4124-4125: ucRsv 배열 복사
         System.arraycopy(
-                ptrQItem.ucRsv,
-                0,
-                destQItem.ucRsv,
-                0,
-                minOf(ptrQItem.ucRsv.size, destQItem.ucRsv.size)
+            ptrQItem.ucRsv,
+            0,
+            destQItem.ucRsv,
+            0,
+            minOf(ptrQItem.ucRsv.size, destQItem.ucRsv.size)
         )
 
         // C 코드 LINE 4127: nRsv4Protocol 배열 복사 (12개)
         System.arraycopy(
-                ptrQItem.nRsv4Protocol,
-                0,
-                destQItem.nRsv4Protocol,
-                0,
-                minOf(ptrQItem.nRsv4Protocol.size, destQItem.nRsv4Protocol.size, 12)
+            ptrQItem.nRsv4Protocol,
+            0,
+            destQItem.nRsv4Protocol,
+            0,
+            minOf(ptrQItem.nRsv4Protocol.size, destQItem.nRsv4Protocol.size, 12)
         )
 
         // C 코드 LINE 4128: nVldPrd 복사 (ucData에 복사하는 대신 직접 복사)
         destQItem.nVldPrd = ptrQItem.nVldPrd
 
+        // traceID 복사 (큐에서 가져온 메시지의 traceID 유지)
+        System.arraycopy(
+            ptrQItem.szTraceId,
+            0,
+            destQItem.szTraceId,
+            0,
+            minOf(ptrQItem.szTraceId.size, destQItem.szTraceId.size)
+        )
+        
+        // msgID 복사 (큐에서 가져온 메시지의 msgID 유지)
+        System.arraycopy(
+            ptrQItem.ucMsgId,
+            0,
+            destQItem.ucMsgId,
+            0,
+            minOf(ptrQItem.ucMsgId.size, destQItem.ucMsgId.size)
+        )
+
         return destQItem
     }
-    
+
     /**
      * QITEM을 다른 QITEM으로 복사합니다.
-     * 
+     *
      * @param source 원본 QITEM
      * @param dest 대상 QITEM
      */
@@ -477,7 +555,7 @@ object QItemServiceUtil {
         dest.usAuthFlag = source.usAuthFlag
         dest.ReturnQ_No = source.ReturnQ_No
         dest.RcsResult = source.RcsResult
-        
+
         // ByteArray 필드 복사
         System.arraycopy(source.szSrcCId, 0, dest.szSrcCId, 0, minOf(source.szSrcCId.size, dest.szSrcCId.size))
         System.arraycopy(source.szSrcMinNo, 0, dest.szSrcMinNo, 0, minOf(source.szSrcMinNo.size, dest.szSrcMinNo.size))
@@ -486,32 +564,56 @@ object QItemServiceUtil {
         System.arraycopy(source.szMsg, 0, dest.szMsg, 0, minOf(source.szMsg.size, dest.szMsg.size))
         System.arraycopy(source.szCB, 0, dest.szCB, 0, minOf(source.szCB.size, dest.szCB.size))
         System.arraycopy(source.szTraceId, 0, dest.szTraceId, 0, minOf(source.szTraceId.size, dest.szTraceId.size))
-        System.arraycopy(source.szOrigMvnoInformation, 0, dest.szOrigMvnoInformation, 0, minOf(source.szOrigMvnoInformation.size, dest.szOrigMvnoInformation.size))
-        System.arraycopy(source.szDestMvnoInformation, 0, dest.szDestMvnoInformation, 0, minOf(source.szDestMvnoInformation.size, dest.szDestMvnoInformation.size))
+        System.arraycopy(
+            source.szOrigMvnoInformation,
+            0,
+            dest.szOrigMvnoInformation,
+            0,
+            minOf(source.szOrigMvnoInformation.size, dest.szOrigMvnoInformation.size)
+        )
+        System.arraycopy(
+            source.szDestMvnoInformation,
+            0,
+            dest.szDestMvnoInformation,
+            0,
+            minOf(source.szDestMvnoInformation.size, dest.szDestMvnoInformation.size)
+        )
         System.arraycopy(source.RcsTag, 0, dest.RcsTag, 0, minOf(source.RcsTag.size, dest.RcsTag.size))
-        System.arraycopy(source.usMsgCodeReserved, 0, dest.usMsgCodeReserved, 0, minOf(source.usMsgCodeReserved.size, dest.usMsgCodeReserved.size))
-        System.arraycopy(source.nRsv4Protocol, 0, dest.nRsv4Protocol, 0, minOf(source.nRsv4Protocol.size, dest.nRsv4Protocol.size))
+        System.arraycopy(
+            source.usMsgCodeReserved,
+            0,
+            dest.usMsgCodeReserved,
+            0,
+            minOf(source.usMsgCodeReserved.size, dest.usMsgCodeReserved.size)
+        )
+        System.arraycopy(
+            source.nRsv4Protocol,
+            0,
+            dest.nRsv4Protocol,
+            0,
+            minOf(source.nRsv4Protocol.size, dest.nRsv4Protocol.size)
+        )
         System.arraycopy(source.ucRsv, 0, dest.ucRsv, 0, minOf(source.ucRsv.size, dest.ucRsv.size))
         System.arraycopy(source.ucMsgId, 0, dest.ucMsgId, 0, minOf(source.ucMsgId.size, dest.ucMsgId.size))
     }
-    
+
     /**
      * ResponseTR DTO를 QITEM으로 변환합니다.
      * C 코드의 MsgHdrToQItem 함수와 동일한 로직 수행
-     * 
+     *
      * C 코드 참고: GIPEVENT_c.c LINE 1978 (MsgHdrToQItem)
-     * 
+     *
      * @param responseTR ResponseTR DTO
      * @return 변환된 QITEM
      */
     fun responseTRToQItem(responseTR: com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR): QITEM {
         val qItem = QITEM()
         val data = responseTR.data
-        
+
         // C 코드 LINE 1978: MsgHdrToQItem 로직
         // msgVerId 설정
         qItem.nMsgVerId = responseTR.msgVerId ?: DEFINE_GIPVERID_510
-        
+
         // srcCID 복사
         val srcCIdBytes = data.srcCID.toByteArray(Charset.forName("CP949"))
         System.arraycopy(
@@ -524,7 +626,7 @@ object QItemServiceUtil {
         if (srcCIdBytes.size < qItem.szSrcCId.size) {
             qItem.szSrcCId[srcCIdBytes.size] = 0x00
         }
-        
+
         // srcCallNo 복사 (String -> ByteArray)
         val srcCallNoStr = data.srcCallNo
         val srcCallNoBytes = srcCallNoStr.toByteArray(Charset.forName("CP949"))
@@ -538,7 +640,7 @@ object QItemServiceUtil {
         if (srcCallNoBytes.size < qItem.szSrcMinNo.size) {
             qItem.szSrcMinNo[srcCallNoBytes.size] = 0x00
         }
-        
+
         // destCID 복사
         val destCIdBytes = data.destCID.toByteArray(Charset.forName("CP949"))
         System.arraycopy(
@@ -551,7 +653,7 @@ object QItemServiceUtil {
         if (destCIdBytes.size < qItem.szCId.size) {
             qItem.szCId[destCIdBytes.size] = 0x00
         }
-        
+
         // destCallNo 복사
         val destCallNoStr = data.destCallNo
         val destCallNoBytes = destCallNoStr.toByteArray(Charset.forName("CP949"))
@@ -565,19 +667,19 @@ object QItemServiceUtil {
         if (destCallNoBytes.size < qItem.szMinNo.size) {
             qItem.szMinNo[destCallNoBytes.size] = 0x00
         }
-        
+
         // msgCode, msgSubCode 설정
         qItem.usMsgCode = data.msgCode
         qItem.usMsgSubCode = data.msgSubCode
-        
+
         // termtype 설정
         if (data.termtype.isNotEmpty()) {
             qItem.ucTermType = data.termtype[0].code.toByte()
         }
-        
+
         // dataEncoding 설정
         qItem.ucDataEncoding = data.dataEncoding.toByte()
-        
+
         // concatenate 정보 설정
         if (data.concatenateflag.isNotEmpty()) {
             qItem.totalSeg = data.concatenateflag.toIntOrNull()?.toByte() ?: 0
@@ -585,17 +687,47 @@ object QItemServiceUtil {
         if (data.concatenateInfo.isNotEmpty()) {
             qItem.segSeq = data.concatenateInfo.toIntOrNull()?.toByte() ?: 0
         }
-        
+
         // rsv4Protocol 설정
         if (data.rsv4Protocol != null && data.rsv4Protocol.isNotEmpty()) {
             data.rsv4Protocol.forEachIndexed { index, item ->
                 if (index < qItem.nRsv4Protocol.size) {
-                    // Rsv4ProtocolItem의 data가 char이므로 int로 변환
-                    qItem.nRsv4Protocol[index] = item.data.code
+                    // Rsv4ProtocolItem의 data가 Integer를 반환하므로 직접 사용
+                    qItem.nRsv4Protocol[index] = item.data ?: 0
                 }
             }
         }
-        
+
+        // msgStatus 설정 (SM_REQ_TRANS_RESULT의 경우)
+        if (data.msgStatus != null && data.msgStatus > 0) {
+            qItem.ucMsgStatus = data.msgStatus.toByte()
+        }
+
+        // msgId 설정 (SM_REQ_TRANS_RESULT의 경우)
+        if (data.msgId != null && data.msgId.isNotEmpty()) {
+            val msgIdBytes = data.msgId.toByteArray(Charset.forName("CP949"))
+            System.arraycopy(
+                msgIdBytes,
+                0,
+                qItem.ucMsgId,
+                0,
+                minOf(msgIdBytes.size, qItem.ucMsgId.size - 1)
+            )
+            if (msgIdBytes.size < qItem.ucMsgId.size) {
+                qItem.ucMsgId[msgIdBytes.size] = 0x00
+            }
+        }
+
+        // msgCodeRsv 설정 (TId로 사용됨)
+        if (data.msgCodeRsv != null && data.msgCodeRsv > 0) {
+            qItem.usMsgCodeReserved[0] = data.msgCodeRsv.toShort()
+        }
+
+        // msgSeqNo 설정
+        if (data.msgSeqNo != null && data.msgSeqNo > 0) {
+            qItem.uMsgSerialNo = data.msgSeqNo
+        }
+
         return qItem
     }
 
@@ -631,20 +763,20 @@ object QItemServiceUtil {
      * C 코드 참고: GIPALL/GIPALL_c.c LINE 4132-4188
      */
     fun makeSPQItem(
-            ptrTRQItem: com.infra.mo.skt_giphttp_mo.dto.jna.SMReqTransResult,
-            ptrCallInfo: com.infra.mo.skt_giphttp_mo.db.altibase.entity.CallInfoEntity,
-            ptrDestQItem: QITEM,
-            recvQNo: Int,
-            szFWDNO: CharArray
+        ptrTRQItem: com.infra.mo.skt_giphttp_mo.dto.jna.SMReqTransResult,
+        ptrCallInfo: com.infra.mo.skt_giphttp_mo.db.altibase.entity.CallInfoEntity,
+        ptrDestQItem: QITEM,
+        recvQNo: Int,
+        szFWDNO: CharArray
     ) {
         // C 코드 LINE 4134-4140: szFWDNO가 있으면 FWD_NO에서 CID와 MinNo 추출
         val szFWDNOStr = String(szFWDNO).trimEnd('\u0000')
         if (szFWDNOStr.isNotEmpty()) {
             // C 코드 LINE 4136: strncpy(ptrDestQItem->szSrcCId, szFWDNO, 3)
             val cidBytes =
-                    szFWDNOStr
-                            .substring(0, minOf(3, szFWDNOStr.length))
-                            .toByteArray(Charset.forName("CP949"))
+                szFWDNOStr
+                    .substring(0, minOf(3, szFWDNOStr.length))
+                    .toByteArray(Charset.forName("CP949"))
             val cidCopySize = minOf(cidBytes.size, 3, ptrDestQItem.szSrcCId.size - 1)
             System.arraycopy(cidBytes, 0, ptrDestQItem.szSrcCId, 0, cidCopySize)
             // C 코드 LINE 4137: ptrDestQItem->szSrcCId[3] = '\0'
@@ -767,13 +899,13 @@ object QItemServiceUtil {
      * C 코드 참고: GIPALL/GIPALL_c.c LINE 3486-3759
      */
     fun insertIntoASPQ(
-            ptrQItem: QITEM,
-            smsQLib: SmsQLib,
-            witcomLog: WitcomLog,
-            gServerID: Int,
-            spcodeMap:
-                    java.util.concurrent.ConcurrentHashMap<
-                            String, com.infra.mo.skt_giphttp_mo.db.altibase.entity.SpcodeEntity>
+        ptrQItem: QITEM,
+        smsQLib: SmsQLib,
+        witcomLog: WitcomLog,
+        gServerID: Int,
+        spcodeMap:
+        java.util.concurrent.ConcurrentHashMap<
+                String, com.infra.mo.skt_giphttp_mo.db.altibase.entity.SpcodeEntity>
     ) {
         // C 코드 LINE 3502: QItemToMsgHdr 호출 (이미 qItemToMsgHdr로 변환된 상태라고 가정)
         // C 코드 LINE 3504: ucServerType 설정
@@ -786,101 +918,101 @@ object QItemServiceUtil {
             // CheckNpa는 간단히 CID가 유효한 전화번호 형식인지 확인
             // 010, 011, 012, 016, 017, 018, 019 등으로 시작하는지 확인
             if (szCID.startsWith("0") &&
-                            (szCID == "010" ||
-                                    szCID == "011" ||
-                                    szCID == "012" ||
-                                    szCID == "016" ||
-                                    szCID == "017" ||
-                                    szCID == "018" ||
-                                    szCID == "019")
+                (szCID == "010" ||
+                        szCID == "011" ||
+                        szCID == "012" ||
+                        szCID == "016" ||
+                        szCID == "017" ||
+                        szCID == "018" ||
+                        szCID == "019")
             ) {
                 // C 코드 LINE 3523-3526: CID와 MinNo 분리
                 val cidBytes = szCID.toByteArray(Charset.forName("CP949"))
                 System.arraycopy(
-                        cidBytes,
-                        0,
-                        ptrQItem.szSrcCId,
-                        0,
-                        minOf(cidBytes.size, ptrQItem.szSrcCId.size - 1)
+                    cidBytes,
+                    0,
+                    ptrQItem.szSrcCId,
+                    0,
+                    minOf(cidBytes.size, ptrQItem.szSrcCId.size - 1)
                 )
                 ptrQItem.szSrcCId[minOf(cidBytes.size, ptrQItem.szSrcCId.size - 1)] = 0x00
 
                 val minNoStr = if (minTmp.length > 3) minTmp.substring(3) else ""
                 val minNoBytes = minNoStr.toByteArray(Charset.forName("CP949"))
                 System.arraycopy(
-                        minNoBytes,
-                        0,
-                        ptrQItem.szSrcMinNo,
-                        0,
-                        minOf(minNoBytes.size, ptrQItem.szSrcMinNo.size - 1)
+                    minNoBytes,
+                    0,
+                    ptrQItem.szSrcMinNo,
+                    0,
+                    minOf(minNoBytes.size, ptrQItem.szSrcMinNo.size - 1)
                 )
                 checkMinNoLen(ptrQItem.szSrcMinNo, minNoStr.length)
             } else if (szCID.length >= 2 &&
-                            !szCID.startsWith("0") &&
-                            (szCID.startsWith("10") ||
-                                    szCID.startsWith("11") ||
-                                    szCID.startsWith("12") ||
-                                    szCID.startsWith("16") ||
-                                    szCID.startsWith("17") ||
-                                    szCID.startsWith("18") ||
-                                    szCID.startsWith("19"))
+                !szCID.startsWith("0") &&
+                (szCID.startsWith("10") ||
+                        szCID.startsWith("11") ||
+                        szCID.startsWith("12") ||
+                        szCID.startsWith("16") ||
+                        szCID.startsWith("17") ||
+                        szCID.startsWith("18") ||
+                        szCID.startsWith("19"))
             ) {
                 // C 코드 LINE 3530-3534: 10, 12, 11 등으로 시작하는 경우
                 val cidTmp = minTmp.substring(0, 2)
                 val cidBytes = "0$cidTmp".toByteArray(Charset.forName("CP949"))
                 System.arraycopy(
-                        cidBytes,
-                        0,
-                        ptrQItem.szSrcCId,
-                        0,
-                        minOf(cidBytes.size, ptrQItem.szSrcCId.size - 1)
+                    cidBytes,
+                    0,
+                    ptrQItem.szSrcCId,
+                    0,
+                    minOf(cidBytes.size, ptrQItem.szSrcCId.size - 1)
                 )
                 ptrQItem.szSrcCId[minOf(cidBytes.size, ptrQItem.szSrcCId.size - 1)] = 0x00
 
                 val minNoStr = if (minTmp.length > 2) minTmp.substring(2) else ""
                 val minNoBytes = minNoStr.toByteArray(Charset.forName("CP949"))
                 System.arraycopy(
-                        minNoBytes,
-                        0,
-                        ptrQItem.szSrcMinNo,
-                        0,
-                        minOf(minNoBytes.size, ptrQItem.szSrcMinNo.size - 1)
+                    minNoBytes,
+                    0,
+                    ptrQItem.szSrcMinNo,
+                    0,
+                    minOf(minNoBytes.size, ptrQItem.szSrcMinNo.size - 1)
                 )
                 checkMinNoLen(ptrQItem.szSrcMinNo, minNoStr.length)
             } else {
                 // C 코드 LINE 3538-3543: 유효하지 않은 전화번호
                 witcomLog.p_write(
-                        Level.DEBUG,
-                        String.format(
-                                "[DEBUG] InsertIntoASPQ() Invalid SourceCallNo (%s).  Not SKT phone number!",
-                                minTmp
-                        )
+                    Level.DEBUG,
+                    String.format(
+                        "[DEBUG] InsertIntoASPQ() Invalid SourceCallNo (%s).  Not SKT phone number!",
+                        minTmp
+                    )
                 )
                 //InsqStat 호출 필요 (C 코드 LINE 3540-3541)
                 smsQLib.InsqStat(
-                        ptrQItem,
-                        MESSAGE_MO,
-                        0,
-                        gServerID,
-                        MODULEID_GIPALL_C,
-                        SERVICEID_GIPALL,
-                        ERRORID_CP_INVALID_SUBSCRIBER,
-                        ST_GIP_INVALID_SMIN_SMSMANAGER,
-                        IF_NULL,
-                        TID_NO_SAVE,
-                        LT_TRACE,
-                        0
+                    ptrQItem,
+                    MESSAGE_MO,
+                    0,
+                    gServerID,
+                    MODULEID_GIPALL_C,
+                    SERVICEID_GIPALL,
+                    ERRORID_CP_INVALID_SUBSCRIBER,
+                    ST_GIP_INVALID_SMIN_SMSMANAGER,
+                    IF_NULL,
+                    TID_NO_SAVE,
+                    LT_TRACE,
+                    0
                 )
                 // InsertHistory
                 return
             }
         } else {
             witcomLog.p_write(
-                    Level.DEBUG,
-                    String.format(
-                            "[DEBUG] InsertIntoASPQ() Invalid SourceCallNo (%s).  Not SKT phone number!",
-                            minTmp
-                    )
+                Level.DEBUG,
+                String.format(
+                    "[DEBUG] InsertIntoASPQ() Invalid SourceCallNo (%s).  Not SKT phone number!",
+                    minTmp
+                )
             )
             return
         }
@@ -891,32 +1023,32 @@ object QItemServiceUtil {
 
         // spcodeMap에서 CID로 확인 (DBSMSManagerSelect_ALTIBASE 대체)
         val ret =
-                if (spcodeMap.containsKey(srcCId)) {
-                    SmsDef.ALTI_SUCCESS
-                } else {
-                    SmsDef.ALTI_NODATA
-                }
+            if (spcodeMap.containsKey(srcCId)) {
+                SmsDef.ALTI_SUCCESS
+            } else {
+                SmsDef.ALTI_NODATA
+            }
 
         if (ret != SmsDef.ALTI_SUCCESS) {
             // C 코드 LINE 3553-3555: SMS Manager 서비스 멤버가 아님
             witcomLog.p_write(
-                    Level.WARN,
-                    String.format(
-                            "[WARNING] InsertIntoASPQ() OK! Not SMS Manager Service member SourceCID(%s) SourceCallNo(%s)",
-                            srcCId,
-                            srcMinNo
-                    )
+                Level.WARN,
+                String.format(
+                    "[WARNING] InsertIntoASPQ() OK! Not SMS Manager Service member SourceCID(%s) SourceCallNo(%s)",
+                    srcCId,
+                    srcMinNo
+                )
             )
             return
         }
 
         witcomLog.p_write(
-                Level.INFO,
-                String.format(
-                        "[NORMAL] InsertIntoASPQ() OK! SMS Manager Service member SourceCID(%s) SourceCallNo(%s)",
-                        srcCId,
-                        srcMinNo
-                )
+            Level.INFO,
+            String.format(
+                "[NORMAL] InsertIntoASPQ() OK! SMS Manager Service member SourceCID(%s) SourceCallNo(%s)",
+                srcCId,
+                srcMinNo
+            )
         )
 
         // C 코드 LINE 3567-3574: Dest Addr 설정
@@ -925,11 +1057,11 @@ object QItemServiceUtil {
         val destMinTmp = "$destCId$destMinNo"
         val destMinBytes = destMinTmp.toByteArray(Charset.forName("CP949"))
         System.arraycopy(
-                destMinBytes,
-                0,
-                ptrQItem.szMinNo,
-                0,
-                minOf(destMinBytes.size, ptrQItem.szMinNo.size - 1)
+            destMinBytes,
+            0,
+            ptrQItem.szMinNo,
+            0,
+            minOf(destMinBytes.size, ptrQItem.szMinNo.size - 1)
         )
         checkMinNoLen(ptrQItem.szMinNo, destMinTmp.length)
 
@@ -939,11 +1071,11 @@ object QItemServiceUtil {
             val spcode = spcodeEntity.spcode
             val spcodeBytes = spcode.toByteArray(Charset.forName("CP949"))
             System.arraycopy(
-                    spcodeBytes,
-                    0,
-                    ptrQItem.szCId,
-                    0,
-                    minOf(spcodeBytes.size, ptrQItem.szCId.size - 1)
+                spcodeBytes,
+                0,
+                ptrQItem.szCId,
+                0,
+                minOf(spcodeBytes.size, ptrQItem.szCId.size - 1)
             )
             ptrQItem.szCId[minOf(spcodeBytes.size, ptrQItem.szCId.size - 1)] = 0x00
         }
@@ -953,15 +1085,15 @@ object QItemServiceUtil {
         val tpNew = Calendar.getInstance()
         tpNew.timeInMillis = timeNew
         val curTime =
-                String.format(
-                        "%04d%02d%02d%02d%02d%02d",
-                        tpNew.get(Calendar.YEAR),
-                        tpNew.get(Calendar.MONTH) + 1,
-                        tpNew.get(Calendar.DAY_OF_MONTH),
-                        tpNew.get(Calendar.HOUR_OF_DAY),
-                        tpNew.get(Calendar.MINUTE),
-                        tpNew.get(Calendar.SECOND)
-                )
+            String.format(
+                "%04d%02d%02d%02d%02d%02d",
+                tpNew.get(Calendar.YEAR),
+                tpNew.get(Calendar.MONTH) + 1,
+                tpNew.get(Calendar.DAY_OF_MONTH),
+                tpNew.get(Calendar.HOUR_OF_DAY),
+                tpNew.get(Calendar.MINUTE),
+                tpNew.get(Calendar.SECOND)
+            )
         // C 코드 LINE 3627: strcat(curTime, "6")
         val curTimeWith6 = "${curTime}6"
 
@@ -979,11 +1111,11 @@ object QItemServiceUtil {
 
             // C 코드 LINE 3590-3599: Resultmsg 설정
             val Resultmsg =
-                    if (nTok != 0) {
-                        msgStr.substring(0, nTok)
-                    } else {
-                        msgStr
-                    }
+                if (nTok != 0) {
+                    msgStr.substring(0, nTok)
+                } else {
+                    msgStr
+                }
 
             // C 코드 LINE 3601-3603: ptrQItem->szMsg에 Resultmsg 복사
             val ResultmsgBytes = Resultmsg.toByteArray(Charset.forName("UTF-16BE"))
@@ -993,19 +1125,19 @@ object QItemServiceUtil {
 
             // C 코드 LINE 3605-3619: [N+] 태그 제거
             val msgAfterFW =
-                    String(
-                            ptrQItem.szMsg.sliceArray(0 until (ptrQItem.ucMsgLen * 2)),
-                            Charset.forName("UTF-16BE")
-                    )
+                String(
+                    ptrQItem.szMsg.sliceArray(0 until (ptrQItem.ucMsgLen * 2)),
+                    Charset.forName("UTF-16BE")
+                )
             nTok = msgAfterFW.indexOf("[N+]")
             if (nTok < 0) nTok = 0
 
             val Resultmsg2 =
-                    if (nTok != 0) {
-                        msgAfterFW.substring(0, nTok)
-                    } else {
-                        msgAfterFW
-                    }
+                if (nTok != 0) {
+                    msgAfterFW.substring(0, nTok)
+                } else {
+                    msgAfterFW
+                }
 
             val Resultmsg2Bytes = Resultmsg2.toByteArray(Charset.forName("UTF-16BE"))
             val resultMsg2Len = minOf(Resultmsg2Bytes.size, ptrQItem.szMsg.size)
@@ -1024,11 +1156,11 @@ object QItemServiceUtil {
             val combinedLen = minOf(curTimeUCS2Len + msgOriginalLen, SmsDef.MAX_SHORT_MSG_LEN / 2)
             val combinedUCS2 = ByteArray(combinedLen * 2)
             System.arraycopy(
-                    curTimeUCS2,
-                    0,
-                    combinedUCS2,
-                    0,
-                    minOf(curTimeUCS2.size, combinedUCS2.size)
+                curTimeUCS2,
+                0,
+                combinedUCS2,
+                0,
+                minOf(curTimeUCS2.size, combinedUCS2.size)
             )
             if (curTimeUCS2.size < combinedUCS2.size) {
                 val remainingSize = minOf(msgOriginal.size, combinedUCS2.size - curTimeUCS2.size)
@@ -1038,16 +1170,16 @@ object QItemServiceUtil {
             // C 코드 LINE 3639: ptrQItem->ucMsgLen = WcsLen(...)
             ptrQItem.ucMsgLen = (combinedUCS2.size / 2).toInt()
             System.arraycopy(
-                    combinedUCS2,
-                    0,
-                    ptrQItem.szMsg,
-                    0,
-                    minOf(combinedUCS2.size, ptrQItem.szMsg.size)
+                combinedUCS2,
+                0,
+                ptrQItem.szMsg,
+                0,
+                minOf(combinedUCS2.size, ptrQItem.szMsg.size)
             )
         }
         // C 코드 LINE 3642-3668: GSM7/ASCII7 인코딩 처리
         else if (ptrQItem.ucDataEncoding.toInt() == SmsDef.DCS_TYPE_DEC_GSM7 ||
-                        ptrQItem.ucDataEncoding.toInt() == SmsDef.DCS_TYPE_DEC_ASCII7
+            ptrQItem.ucDataEncoding.toInt() == SmsDef.DCS_TYPE_DEC_ASCII7
         ) {
             // C 코드 LINE 3643: memset(msg, 0x00, MAX_SHORT_MSG_LEN)
             val msg = ByteArray(SmsDef.MAX_SHORT_MSG_LEN)
@@ -1055,20 +1187,20 @@ object QItemServiceUtil {
             // C 코드 LINE 3645-3651: Unpack (7bit → 8bit) - msg[15]부터 시작
             val msgBytes = ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen)
             val unpackedMsgStr =
-                    if (ptrQItem.ucDataEncoding.toInt() == SmsDef.DCS_TYPE_DEC_GSM7) {
-                        gsm7bitDecodeToString(msgBytes)
-                    } else {
-                        // ASCII7은 US_ASCII로 디코딩
-                        String(msgBytes, StandardCharsets.US_ASCII)
-                    }
+                if (ptrQItem.ucDataEncoding.toInt() == SmsDef.DCS_TYPE_DEC_GSM7) {
+                    gsm7bitDecodeToString(msgBytes)
+                } else {
+                    // ASCII7은 US_ASCII로 디코딩
+                    String(msgBytes, StandardCharsets.US_ASCII)
+                }
             // msg[15]부터 unpacked 메시지 복사
             val unpackedMsgBytes = unpackedMsgStr.toByteArray(StandardCharsets.US_ASCII)
             System.arraycopy(
-                    unpackedMsgBytes,
-                    0,
-                    msg,
-                    15,
-                    minOf(unpackedMsgBytes.size, msg.size - 15)
+                unpackedMsgBytes,
+                0,
+                msg,
+                15,
+                minOf(unpackedMsgBytes.size, msg.size - 15)
             )
 
             // C 코드 LINE 3654-3655: memcpy(msg, curTime,14); msg[14] = '6'
@@ -1083,14 +1215,14 @@ object QItemServiceUtil {
             // C 코드 LINE 3662-3667: Packing (8bit → 7bit)
             val msgLen = unpackedMsgStr.length + 15 // 시간(15) + 원본 메시지
             val packedMsg =
-                    if (ptrQItem.ucDataEncoding.toInt() == SmsDef.DCS_TYPE_DEC_GSM7) {
-                        val msgStr =
-                                String(msg.sliceArray(0 until msgLen), StandardCharsets.US_ASCII)
-                        textTogsm7bitEncode(msgStr)
-                    } else {
-                        // ASCII7은 US_ASCII로 인코딩
-                        msg.sliceArray(0 until msgLen)
-                    }
+                if (ptrQItem.ucDataEncoding.toInt() == SmsDef.DCS_TYPE_DEC_GSM7) {
+                    val msgStr =
+                        String(msg.sliceArray(0 until msgLen), StandardCharsets.US_ASCII)
+                    textTogsm7bitEncode(msgStr)
+                } else {
+                    // ASCII7은 US_ASCII로 인코딩
+                    msg.sliceArray(0 until msgLen)
+                }
 
             // C 코드 LINE 3664/3667: ptrQItem->ucMsgLen = Packing8bitTo7bit(...)
             val copySize = minOf(packedMsg.size, ptrQItem.szMsg.size)
@@ -1108,11 +1240,11 @@ object QItemServiceUtil {
 
             // C 코드 LINE 3674-3685: Resultmsg 설정
             val Resultmsg =
-                    if (tok >= 0) {
-                        msgStr.substring(0, tok)
-                    } else {
-                        msgStr
-                    }
+                if (tok >= 0) {
+                    msgStr.substring(0, tok)
+                } else {
+                    msgStr
+                }
 
             // C 코드 LINE 3687-3690: msg와 ptrQItem->szMsg 업데이트
             val ResultmsgBytes = Resultmsg.toByteArray(Charset.forName("CP949"))
@@ -1122,19 +1254,19 @@ object QItemServiceUtil {
 
             // C 코드 LINE 3692: tok = strstr(msg, "[N+]")
             val msgAfterFW =
-                    String(
-                            ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
-                            Charset.forName("CP949")
-                    )
+                String(
+                    ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
+                    Charset.forName("CP949")
+                )
             tok = msgAfterFW.indexOf("[N+]")
 
             // C 코드 LINE 3693-3704: Resultmsg 설정
             val Resultmsg2 =
-                    if (tok >= 0) {
-                        msgAfterFW.substring(0, tok)
-                    } else {
-                        msgAfterFW
-                    }
+                if (tok >= 0) {
+                    msgAfterFW.substring(0, tok)
+                } else {
+                    msgAfterFW
+                }
 
             val Resultmsg2Bytes = Resultmsg2.toByteArray(Charset.forName("CP949"))
             val resultMsg2Len = minOf(Resultmsg2Bytes.size, ptrQItem.szMsg.size)
@@ -1143,10 +1275,10 @@ object QItemServiceUtil {
 
             // C 코드 LINE 3707-3711: 시간 + "6" + 메시지
             val msgFinal =
-                    String(
-                            ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
-                            Charset.forName("CP949")
-                    )
+                String(
+                    ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
+                    Charset.forName("CP949")
+                )
             val finalMsg = "${curTime}6$msgFinal"
             val finalMsgBytes = finalMsg.toByteArray(Charset.forName("CP949"))
             val copySize = minOf(finalMsgBytes.size, ptrQItem.szMsg.size)
@@ -1179,71 +1311,71 @@ object QItemServiceUtil {
             val szCIdInt = byteArrayToKString(ptrQItem.szCId).toIntOrNull() ?: 0
             //InsqStat 호출 필요 (C 코드 LINE 3737-3738)
             smsQLib.InsqStat(
-                    ptrQItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPALL_C,
-                    SERVICEID_GIPALL,
-                    ERRORID_CP_INSERTQ_FAIL,
-                    ST_Q_FULL_SMSMANAGER,
-                    szCIdInt,
-                    TID_NO_SAVE,
-                    LT_TRACE,
-                    0
+                ptrQItem,
+                MESSAGE_MO,
+                0,
+                gServerID,
+                MODULEID_GIPALL_C,
+                SERVICEID_GIPALL,
+                ERRORID_CP_INSERTQ_FAIL,
+                ST_Q_FULL_SMSMANAGER,
+                szCIdInt,
+                TID_NO_SAVE,
+                LT_TRACE,
+                0
             )
             // InsertHistory(gCallHistory, ptrQItem, NULL, MODULE_GIPALL, MANAGERQ_FULL, __LINE__,
             // atoi(gszSPCode));
         } else if (insertResult < 0) {
             witcomLog.p_write(
-                    Level.ERROR,
-                    String.format(
-                            "[ERROR] InsertIntoASPQ ERROR : InsertIntoSmsQ %d[Q_FAIL]",
-                            insertResult
-                    )
+                Level.ERROR,
+                String.format(
+                    "[ERROR] InsertIntoASPQ ERROR : InsertIntoSmsQ %d[Q_FAIL]",
+                    insertResult
+                )
             )
             val szCIdInt = byteArrayToKString(ptrQItem.szCId).toIntOrNull() ?: 0
             //InsqStat 호출 필요 (C 코드 LINE 3750-3751)
             smsQLib.InsqStat(
-                    ptrQItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPALL_C,
-                    SERVICEID_GIPALL,
-                    ERRORID_CP_INSERTQ_FAIL,
-                    ST_Q_INSERT_FAIL_SMSMANAGER,
-                    szCIdInt,
-                    TID_NO_SAVE,
-                    LT_TRACE,
-                    0
+                ptrQItem,
+                MESSAGE_MO,
+                0,
+                gServerID,
+                MODULEID_GIPALL_C,
+                SERVICEID_GIPALL,
+                ERRORID_CP_INSERTQ_FAIL,
+                ST_Q_INSERT_FAIL_SMSMANAGER,
+                szCIdInt,
+                TID_NO_SAVE,
+                LT_TRACE,
+                0
             )
             //            InsertHistory(gCallHistory, ptrQItem, NULL, MODULE_GIPALL,
             // MANAGERQ_INSERT_FAIL, __LINE__, atoi(gszSPCode));
         } else {
             witcomLog.p_write(
-                    Level.INFO,
-                    String.format(
-                            "[NORMAL] InsertIntoASPQ() OK! SMS Manager Service member SourceCID(%s) SourceCallNo(%s)",
-                            srcCId,
-                            srcMinNo
-                    )
+                Level.INFO,
+                String.format(
+                    "[NORMAL] InsertIntoASPQ() OK! SMS Manager Service member SourceCID(%s) SourceCallNo(%s)",
+                    srcCId,
+                    srcMinNo
+                )
             )
             val szCIdInt = byteArrayToKString(ptrQItem.szCId).toIntOrNull() ?: 0
             //InsqStat 호출 필요 (C 코드 LINE 3757-3758)
             smsQLib.InsqStat(
-                    ptrQItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPALL_C,
-                    SERVICEID_GIPALL,
-                    ERRORID_CP_MO_SUCCESS,
-                    ST_GIPALL_SMSMGR_OK,
-                    szCIdInt,
-                    TID_NO_SAVE,
-                    LT_BOTH,
-                    0
+                ptrQItem,
+                MESSAGE_MO,
+                0,
+                gServerID,
+                MODULEID_GIPALL_C,
+                SERVICEID_GIPALL,
+                ERRORID_CP_MO_SUCCESS,
+                ST_GIPALL_SMSMGR_OK,
+                szCIdInt,
+                TID_NO_SAVE,
+                LT_BOTH,
+                0
             )
         }
     }

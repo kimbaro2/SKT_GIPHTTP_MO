@@ -1,0 +1,146 @@
+---
+
+## BillType (과금 타입) 분석 및 구현
+
+### 개요
+BillType은 SMS 과금 처리 방식을 결정하는 핵심 타입입니다. 총 6가지 경우의 수가 있으며, 각 값에 따라 다른 처리 로직이 적용됩니다.
+
+### BillType 경우의 수
+
+| 값 | 상수명 | 설명 | 의미 | 주요 사용처 |
+|---|---|---|---|---|
+| 0 | BILLTYPE_NONE | 기본값/무료문자 | 기본값 또는 무료문자 처리 | 무료문자 처리 |
+| 1 | BILLTYPE_NOT | 비과금 | 비과금 처리 | MO/TR 처리 분기, 즉시 과금 처리 |
+| 2 | BILLTYPE_SRC | 발신자 과금 | 발신자 과금 처리 | 기본값, NP_PREFIX, MO 한도 체크 |
+| 3 | BILLTYPE_DESC | 착신자 과금 | 착신자 과금 처리 | MT 한도 체크 |
+| 4 | BILLTYPE_GIVE | 선물 과금 | 선물 과금 처리 | GIVE 한도 체크 |
+| 5 | BILLTYPE_CNT | 비과금 정산용 | 비과금 정산용 처리 | 정의만 존재 |
+
+### 주요 분기 로직
+
+#### 1. MO 처리 분기 (GIPEVENT_c.c LINE 1605)
+- `billType != "1"` → NOTI_PLUS 여부에 따라 `InsertMO_NOTISEND` 또는 `InsertGIPMOCallInfo`
+- `billType == "1"` → `InsertGIPMOCallInfo`만 실행
+
+#### 2. TR 수신 처리 (GIPEVENT_c.c LINE 1995)
+- `billType == "1"` → 즉시 과금 처리 (`SelectGIPMOCallInfo` 호출)
+
+#### 3. 한도 체크 (GIDBLib.c LINE 4727-4749)
+- `billType == 2` → MO 한도 체크 (`iLimitMO = true`)
+- `billType == 3` → MT 한도 체크 (`iLimitMT = true`)
+- `billType == 4` → GIVE 한도 체크 (`iLimitGIVE = true`)
+
+#### 4. NP_PREFIX 처리 (SmsQLib.c LINE 2056)
+- `billType == '2'` → 특별한 통신사 코드 처리
+
+### 구현된 클래스
+
+#### 1. BillType.kt (Enum 클래스)
+**위치**: `src/main/java/com/infra/mo/skt_giphttp_mo/utils/BillType.kt`
+
+**주요 기능**:
+- 6가지 BillType 값 정의 (NONE, NOT, SRC, DESC, GIVE, CNT)
+- 각 값의 설명과 의미 포함
+- 문자열/정수/문자 변환 메서드
+- 기본값 제공 (SRC = "2")
+
+**사용 예시**:
+```kotlin
+val billType = BillType.SRC
+println(billType.description) // "발신자 과금"
+println(billType.toStringValue()) // "2"
+
+// 문자열로부터 BillType 찾기
+val type = BillType.fromString("2") // BillType.SRC
+```
+
+#### 2. BillTypeUtil.kt (유틸리티 클래스)
+**위치**: `src/main/java/com/infra/mo/skt_giphttp_mo/utils/BillTypeUtil.kt`
+
+**주요 메서드**:
+
+1. **과금 타입 확인 메서드**
+   - `isNotBilling(billType: String?)` - 비과금 여부 확인 (BillType == "1")
+   - `isSrcBilling(billType: String?)` - 발신자 과금 여부 확인 (BillType == "2")
+   - `isDescBilling(billType: String?)` - 착신자 과금 여부 확인 (BillType == "3")
+   - `isGiveBilling(billType: String?)` - 선물 과금 여부 확인 (BillType == "4")
+   - `isFreeMessage(billType: String?)` - 무료문자 여부 확인 (BillType == "0")
+
+2. **처리 로직 메서드**
+   - `shouldInsertMO_NOTISEND(billType: String?, isNotiPlus: Boolean)` - MO 전송 시 INSERT 테이블 결정
+     - C 코드: GIPEVENT_c.c LINE 1605-1643
+     - 로직: `gBILLTYPE != '1' && NOTI_PLUS` → InsertMO_NOTISEND
+   - `shouldProcessImmediateBilling(billType: String?)` - TR 수신 시 즉시 과금 처리 여부
+     - C 코드: GIPEVENT_c.c LINE 1995-2066
+     - 로직: `gBILLTYPE == '1'` → 즉시 과금 처리
+
+3. **한도 체크 메서드**
+   - `getLimitCheck(chLimitFlag: String?, billType: String?)` - 한도 체크 로직
+     - C 코드: GIDBLib.c LINE 4727-4749
+     - 반환: `LimitCheckResult(limitMO, limitMT, limitGIVE)`
+     - BILLTYPE_SRC (2) → iLimitMO = true
+     - BILLTYPE_DESC (3) → iLimitMT = true
+     - BILLTYPE_GIVE (4) → iLimitGIVE = true
+
+4. **기타 유틸리티 메서드**
+   - `requiresNPPrefixProcessing(billType: String?)` - NP_PREFIX 처리 여부 확인
+   - `isValid(billType: String?)` - BillType 유효성 검증
+   - `getDescription(billType: String?)` - BillType 설명 조회
+   - `getMeaning(billType: String?)` - BillType 의미 조회
+
+**사용 예시**:
+```kotlin
+// 비과금 여부 확인
+val isNotBilling = BillTypeUtil.isNotBilling("1") // true
+
+// 한도 체크
+val limitCheck = BillTypeUtil.getLimitCheck("Y", "2")
+// LimitCheckResult(limitMO=true, limitMT=false, limitGIVE=false)
+
+// MO 처리 분기
+val shouldInsertMO_NOTISEND = BillTypeUtil.shouldInsertMO_NOTISEND("2", true)
+// true: InsertMO_NOTISEND, false: InsertGIPMOCallInfo
+```
+
+### C 코드 참조 위치
+
+- **GITcp.h**: BillType 상수 정의
+- **GIPEVENT_c.c LINE 1605**: MO 처리 분기 로직
+- **GIPEVENT_c.c LINE 1995**: TR 수신 즉시 과금 처리
+- **GIDBLib.c LINE 4727-4749**: 한도 체크 로직
+- **SmsQLib.c LINE 2056**: NP_PREFIX 처리
+- **GipDefaultEntity.java LINE 81**: 데이터베이스 주석
+
+### 프로젝트별 구현 위치
+
+- **SKT_GIPHTTP_SEND**: `src/main/java/com/infra/send/skt_giphttp_send/utils/`
+- **SKT_GIPHTTP_RECV**: `src/main/java/com/infra/recv/skt_giphttp_recv/utils/`
+- **SKT_GIPHTTP_MO**: `src/main/java/com/infra/mo/skt_giphttp_mo/utils/`
+
+### 마이그레이션 가이드
+
+기존 코드에서 BillType 관련 로직을 새 클래스로 마이그레이션할 때:
+
+1. **문자열 비교 대신 enum 사용**
+   ```kotlin
+   // 기존
+   if (billType == "1") { ... }
+   
+   // 변경
+   if (BillTypeUtil.isNotBilling(billType)) { ... }
+   ```
+
+2. **한도 체크 로직 통합**
+   ```kotlin
+   // 기존: switch 문으로 분기
+   // 변경: BillTypeUtil.getLimitCheck() 사용
+   val result = BillTypeUtil.getLimitCheck(chLimitFlag, billType)
+   ```
+
+3. **MO 처리 분기 통합**
+   ```kotlin
+   // 기존: 복잡한 조건문
+   // 변경: BillTypeUtil.shouldInsertMO_NOTISEND() 사용
+   val shouldInsert = BillTypeUtil.shouldInsertMO_NOTISEND(billType, isNotiPlus)
+   ```
+
