@@ -871,7 +871,18 @@ object QItemServiceUtil {
 
         // C 코드 LINE 4181: memcpy(ptrDestQItem->szMsg, ptrCallInfo->szMsg, ptrCallInfo->ucMsgLen)
         val ptrCallInfo_szMsg = ptrCallInfo.msg ?: ""
-        val msgBytes = ptrCallInfo_szMsg.toByteArray(Charset.forName("CP949"))
+        // dataEncoding 값에 따라 동적으로 인코딩 처리
+        val dataEncoding = ptrCallInfo.dcsType ?: 14
+        val encodingType = SmsEncodingTypeAnalyzer.analyze(dataEncoding)
+        val charset = when (encodingType) {
+            SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN -> Charset.forName("UTF-16BE")
+            SmsEncodingTypeAnalyzer.MessageType.KSC5601_CP949 -> Charset.forName("CP949")
+            SmsEncodingTypeAnalyzer.MessageType.ASCII_7BIT -> StandardCharsets.US_ASCII
+            SmsEncodingTypeAnalyzer.MessageType.BINARY_8BIT -> StandardCharsets.ISO_8859_1
+            SmsEncodingTypeAnalyzer.MessageType.GSM_7BIT -> StandardCharsets.US_ASCII // GSM7BIT은 별도 처리 필요
+            else -> Charset.forName("CP949") // 기본값
+        }
+        val msgBytes = ptrCallInfo_szMsg.toByteArray(charset)
         val msgCopySize = minOf(msgBytes.size, ptrDestQItem.szMsg.size, ptrDestQItem.ucMsgLen)
         System.arraycopy(msgBytes, 0, ptrDestQItem.szMsg, 0, msgCopySize)
 
@@ -1231,9 +1242,27 @@ object QItemServiceUtil {
         }
         // C 코드 LINE 3669-3713: 기타 인코딩 처리
         else {
+            // dataEncoding 값에 따라 적절한 Charset 선택
+            val dataEncoding = ptrQItem.ucDataEncoding.toInt() and 0xFF
+            val encodingType = SmsEncodingTypeAnalyzer.analyze(dataEncoding)
+            val charset = when (encodingType) {
+                SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN -> Charset.forName("UTF-16BE")
+                SmsEncodingTypeAnalyzer.MessageType.KSC5601_CP949 -> Charset.forName("CP949")
+                SmsEncodingTypeAnalyzer.MessageType.ASCII_7BIT -> StandardCharsets.US_ASCII
+                SmsEncodingTypeAnalyzer.MessageType.BINARY_8BIT -> StandardCharsets.ISO_8859_1
+                SmsEncodingTypeAnalyzer.MessageType.GSM_7BIT -> StandardCharsets.US_ASCII
+                else -> Charset.forName("CP949") // 기본값
+            }
+            
             // C 코드 LINE 3671: memcpy(msg, ptrQItem->szMsg, ptrQItem->ucMsgLen + 1)
-            val msg = ptrQItem.szMsg.sliceArray(0 until (ptrQItem.ucMsgLen + 1))
-            val msgStr = String(msg, Charset.forName("CP949"))
+            // UCS2는 2바이트/문자이므로 바이트 수는 짝수여야 함. +1을 하면 홀수 바이트가 되어 디코딩이 깨짐
+            val msgLength = if (encodingType == SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN) {
+                ptrQItem.ucMsgLen  // UCS2는 바이트 수 그대로 사용
+            } else {
+                ptrQItem.ucMsgLen + 1  // 다른 인코딩은 +1 사용
+            }
+            val msg = ptrQItem.szMsg.sliceArray(0 until msgLength)
+            val msgStr = String(msg, charset)
 
             // C 코드 LINE 3673: tok = strstr(msg, "[FW]")
             var tok = msgStr.indexOf("[FW]")
@@ -1247,7 +1276,7 @@ object QItemServiceUtil {
                 }
 
             // C 코드 LINE 3687-3690: msg와 ptrQItem->szMsg 업데이트
-            val ResultmsgBytes = Resultmsg.toByteArray(Charset.forName("CP949"))
+            val ResultmsgBytes = Resultmsg.toByteArray(charset)
             val resultMsgLen = minOf(ResultmsgBytes.size, ptrQItem.szMsg.size)
             System.arraycopy(ResultmsgBytes, 0, ptrQItem.szMsg, 0, resultMsgLen)
             ptrQItem.ucMsgLen = resultMsgLen
@@ -1256,7 +1285,7 @@ object QItemServiceUtil {
             val msgAfterFW =
                 String(
                     ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
-                    Charset.forName("CP949")
+                    charset
                 )
             tok = msgAfterFW.indexOf("[N+]")
 
@@ -1268,7 +1297,7 @@ object QItemServiceUtil {
                     msgAfterFW
                 }
 
-            val Resultmsg2Bytes = Resultmsg2.toByteArray(Charset.forName("CP949"))
+            val Resultmsg2Bytes = Resultmsg2.toByteArray(charset)
             val resultMsg2Len = minOf(Resultmsg2Bytes.size, ptrQItem.szMsg.size)
             System.arraycopy(Resultmsg2Bytes, 0, ptrQItem.szMsg, 0, resultMsg2Len)
             ptrQItem.ucMsgLen = resultMsg2Len
@@ -1277,10 +1306,10 @@ object QItemServiceUtil {
             val msgFinal =
                 String(
                     ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
-                    Charset.forName("CP949")
+                    charset
                 )
             val finalMsg = "${curTime}6$msgFinal"
-            val finalMsgBytes = finalMsg.toByteArray(Charset.forName("CP949"))
+            val finalMsgBytes = finalMsg.toByteArray(charset)
             val copySize = minOf(finalMsgBytes.size, ptrQItem.szMsg.size)
             System.arraycopy(finalMsgBytes, 0, ptrQItem.szMsg, 0, copySize)
             ptrQItem.ucMsgLen = copySize

@@ -68,6 +68,21 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
     );
     
     /**
+     * SelectGIPMOCallInfo 함수 - msgId만으로 조회
+     * 
+     * SELECT * FROM MOCALLINFO
+     * WHERE MSGID = :msgId
+     * ORDER BY MOSUBTIME DESC
+     * 
+     * 주의: 동일한 msgId가 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
+     */
+    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO WHERE MSGID = :msgId ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
+            nativeQuery = true)
+    MOCallInfoEntity findByMsgId(
+            @Param("msgId") String msgId
+    );
+    
+    /**
      * UpdateGIPMOCallInfo 함수 - 원본 레코드 삭제
      * 
      * C 코드: GIDBLib.c LINE 3884-3899
@@ -81,6 +96,20 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
     int deleteBySrcCallNoAndDestCIdAndMsgId(
             @Param("srcCallNo") String srcCallNo,
             @Param("destCId") String destCId,
+            @Param("msgId") String msgId
+    );
+    
+    /**
+     * DeleteGIPMOCallInfo 함수 - msgId만으로 삭제
+     * 
+     * DELETE FROM MOCALLINFO
+     * WHERE MSGID = :msgId
+     */
+    @Modifying
+    @Query(value = "DELETE FROM SMS.MOCALLINFO " +
+            "WHERE MSGID = :msgId",
+            nativeQuery = true)
+    int deleteByMsgId(
             @Param("msgId") String msgId
     );
 }

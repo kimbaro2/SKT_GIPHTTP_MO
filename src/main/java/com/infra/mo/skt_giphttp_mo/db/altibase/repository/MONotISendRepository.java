@@ -36,6 +36,22 @@ public interface MONotISendRepository extends JpaRepository<MONotISendEntity, MO
     );
     
     /**
+     * findByMsgIdAndServerType 함수 - msgId만으로 조회 (msgID는 고유 값)
+     * 
+     * SELECT * FROM MO_NOTISEND
+     * WHERE MSGID = ? AND SERVERTYPE = ?
+     * ORDER BY MOSUBTIME DESC
+     */
+    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MO_NOTISEND " +
+            "WHERE MSGID = :msgId AND SERVERTYPE = :serverType " +
+            "ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
+            nativeQuery = true)
+    Optional<MONotISendEntity> findByMsgIdAndServerType(
+            @Param("msgId") String msgId,
+            @Param("serverType") String serverType
+    );
+    
+    /**
      * UpdateMO_NOTISEND 함수
      * 
      * C 코드: GIDBLib.c LINE 4418-4425

@@ -32,6 +32,7 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_NODATA
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_TR_FAIL
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_TR_SUCCESS
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_TR_SUCCESS
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.GI_RES_NO_ERR
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.IF_NULL
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.LT_BOTH
@@ -78,8 +79,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import javax.persistence.EntityManager
 import javax.persistence.PersistenceContext
-import java.io.File
-import java.io.FileWriter
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.*
@@ -108,10 +107,8 @@ open class SmsResServiceImpl(
     private val gServerID = System.getenv("SMSS_NO")?.trim()?.toIntOrNull() ?: 0
     
     // bprintf 로그 파일 경로: C 코드 bprintf.c LINE 78 - getenv("SMS_VCDR")/LOG/
-    private val vcdrDir: String = System.getenv("SMS_VCDR") ?: "/APP/sms/vcdr"
-    private val billingLogDir = "$vcdrDir/LOG"
-    private var billingLogFile: FileWriter? = null
-    private var lastBillingLogMinute: Int = -1
+    // JNA bprintf 함수가 내부적으로 파일 경로를 처리하므로 여기서는 주석으로만 남김
+    // private val vcdrDir: String = System.getenv("SMS_VCDR") ?: "/APP/sms/vcdr"
 
     // CFG_VBILL(PROC_TYPE='MO')에서 VBILL_MO 큐 번호를 조회하여 캐싱
     @Volatile
@@ -288,12 +285,9 @@ open class SmsResServiceImpl(
             val msgId = request.data.msgId ?: ""
             
             // MO ACK에서는 MOCALLINFO 레코드 삭제만 수행 (ESMClass 정보 없음)
-            val deletedMOCallInfo = selectGIPMOCallInfo(
-                request.data.srcCallNo ?: "",
-                request.data.destCID ?: "",
-                msgId
-            )
-            if (deletedMOCallInfo != null) {
+            val moCallInfo = selectGIPMOCallInfo(msgId)
+            if (moCallInfo != null) {
+                deleteGIPMOCallInfo(moCallInfo)
                 witcomLog.c_write(loggerName, Level.INFO,
                     String.format("[processSMReqSimple] BILLTYPE='1' MOCALLINFO 삭제 완료: SourceCallNo(%s) DestCID(%s) MsgId(%s)",
                         request.data.srcCallNo, request.data.destCID, msgId),
@@ -353,6 +347,7 @@ open class SmsResServiceImpl(
                 Thread.currentThread().getId()
             )
             // C 코드 LINE 2073-2075: InsqStat 호출 (성공)
+            // C 코드 LINE 2096-2098: LT_BOTH 사용하여 통계에 15 값 기록
             smsQLib.InsqStat(
                 qItem,
                 MESSAGE_MO,
@@ -364,7 +359,7 @@ open class SmsResServiceImpl(
                 ST_GIPEVENT_MORS_OK,
                 ackResult,
                 TID_NO_SAVE,
-                LT_BOTH,
+                LT_BOTH,  // 통계에 15 값 기록 (C 코드 LINE 2096-2098과 일치)
                 0
             )
             
@@ -387,6 +382,7 @@ open class SmsResServiceImpl(
                 Thread.currentThread().getId()
             )
             // C 코드 LINE 2079-2081: InsqStat 호출 (실패)
+            // TRC 생성은 processMOBilling에서만 수행하므로 LT_TRACE 사용
             smsQLib.InsqStat(
                 qItem,
                 MESSAGE_MO,
@@ -398,7 +394,7 @@ open class SmsResServiceImpl(
                 ST_GIP_MORS_FAIL,
                 ackResult,
                 TID_NO_SAVE,
-                LT_BOTH,
+                LT_TRACE,  // LT_BOTH → LT_TRACE로 변경 (TRC 생성 안 함, 일관성 유지)
                 0
             )
             
@@ -437,12 +433,64 @@ open class SmsResServiceImpl(
                 String.format("[processSMReqSimple] !gMOTRBILL 분기 선택: 즉시 과금 처리 시작"),
                 Thread.currentThread().getId()
             )
-            processMOBilling(qItem, request, gipHttpMoAccess, smsQLib)
+            processMOBilling(qItem, request, gipHttpMoAccess, smsQLib, loggerName)
             witcomLog.c_write(loggerName, Level.INFO,
                 String.format("[processSMReqSimple] !gMOTRBILL 분기 완료: 즉시 과금 처리 완료"),
                 Thread.currentThread().getId()
             )
             return
+        } else {
+            // MOTRBILL='Y': UpdateGIPMOCallInfo 또는 UpdateMO_NOTISEND 호출 (MO-TR에서 과금)
+            witcomLog.c_write(loggerName, Level.INFO,
+                String.format("[processSMReqSimple] gMOTRBILL='Y' 분기 선택: UpdateGIPMOCallInfo 또는 UpdateMO_NOTISEND 호출 시작"),
+                Thread.currentThread().getId()
+            )
+            
+            val rsv4Protocol11 = request.data.rsv4Protocol?.getOrNull(11)?.data ?: 0
+            val isNotiPlusType =
+                rsv4Protocol11 == NOTI_PLUS_NORMAL_MO ||
+                    rsv4Protocol11 == NOTI_PLUS_PORTED_MO
+            val isNotiType =
+                rsv4Protocol11 == NOTI_NORMAL_MO ||
+                    rsv4Protocol11 == NOTI_PORTED_MO
+            
+            witcomLog.c_write(loggerName, Level.DEBUG,
+                String.format("[processSMReqSimple] ESMClass 분기 체크: rsv4Protocol11(%d), isNotiPlusType(%s), isNotiType(%s), NOTI_PLUS_NORMAL_MO(%d), NOTI_PLUS_PORTED_MO(%d), NOTI_NORMAL_MO(%d), NOTI_PORTED_MO(%d)",
+                    rsv4Protocol11,
+                    if (isNotiPlusType) "YES" else "NO",
+                    if (isNotiType) "YES" else "NO",
+                    NOTI_PLUS_NORMAL_MO,
+                    NOTI_PLUS_PORTED_MO,
+                    NOTI_NORMAL_MO,
+                    NOTI_PORTED_MO
+                ),
+                Thread.currentThread().getId()
+            )
+            
+            if (isNotiPlusType || isNotiType) {
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processSMReqSimple] NOTI_PLUS/NOTI 분기 선택: isNotiPlusType(%s), isNotiType(%s) - updateMO_NOTISEND 호출",
+                        if (isNotiPlusType) "YES" else "NO",
+                        if (isNotiType) "YES" else "NO"
+                    ),
+                    Thread.currentThread().getId()
+                )
+                updateMO_NOTISEND(request)
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processSMReqSimple] NOTI_PLUS/NOTI 분기 완료: updateMO_NOTISEND 완료"),
+                    Thread.currentThread().getId()
+                )
+            } else {
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processSMReqSimple] 일반 분기 선택: isNotiPlusType(NO), isNotiType(NO) - updateGIPMOCallInfo 호출"),
+                    Thread.currentThread().getId()
+                )
+                updateGIPMOCallInfo(request)
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processSMReqSimple] 일반 분기 완료: updateGIPMOCallInfo 완료"),
+                    Thread.currentThread().getId()
+                )
+            }
         }
     }
     
@@ -455,20 +503,15 @@ open class SmsResServiceImpl(
      * - bprintf 과금 데이터 출력
      * - InsqStat 호출 (과금 완료)
      * - RCS 처리 (필요 시)
+     * - MOCALLINFO 삭제 (과금 성공 후)
      */
-    private suspend fun processMOBilling(
+    override suspend fun processMOBilling(
         qItem: QITEM,
         request: ResponseTR,
         gipHttpMoAccess: GipHttpMoAccessEntity?,
-        smsQLib: SmsQLib
+        smsQLib: SmsQLib,
+        loggerName: String
     ) {
-        // loggerName 생성: gipHttpMoAccess에서 IP/PORT 추출
-        val loggerName = getLoggerName(
-            request.data.destCID,
-            gipHttpMoAccess?.ipAddr,
-            gipHttpMoAccess?.portNo
-        )
-        
         witcomLog.c_write(loggerName, Level.DEBUG,
             String.format("[processMOBilling] 함수 진입: destCID(%s), srcCallNo(%s), msgSeqNo(%d)",
                 request.data.destCID ?: "",
@@ -478,86 +521,58 @@ open class SmsResServiceImpl(
             Thread.currentThread().getId()
         )
         
-        // C 코드 LINE 2096: DBGet_GIENQ_CID 호출
-        witcomLog.c_write(loggerName, Level.DEBUG,
-            String.format("[processMOBilling] DBGet_GIENQ_CID 호출 시작: destCID(%s)", request.data.destCID ?: ""),
-            Thread.currentThread().getId()
-        )
-        val cidLen = dbGetGIENQCID(request.data.destCID, loggerName)
-        
-        witcomLog.c_write(loggerName, Level.DEBUG,
-            String.format("[processMOBilling] DBGet_GIENQ_CID 결과: cidLen(%d), result(%s)",
-                cidLen,
-                if (cidLen >= 0) "SUCCESS" else "FAIL"
-            ),
-            Thread.currentThread().getId()
-        )
-        
-        if (cidLen < 0) {
-            witcomLog.c_write(loggerName, Level.INFO,
-                String.format("[processMOBilling] Invalid CID 분기 선택: cidLen(%d) - 에러 처리", cidLen),
-                Thread.currentThread().getId()
-            )
-            // C 코드 LINE 2107-2112: Invalid CID 처리
-            smsQLib.InsqStat(
-                qItem,
-                MESSAGE_MO,
-                0,
-                gServerID,
-                MODULEID_GIPEVENT_C,
-                SERVICEID_GIPEVENT,
-                ERRORID_CP_MO_FAIL,
-                ST_GIP_INVALID_CID,
-                IF_NULL,
-                TID_NO_SAVE,
-                LT_TRACE,
-                0
-            )
-            
-            witcomLog.c_write(
-                loggerName,
-                Level.ERROR,
-                String.format("[processMOBilling] Invalid CID 분기: Invalid DestCID [%s]", request.data.destCID),
-                Thread.currentThread().getId()
-            )
-            return
-        }
-        
-        val cdrCId = request.data.destCID.substring(0, cidLen)
-        
         // C 코드 LINE 2122: SelectGIPMOCallInfo 호출
         // HTTP 환경에서는 MO와 MO-TR이 동일한 msgID를 사용하므로,
         // 원본 레코드를 조회하기 위해 request.data.msgId를 사용
         val msgId = request.data.msgId ?: ""  // MO와 MO-TR 모두 동일한 msgID
         
         witcomLog.c_write(loggerName, Level.DEBUG,
-            String.format("[processMOBilling] SelectGIPMOCallInfo 호출 시작: srcCallNo(%s), destCID(%s), msgId(%s)",
-                request.data.srcCallNo ?: "",
-                request.data.destCID ?: "",
+            String.format("[processMOBilling] SelectGIPMOCallInfo 호출 시작: msgId(%s)",
                 msgId
             ),
             Thread.currentThread().getId()
         )
-        val moCallInfo = selectGIPMOCallInfo(
-            request.data.srcCallNo,
-            request.data.destCID,
-            msgId
-        )
+        val moCallInfo = selectGIPMOCallInfo(msgId)
         
-        witcomLog.c_write(loggerName, Level.DEBUG,
-            String.format("[processMOBilling] SelectGIPMOCallInfo 결과: moCallInfo(%s)",
-                if (moCallInfo != null) "FOUND" else "NOT_FOUND"
+        witcomLog.c_write(loggerName, 
+            if (moCallInfo != null) Level.INFO else Level.WARN,
+            String.format("[processMOBilling] SelectGIPMOCallInfo 결과: moCallInfo(%s), msgId(%s)",
+                if (moCallInfo != null) "FOUND" else "NOT_FOUND",
+                msgId
             ),
             Thread.currentThread().getId()
         )
         
+        // MOCALLINFO 조회 실패 시 상세 로그 출력
+        if (moCallInfo == null) {
+            witcomLog.c_write(loggerName, Level.WARN,
+                String.format("[processMOBilling] ⚠️ MOCALLINFO 레코드 없음: srcCallNo(%s), destCID(%s), msgId(%s) - MO 메시지 수신 시 insertGIPMOCallInfo로 레코드가 생성되어야 함",
+                    request.data.srcCallNo ?: "",
+                    request.data.destCID ?: "",
+                    msgId
+                ),
+                Thread.currentThread().getId()
+            )
+        } else {
+            witcomLog.c_write(loggerName, Level.DEBUG,
+                String.format("[processMOBilling] MOCALLINFO 레코드 조회 성공: srcCallNo(%s), destCID(%s), msgId(%s), traceId(%s), moSubTime(%s)",
+                    moCallInfo.srcCallNo ?: "",
+                    moCallInfo.destCId ?: "",
+                    moCallInfo.msgId ?: "",
+                    moCallInfo.traceId ?: "",
+                    moCallInfo.moSubTime ?: ""
+                ),
+                Thread.currentThread().getId()
+            )
+        }
+        
         // C 코드 LINE 408: SelectTRMOCallInfo 호출 후, 실패 시 SelectTRMO_NOTISEND 호출
         // MOCALLINFO 우선 조회, 실패 시 MO_NOTISEND 조회
+        // msgId는 고유 값이므로 msgId만으로 조회
         val effectiveMoInfo = moCallInfo ?: moNotISendRepository
-            .findByMsgIdAndDestCIdAndSrcCIdAndServerType(
-                request.data.msgSeqNo.toString(),
-                request.data.destCID,
-                request.data.srcCID
+            .findByMsgIdAndServerType(
+                msgId,
+                "V"  // SERVERTYPE='V'
             )
             .orElse(null)
             ?.let { noti ->
@@ -674,44 +689,182 @@ open class SmsResServiceImpl(
             val buf = SimpleDateFormat("yyMMddHHmmss").format(Date(now.timeInMillis - 15000))
             val szUsec = String.format("%.4f", (now.get(Calendar.MILLISECOND) / 1000.0)).substring(2)
             
-            val destCallNoInt = request.data.destCallNo.toIntOrNull() ?: 0
-            val isPortableNo = destCallNoInt >= 100000000
+            // DB 정보만 사용 (msgID는 고유 값이므로 겹치지 않음)
+            val dbSrcCId = effectiveMoInfo.srcCId ?: ""
+            val dbDestCId = effectiveMoInfo.destCId ?: ""
+            val dbSrcCallNo = effectiveMoInfo.srcCallNo ?: ""
+            val dbDestCallNo = effectiveMoInfo.destCallNo ?: ""
             
-            val isColorOrAvata = request.data.destCID.startsWith("COL") || request.data.destCID.startsWith("AVAT")
+            // DBGet_GIENQ_CID 호출 (DB 정보 사용)
+            witcomLog.c_write(loggerName, Level.DEBUG,
+                String.format("[processMOBilling] DBGet_GIENQ_CID 호출 시작: destCID(%s) - DB 정보 사용", dbDestCId),
+                Thread.currentThread().getId()
+            )
+            val cidLen = dbGetGIENQCID(dbDestCId, loggerName)
+            
+            witcomLog.c_write(loggerName, Level.DEBUG,
+                String.format("[processMOBilling] DBGet_GIENQ_CID 결과: cidLen(%d), result(%s)",
+                    cidLen,
+                    if (cidLen >= 0) "SUCCESS" else "FAIL"
+                ),
+                Thread.currentThread().getId()
+            )
+            
+            if (cidLen < 0) {
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processMOBilling] Invalid CID 분기 선택: cidLen(%d) - 에러 처리", cidLen),
+                    Thread.currentThread().getId()
+                )
+                // C 코드 LINE 2107-2112: Invalid CID 처리
+                smsQLib.InsqStat(
+                    qItem,
+                    MESSAGE_MO,
+                    0,
+                    gServerID,
+                    MODULEID_GIPEVENT_C,
+                    SERVICEID_GIPEVENT,
+                    ERRORID_CP_MO_FAIL,
+                    ST_GIP_INVALID_CID,
+                    IF_NULL,
+                    TID_NO_SAVE,
+                    LT_TRACE,
+                    0
+                )
+                
+                witcomLog.c_write(
+                    loggerName,
+                    Level.ERROR,
+                    String.format("[processMOBilling] Invalid CID 분기: Invalid DestCID [%s] - DB 정보", dbDestCId),
+                    Thread.currentThread().getId()
+                )
+                return
+            }
+            
+            val cdrCId = dbDestCId.substring(0, cidLen)
+            val destCallNoInt = dbDestCallNo.toIntOrNull() ?: 0
+            val isPortableNo = destCallNoInt >= 100000000
+            val isColorOrAvata = dbDestCId.startsWith("COL") || dbDestCId.startsWith("AVAT")
+            val srcCallNoInt = dbSrcCallNo.toIntOrNull() ?: 0
             
             val callTypeMo = 1
             val msgDeleverOk = 0
             val moduleNo = 0
+            val msgSeqNo = 0  // msgSeqNo는 DB에 저장되지 않으므로 0 사용
+            
+            // bprintf 호출 전 로그
+            witcomLog.c_write(loggerName, Level.DEBUG,
+                String.format("[processMOBilling] bprintf 호출 전: isColorOrAvata(%b), destCID(%s), srcCallNo(%s), destCallNo(%s), cdrCId(%s)",
+                    isColorOrAvata,
+                    dbDestCId,
+                    dbSrcCallNo,
+                    dbDestCallNo,
+                    cdrCId),
+                Thread.currentThread().getId()
+            )
+            
+            // C 코드 LINE 2163-2195: bprintf 과금 데이터 출력 (JNA bprintf 함수 사용)
+            val szServerNo = ""  // C 코드 LINE 2096: szServerNo (환경변수에서 가져오거나 빈 문자열)
+            val nRoaming = (effectiveMoInfo.roamingId ?: 0L).toInt()
+            val RoamPMN = effectiveMoInfo.roamPMN ?: ""
+            val CallBack = dstCallback
+            val cWZone = effectiveMoInfo.wZone?.get(0) ?: '0'
+            val origMvnoInfo = effectiveMoInfo.origMvnoInfo ?: ""
+            val destMvnoInfo = effectiveMoInfo.destMvnoInfo ?: ""
             
             if (isColorOrAvata) {
-                val billingLine = if (isPortableNo) {
-                    String.format(";%d;;;%d;%s;%s%d;0%d;%s;11;%08d;%s;%s;%s%s;%d;%d;%d;;;;;;%s;%s;0;%c;;%s;%s;%d;0;;\n",
-                        callTypeMo, moduleNo, "", request.data.srcCID, request.data.srcCallNo.toIntOrNull() ?: 0,
-                        destCallNoInt, cdrCId, request.data.msgSeqNo,
-                        moRecvTime, moSubTime, buf, szUsec, msgDeleverOk, qItem.ucMsgLen.toInt(), (effectiveMoInfo.roamingId ?: 0L).toInt(),
-                        effectiveMoInfo.roamPMN ?: "", dstCallback, effectiveMoInfo.wZone?.get(0) ?: '0',
-                        effectiveMoInfo.origMvnoInfo ?: "", effectiveMoInfo.destMvnoInfo ?: "", nRcs)
+                if (isPortableNo) {
+                    // C 코드 LINE 2169: bprintf 호출 (가입자 번호 형식: 0%d)
+                    val bprintfResult = smsQLib.bprintf(
+                        ";%d;;;%d;%s;%s%d;0%d;%s;11;%08d;%s;%s;%s%s;%d;%d;%d;;;;;;%s;%s;0;%c;;%s;%s;%d;0;;\n",
+                        callTypeMo,
+                        moduleNo,
+                        szServerNo,
+                        dbSrcCId,
+                        srcCallNoInt,
+                        destCallNoInt,
+                        cdrCId,
+                        msgSeqNo,
+                        moRecvTime,
+                        moSubTime,
+                        buf,
+                        szUsec,
+                        msgDeleverOk,
+                        qItem.ucMsgLen.toInt(),
+                        nRoaming,
+                        RoamPMN,
+                        CallBack,
+                        cWZone,
+                        origMvnoInfo,
+                        destMvnoInfo,
+                        nRcs
+                    )
+                    witcomLog.c_write(loggerName, Level.INFO,
+                        String.format("[processMOBilling] bprintf 호출 완료 (Color/Avata, 가입자 번호): 반환값(%d)", bprintfResult),
+                        Thread.currentThread().getId()
+                    )
                 } else {
-                    String.format(";%d;;;%d;%s;%s%d;%d;%s;11;%08d;%s;%s;%s%s;%d;%d;%d;;;;;;%s;%s;0;%c;;%s;%s;%d;0;;\n",
-                        callTypeMo, moduleNo, "", request.data.srcCID, request.data.srcCallNo.toIntOrNull() ?: 0,
-                        destCallNoInt, cdrCId, request.data.msgSeqNo,
-                        moRecvTime, moSubTime, buf, szUsec, msgDeleverOk, qItem.ucMsgLen.toInt(), (effectiveMoInfo.roamingId ?: 0L).toInt(),
-                        effectiveMoInfo.roamPMN ?: "", dstCallback, effectiveMoInfo.wZone?.get(0) ?: '0',
-                        effectiveMoInfo.origMvnoInfo ?: "", effectiveMoInfo.destMvnoInfo ?: "", nRcs)
+                    // C 코드 LINE 2179: bprintf 호출 (일반 번호 형식: %d)
+                    val bprintfResult = smsQLib.bprintf(
+                        ";%d;;;%d;%s;%s%d;%d;%s;11;%08d;%s;%s;%s%s;%d;%d;%d;;;;;;%s;%s;0;%c;;%s;%s;%d;0;;\n",
+                        callTypeMo,
+                        moduleNo,
+                        szServerNo,
+                        dbSrcCId,
+                        srcCallNoInt,
+                        destCallNoInt,
+                        cdrCId,
+                        msgSeqNo,
+                        moRecvTime,
+                        moSubTime,
+                        buf,
+                        szUsec,
+                        msgDeleverOk,
+                        qItem.ucMsgLen.toInt(),
+                        nRoaming,
+                        RoamPMN,
+                        CallBack,
+                        cWZone,
+                        origMvnoInfo,
+                        destMvnoInfo,
+                        nRcs
+                    )
+                    witcomLog.c_write(loggerName, Level.INFO,
+                        String.format("[processMOBilling] bprintf 호출 완료 (Color/Avata, 일반 번호): 반환값(%d)", bprintfResult),
+                        Thread.currentThread().getId()
+                    )
                 }
-                writeBillingLog(billingLine, loggerName)
             } else {
-                val billingLine = String.format(";%d;;;%d;%s;%s%d;%s;;11;%08d;%s;%s;%s%s;%d;%d;%d;;;;;;%s;%s;0;%c;;%s;%s;%d;0;;\n",
-                    callTypeMo, moduleNo, "", request.data.srcCID, request.data.srcCallNo.toIntOrNull() ?: 0,
-                    cdrCId, request.data.msgSeqNo,
-                    moRecvTime, moSubTime, buf, szUsec, msgDeleverOk, qItem.ucMsgLen.toInt(), effectiveMoInfo.roamingId ?: 0,
-                    effectiveMoInfo.roamPMN ?: "", dstCallback, effectiveMoInfo.wZone?.get(0) ?: '0',
-                    effectiveMoInfo.origMvnoInfo ?: "", effectiveMoInfo.destMvnoInfo ?: "", nRcs)
-                writeBillingLog(billingLine, loggerName)
+                // C 코드 LINE 2190: bprintf 호출 (일반 DestCID)
+                val bprintfResult = smsQLib.bprintf(
+                    ";%d;;;%d;%s;%s%d;%s;;11;%08d;%s;%s;%s%s;%d;%d;%d;;;;;;%s;%s;0;%c;;%s;%s;%d;0;;\n",
+                    callTypeMo,
+                    moduleNo,
+                    szServerNo,
+                    dbSrcCId,
+                    srcCallNoInt,
+                    cdrCId,
+                    msgSeqNo,
+                    moRecvTime,
+                    moSubTime,
+                    buf,
+                    szUsec,
+                    msgDeleverOk,
+                    qItem.ucMsgLen.toInt(),
+                    nRoaming,
+                    RoamPMN,
+                    CallBack,
+                    cWZone,
+                    origMvnoInfo,
+                    destMvnoInfo,
+                    nRcs
+                )
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processMOBilling] bprintf 호출 완료 (일반 DestCID): 반환값(%d)", bprintfResult),
+                    Thread.currentThread().getId()
+                )
             }
             
             // C 코드 LINE 518-519 (MOCALLINFO) 또는 LINE 651-652 (MO_NOTISEND): InsqStat 호출
-            // MO-TR 결과 처리이므로 ERRORID_CP_MO_TR_SUCCESS 사용
             val statTraceId = if (isFromMOCallInfo) {
                 // C 코드 LINE 518-519: MOCALLINFO 케이스
                 ST_VBILLMO_OK
@@ -720,85 +873,201 @@ open class SmsResServiceImpl(
                 ST_VBILLMO_NOTISEND_OK
             }
             
+            // C 코드 LINE 553 (ST_VBILLMO_OK) 또는 LINE 751 (ST_VBILLMO_NOTISEND_OK): ErrorID 분기
+            // MOTRBILL='N'이고 MO-ACK 단계일 때는 이미 processSMReqSimple()에서 InsqStat 호출했으므로 여기서는 스킵
+            val isMOACK = request.data.msgSubCode.toInt() == SM_REQ_SIMPLE  // MO-ACK 단계인지 확인
+            val gMOTRBILL = gipHttpMoAccess?.moTrBill?.trim()?.equals("Y", ignoreCase = true) == true
+            val shouldSkipInsqStat = isMOACK && !gMOTRBILL  // MOTRBILL='N'이고 MO-ACK 단계면 InsqStat 스킵
+            
             witcomLog.c_write(loggerName, Level.DEBUG,
-                String.format("[processMOBilling] InsqStat 호출: isFromMOCallInfo(%s), isFromMONotISend(%s), statTraceId(%d)",
-                    if (isFromMOCallInfo) "YES" else "NO",
-                    if (isFromMONotISend) "YES" else "NO",
-                    statTraceId
-                ),
+                String.format("[processMOBilling] 분기 체크: isMOACK(%b), gMOTRBILL(%b), shouldSkipInsqStat(%b), isFromMOCallInfo(%b)",
+                    isMOACK,
+                    gMOTRBILL,
+                    shouldSkipInsqStat,
+                    isFromMOCallInfo),
                 Thread.currentThread().getId()
             )
             
-            // 과금 처리 규칙: LT_TRACE(과금) + LT_BOTH(통계) 두 번 호출
-            // 1. 과금용 InsqStat 호출 (LT_TRACE)
-            witcomLog.c_write(loggerName, Level.DEBUG,
-                String.format("[processMOBilling] InsqStat 호출 시작 (과금용 LT_TRACE): MODULEID_VBILLMO(%d), SERVICEID_GIPEVENT(%d), ERRORID_CP_MO_TR_SUCCESS(%d), statTraceId(%d)",
-                    MODULEID_VBILLMO,
+            if (shouldSkipInsqStat) {
+                // MOTRBILL='N'이고 MO-ACK 단계: InsqStat은 이미 processSMReqSimple()에서 호출했으므로 스킵
+                // MOCALLINFO 삭제만 수행
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processMOBilling] MOTRBILL='N' MO-ACK 단계: InsqStat 스킵, MOCALLINFO 삭제만 수행 - msgId(%s)",
+                        msgId),
+                    Thread.currentThread().getId()
+                )
+                
+                // MOCALLINFO 삭제 (InsqStat 성공 여부와 관계없이)
+                if (moCallInfo != null) {
+                    witcomLog.c_write(loggerName, Level.DEBUG,
+                        String.format("[processMOBilling] MOCALLINFO 삭제 시작: MsgId(%s)",
+                            msgId),
+                        Thread.currentThread().getId()
+                    )
+                    deleteGIPMOCallInfo(moCallInfo)
+                    witcomLog.c_write(loggerName, Level.INFO,
+                        String.format("[processMOBilling] MOCALLINFO 삭제 완료: MsgId(%s)",
+                            msgId),
+                        Thread.currentThread().getId()
+                    )
+                } else {
+                    witcomLog.c_write(loggerName, Level.WARN,
+                        String.format("[processMOBilling] ⚠️ MOCALLINFO 삭제 스킵: moCallInfo가 NULL - msgId(%s)",
+                            msgId),
+                        Thread.currentThread().getId()
+                    )
+                }
+            } else {
+                // MOTRBILL='Y'이고 MO-TR 단계: InsqStat 호출 필요
+                val errorId = if (isFromMOCallInfo) {
+                    // MOTRBILL='Y'이고 MO-TR 단계: MO-TR 과금이므로 ERRORID_CP_MO_TR_SUCCESS (27) 사용
+                    // C 코드 LINE 553: ST_VBILLMO_OK → ERRORID_CP_MO_TR_SUCCESS (27)
+                    ERRORID_CP_MO_TR_SUCCESS
+                } else {
+                    // C 코드 LINE 751: ST_VBILLMO_NOTISEND_OK → ERRORID_CP_TR_SUCCESS (25)
+                    ERRORID_CP_TR_SUCCESS
+                }
+                
+                witcomLog.c_write(loggerName, Level.DEBUG,
+                    String.format("[processMOBilling] InsqStat 호출: isFromMOCallInfo(%s), isFromMONotISend(%s), statTraceId(%d), errorId(%d)",
+                        if (isFromMOCallInfo) "YES" else "NO",
+                        if (isFromMONotISend) "YES" else "NO",
+                        statTraceId,
+                        errorId
+                    ),
+                    Thread.currentThread().getId()
+                )
+                
+                // InsqStat 호출 전: DB에서 조회한 정보로 qItem의 dest/src 스왑 설정 (통계 기록용)
+                // 통계 기록 시 dest와 src를 스왑해야 함
+                val originalSzCId = ByteArray(16)
+                val originalSzSrcCId = ByteArray(16)
+                val originalSzMinNo = ByteArray(12)
+                val originalSzSrcMinNo = ByteArray(12)
+                
+                // 원본 값 백업
+                System.arraycopy(qItem.szCId, 0, originalSzCId, 0, 16)
+                System.arraycopy(qItem.szSrcCId, 0, originalSzSrcCId, 0, 16)
+                System.arraycopy(qItem.szMinNo, 0, originalSzMinNo, 0, 12)
+                System.arraycopy(qItem.szSrcMinNo, 0, originalSzSrcMinNo, 0, 12)
+                
+                // DB에서 조회한 정보로 스왑 설정
+                // szCId = effectiveMoInfo.srcCId (원래 dest)
+                // szSrcCId = effectiveMoInfo.destCId (원래 src)
+                // szMinNo = effectiveMoInfo.srcCallNo (원래 dest)
+                // szSrcMinNo = effectiveMoInfo.destCallNo (원래 src)
+                val srcCIdBytes = (effectiveMoInfo.srcCId ?: "").toByteArray(Charset.forName("CP949"))
+                val destCIdBytes = (effectiveMoInfo.destCId ?: "").toByteArray(Charset.forName("CP949"))
+                val srcCallNoBytes = (effectiveMoInfo.srcCallNo ?: "").toByteArray(Charset.forName("CP949"))
+                val destCallNoBytes = (effectiveMoInfo.destCallNo ?: "").toByteArray(Charset.forName("CP949"))
+                
+                // 스왑 설정: szCId = srcCId, szSrcCId = destCId
+                qItem.szCId.fill(0)
+                System.arraycopy(srcCIdBytes, 0, qItem.szCId, 0, minOf(srcCIdBytes.size, 16))
+                if (srcCIdBytes.size < 16) {
+                    qItem.szCId[srcCIdBytes.size] = 0x00
+                }
+                qItem.szSrcCId.fill(0)
+                System.arraycopy(destCIdBytes, 0, qItem.szSrcCId, 0, minOf(destCIdBytes.size, 16))
+                if (destCIdBytes.size < 16) {
+                    qItem.szSrcCId[destCIdBytes.size] = 0x00
+                }
+                
+                // 스왑 설정: szMinNo = srcCallNo, szSrcMinNo = destCallNo
+                qItem.szMinNo.fill(0)
+                System.arraycopy(srcCallNoBytes, 0, qItem.szMinNo, 0, minOf(srcCallNoBytes.size, 12))
+                if (srcCallNoBytes.size < 12) {
+                    qItem.szMinNo[srcCallNoBytes.size] = 0x00
+                }
+                qItem.szSrcMinNo.fill(0)
+                System.arraycopy(destCallNoBytes, 0, qItem.szSrcMinNo, 0, minOf(destCallNoBytes.size, 12))
+                if (destCallNoBytes.size < 12) {
+                    qItem.szSrcMinNo[destCallNoBytes.size] = 0x00
+                }
+                
+                witcomLog.c_write(loggerName, Level.DEBUG,
+                    String.format("[processMOBilling] qItem 스왑 설정 완료: szCId(%s), szSrcCId(%s), szMinNo(%s), szSrcMinNo(%s)",
+                        QItemServiceUtil.byteArrayToKString(qItem.szCId),
+                        QItemServiceUtil.byteArrayToKString(qItem.szSrcCId),
+                        QItemServiceUtil.byteArrayToKString(qItem.szMinNo),
+                        QItemServiceUtil.byteArrayToKString(qItem.szSrcMinNo)
+                    ),
+                    Thread.currentThread().getId()
+                )
+                
+                // C 코드 LINE 553 또는 LINE 751: InsqStat을 LT_BOTH로 한 번만 호출 (과금 + 통계 기록)
+                witcomLog.c_write(loggerName, Level.DEBUG,
+                    String.format("[processMOBilling] InsqStat 호출 시작: MODULEID_VBILLMO(%d), SERVICEID_GIPEVENT(%d), errorId(%d), statTraceId(%d), LT_BOTH",
+                        MODULEID_VBILLMO,
+                        SERVICEID_GIPEVENT,
+                        errorId,
+                        statTraceId
+                    ),
+                    Thread.currentThread().getId()
+                )
+                
+                val insqStatResult = smsQLib.InsqStat(
+                    qItem,
+                    MESSAGE_TR,  // C 코드와 동일: MESSAGE_TR
+                    0,
+                    gServerID,
+                    MODULEID_VBILLMO,  // C 코드와 동일: MODULEID_VBILLMO
                     SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_TR_SUCCESS,
-                    statTraceId
-                ),
-                Thread.currentThread().getId()
-            )
-            
-            val insqStatBillingResult = smsQLib.InsqStat(
-                qItem,
-                MESSAGE_TR,  // C 코드와 동일: MESSAGE_TR
-                0,
-                gServerID,
-                MODULEID_VBILLMO,  // C 코드와 동일: MODULEID_VBILLMO
-                SERVICEID_GIPEVENT,
-                ERRORID_CP_MO_TR_SUCCESS,  // C 코드와 동일: ERRORID_CP_MO_TR_SUCCESS
-                statTraceId,  // ST_VBILLMO_OK 또는 ST_VBILLMO_NOTISEND_OK
-                IF_NULL,
-                TID_NO_SAVE,
-                LT_TRACE,  // 과금용
-                0
-            )
-            
-            witcomLog.c_write(loggerName,
-                if (insqStatBillingResult == 1) Level.DEBUG else Level.ERROR,
-                String.format("[processMOBilling] InsqStat 호출 결과 (과금용 LT_TRACE): 반환값(%d), 성공여부(%b)",
-                    insqStatBillingResult,
-                    insqStatBillingResult == 1
-                ),
-                Thread.currentThread().getId()
-            )
-            
-            // 2. 통계용 InsqStat 호출 (LT_BOTH)
-            witcomLog.c_write(loggerName, Level.DEBUG,
-                String.format("[processMOBilling] InsqStat 호출 시작 (통계용 LT_BOTH): MODULEID_VBILLMO(%d), SERVICEID_GIPEVENT(%d), ERRORID_CP_MO_TR_SUCCESS(%d), statTraceId(%d)",
-                    MODULEID_VBILLMO,
-                    SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_TR_SUCCESS,
-                    statTraceId
-                ),
-                Thread.currentThread().getId()
-            )
-            
-            val insqStatResult = smsQLib.InsqStat(
-                qItem,
-                MESSAGE_TR,  // C 코드와 동일: MESSAGE_TR
-                0,
-                gServerID,
-                MODULEID_VBILLMO,  // C 코드와 동일: MODULEID_VBILLMO
-                SERVICEID_GIPEVENT,
-                ERRORID_CP_MO_TR_SUCCESS,  // C 코드와 동일: ERRORID_CP_MO_TR_SUCCESS
-                statTraceId,  // ST_VBILLMO_OK 또는 ST_VBILLMO_NOTISEND_OK
-                IF_NULL,
-                TID_NO_SAVE,
-                LT_BOTH,  // 통계용
-                0
-            )
-            
-            witcomLog.c_write(loggerName,
-                if (insqStatResult == 1) Level.DEBUG else Level.ERROR,
-                String.format("[processMOBilling] InsqStat 호출 결과 (통계용 LT_BOTH): 반환값(%d), 성공여부(%b)",
-                    insqStatResult,
-                    insqStatResult == 1
-                ),
-                Thread.currentThread().getId()
-            )
+                    errorId,  // ERRORID_CP_MO_TR_SUCCESS (27) 또는 ERRORID_CP_TR_SUCCESS (25)
+                    statTraceId,  // ST_VBILLMO_OK 또는 ST_VBILLMO_NOTISEND_OK
+                    IF_NULL,
+                    TID_NO_SAVE,
+                    LT_BOTH,  // C 코드와 동일: LT_BOTH (과금 + 통계 기록)
+                    0
+                )
+                
+                // InsqStat 호출 후: 원본 값 복원
+                System.arraycopy(originalSzCId, 0, qItem.szCId, 0, 16)
+                System.arraycopy(originalSzSrcCId, 0, qItem.szSrcCId, 0, 16)
+                System.arraycopy(originalSzMinNo, 0, qItem.szMinNo, 0, 12)
+                System.arraycopy(originalSzSrcMinNo, 0, qItem.szSrcMinNo, 0, 12)
+                
+                witcomLog.c_write(loggerName,
+                    if (insqStatResult == 1) Level.DEBUG else Level.ERROR,
+                    String.format("[processMOBilling] InsqStat 호출 결과: 반환값(%d), 성공여부(%b)",
+                        insqStatResult,
+                        insqStatResult == 1
+                    ),
+                    Thread.currentThread().getId()
+                )
+                
+                // MOTRBILL='Y'이고 MO-TR 단계: msgId로 조회하여 존재한다면 삭제 처리
+                // InsqStat 성공 여부와 관계없이 MOCALLINFO가 존재하면 삭제
+                witcomLog.c_write(loggerName, Level.DEBUG,
+                    String.format("[processMOBilling] 삭제 조건 체크: insqStatResult(%d), moCallInfo(%s), msgId(%s)",
+                        insqStatResult,
+                        if (moCallInfo != null) "NOT_NULL" else "NULL",
+                        msgId),
+                    Thread.currentThread().getId()
+                )
+                
+                if (moCallInfo != null) {
+                    witcomLog.c_write(loggerName, Level.DEBUG,
+                        String.format("[processMOBilling] MO-TR 요청 후 MOCALLINFO 삭제 시작: MsgId(%s), insqStatResult(%d)",
+                            msgId,
+                            insqStatResult),
+                        Thread.currentThread().getId()
+                    )
+                    deleteGIPMOCallInfo(moCallInfo)
+                    witcomLog.c_write(loggerName, Level.INFO,
+                        String.format("[processMOBilling] MO-TR 요청 후 MOCALLINFO 삭제 완료: MsgId(%s)",
+                            msgId),
+                        Thread.currentThread().getId()
+                    )
+                } else {
+                    // MOCALLINFO가 없는 경우 로그 추가
+                    witcomLog.c_write(loggerName, Level.WARN,
+                        String.format("[processMOBilling] ⚠️ MOCALLINFO 삭제 스킵: moCallInfo가 NULL - msgId(%s), MO-TR 요청 시 MOCALLINFO가 존재하지 않음",
+                            msgId),
+                        Thread.currentThread().getId()
+                    )
+                }
+            }
             
             // C 코드 LINE 2199-2221: RCS 태그 처리 및 큐 삽입
             if (effectiveMoInfo.rcs != null && effectiveMoInfo.rcs.isNotEmpty()) {
@@ -884,6 +1153,49 @@ open class SmsResServiceImpl(
             ),
             Thread.currentThread().getId()
         )
+        
+        // MO-TR 요청 시 원본 MO 요청의 traceId를 MOCALLINFO에서 조회하여 qItem에 설정
+        // 절대 새로 생성하지 않고, 원본 MO 요청 시 생성된 traceId를 사용해야 함
+        val msgId = request.data.msgId ?: ""
+        if (msgId.isNotEmpty()) {
+            witcomLog.c_write(loggerName, Level.DEBUG,
+                String.format("[processSMReqTransResult] MOCALLINFO에서 traceId 조회 시작: msgId(%s)",
+                    msgId),
+                Thread.currentThread().getId()
+            )
+            
+            val moCallInfo = selectGIPMOCallInfo(msgId)
+            if (moCallInfo?.traceId != null && moCallInfo.traceId.isNotEmpty()) {
+                // 원본 MO 요청의 traceId를 qItem에 설정 (절대 새로 생성하지 않음)
+                val traceIdBytes = moCallInfo.traceId.toByteArray(Charset.forName("CP949"))
+                System.arraycopy(traceIdBytes, 0, qItem.szTraceId, 0,
+                    minOf(traceIdBytes.size, qItem.szTraceId.size - 1))
+                if (traceIdBytes.size < qItem.szTraceId.size) {
+                    qItem.szTraceId[traceIdBytes.size] = 0x00
+                }
+                
+                witcomLog.c_write(loggerName, Level.INFO,
+                    String.format("[processSMReqTransResult] 원본 traceId 설정 완료: msgId(%s), traceId(%s)",
+                        msgId,
+                        moCallInfo.traceId),
+                    Thread.currentThread().getId()
+                )
+            } else {
+                // traceId가 MOCALLINFO에서 확인되지 않으면 에러
+                val errorMsg = String.format(
+                    "[processSMReqTransResult] ⚠️ traceId 조회 실패: msgId(%s), MOCALLINFO 조회 결과(%s) - 원본 MO 요청의 traceId가 없어 MO-TR 처리가 불가능합니다",
+                    msgId,
+                    if (moCallInfo == null) "NULL (레코드 없음)" else "traceId 없음"
+                )
+                witcomLog.c_write(loggerName, Level.ERROR, errorMsg, Thread.currentThread().getId())
+                throw IllegalStateException(errorMsg)
+            }
+        } else {
+            // msgId가 없으면 에러
+            val errorMsg = "[processSMReqTransResult] ⚠️ msgId가 없음 - MO-TR 요청에는 msgId가 필수입니다"
+            witcomLog.c_write(loggerName, Level.ERROR, errorMsg, Thread.currentThread().getId())
+            throw IllegalStateException(errorMsg)
+        }
         
         // C 코드 LINE 2248-2249: gMsgSendReady, gRetryCount 초기화
         // HTTP 환경에서는 불필요
@@ -1031,28 +1343,13 @@ open class SmsResServiceImpl(
             Thread.currentThread().getId()
         )
         
-        // C 코드 LINE 2266-2269: InsqStat 호출
+        // C 코드 LINE 3371: if (gMOTRBILL) ProcessTRVBILLMO(ptrGIMsgHdr);
+        // C 코드에서는 GIPEVENT_c.c에서 InsqStat을 호출하지 않고, ProcessTRVBILLMO를 호출해서 VBILL_MO 큐에만 적재
+        // 실제 InsqStat은 VBILLMO_c.c의 ProcessTR에서 한 번만 호출됨 (LINE 553: LT_BOTH)
+        // 따라서 여기서는 InsqStat을 호출하지 않음 (중복 TRC 생성 방지)
+        
         // HTTP 요청은 단일 스레드이므로 index 0 사용
         val smsQLib: SmsQLib = liveReloadCLibraryFile.getPreInitializedLibrary(0)
-        
-        witcomLog.c_write(loggerName, Level.DEBUG,
-            String.format("[processSMReqTransResult] InsqStat 호출: ERRORID_CP_MO_TR_SUCCESS(%d) - TR 결과 통계 기록", ERRORID_CP_MO_TR_SUCCESS),
-            Thread.currentThread().getId()
-        )
-        smsQLib.InsqStat(
-            qItem,
-            MESSAGE_TR,
-            0,
-            gServerID,
-            MODULEID_GIPEVENT_C,
-            SERVICEID_GIPEVENT,
-            ERRORID_CP_MO_TR_SUCCESS,
-            ST_GIPEVENT_MTTR_OK,
-            IF_NULL,
-            TID_SAVE,
-            LT_BOTH,
-            0
-        )
 
         // HTTP 방식: MO-TR 수신 시 CP로부터 받은 정보로 MOCALLINFO 업데이트 후 MO ACK 기능 수행
         if (gipHttpMoAccess != null) {
@@ -1140,12 +1437,9 @@ open class SmsResServiceImpl(
                     }
                 } else {
                     // MOCALLINFO 레코드 삭제
-                    val deletedMOCallInfo = selectGIPMOCallInfo(
-                        request.data.srcCallNo,
-                        request.data.destCID,
-                        msgId
-                    )
-                    if (deletedMOCallInfo != null) {
+                    val moCallInfo = selectGIPMOCallInfo(msgId)
+                    if (moCallInfo != null) {
+                        deleteGIPMOCallInfo(moCallInfo)
                         witcomLog.c_write(loggerName, Level.INFO,
                             String.format("[processSMReqTransResult] BILLTYPE='1' MOCALLINFO 삭제 완료: SourceCallNo(%s) DestCID(%s) MsgId(%s)",
                                 request.data.srcCallNo, request.data.destCID, msgId),
@@ -1191,6 +1485,7 @@ open class SmsResServiceImpl(
                 )
                 
                 // 2-1. 업데이트된 MOCALLINFO로 MO ACK 기능(과금 처리) 수행
+                // C 코드 LINE 3371: if (gMOTRBILL) ProcessTRVBILLMO(ptrGIMsgHdr);
                 witcomLog.c_write(loggerName, Level.DEBUG,
                     String.format("[processSMReqTransResult] 과금 처리 분기 체크: billType(%s), gMOTRBILL(%s)",
                         billType,
@@ -1199,38 +1494,27 @@ open class SmsResServiceImpl(
                     Thread.currentThread().getId()
                 )
                 
-                if (!gMOTRBILL) {
+                if (gMOTRBILL) {
+                    // HTTP 방식: InsqStat 호출이 VBILLMO 큐 적재와 처리를 함께 수행
+                    // processMOBilling 내부에서 InsqStat을 호출하면 자동으로 큐 적재와 처리가 이루어짐
                     witcomLog.c_write(loggerName, Level.INFO,
-                        String.format("[processSMReqTransResult] 과금 처리 분기 선택: billType(%s)!='1' && gMOTRBILL(%s) - processMOBilling 호출",
-                            billType,
+                        String.format("[processSMReqTransResult] gMOTRBILL='Y' 분기 선택: gMOTRBILL(%s)=='Y' - processMOBilling 호출",
                             if (gMOTRBILL) "Y" else "N"
                         ),
                         Thread.currentThread().getId()
                     )
-                    // SRC 케이스이고 !gMOTRBILL인 경우 과금 처리 수행
-                    processMOBilling(qItem, request, gipHttpMoAccess, smsQLib)
+                    processMOBilling(qItem, request, gipHttpMoAccess, smsQLib, loggerName)
                     witcomLog.c_write(loggerName, Level.INFO,
-                        String.format("[processSMReqTransResult] 과금 처리 분기 완료: processMOBilling 완료"),
-                        Thread.currentThread().getId()
-                    )
-                    
-                    // 3. 과금 처리 후 ESMClass별 분기 처리
-                    processESMClassBranch(qItem, request, gipHttpMoAccess, smsQLib)
-                    witcomLog.c_write(loggerName, Level.INFO,
-                        String.format("[processSMReqTransResult] ESMClass 분기 처리 완료"),
+                        String.format("[processSMReqTransResult] gMOTRBILL='Y' 분기 완료: processMOBilling 완료"),
                         Thread.currentThread().getId()
                     )
                 } else {
+                    // C 코드 LINE 3371: !gMOTRBILL인 경우 아무것도 하지 않음
+                    // MO-ACK 단계에서 이미 과금 처리가 완료되었으므로 MO-TR 단계에서는 처리하지 않음
                     witcomLog.c_write(loggerName, Level.INFO,
-                        String.format("[processSMReqTransResult] VBILL_MO 분기 선택: gMOTRBILL(%s)=='Y' - enqueueVbillMoTR 호출",
+                        String.format("[processSMReqTransResult] !gMOTRBILL 분기: gMOTRBILL(%s)=='N' - 과금 처리 없음 (MO-ACK 단계에서 이미 완료)",
                             if (gMOTRBILL) "Y" else "N"
                         ),
-                        Thread.currentThread().getId()
-                    )
-                    // gMOTRBILL인 경우 VBILL_MO 큐 적재
-                    enqueueVbillMoTR(qItem, request, gipHttpMoAccess)
-                    witcomLog.c_write(loggerName, Level.INFO,
-                        String.format("[processSMReqTransResult] VBILL_MO 분기 완료: enqueueVbillMoTR 완료"),
                         Thread.currentThread().getId()
                     )
                 }
@@ -1285,165 +1569,65 @@ open class SmsResServiceImpl(
     
     /**
      * C 코드 ProcessTRVBILLMO() 포팅: VBILL_MO 큐 적재 및 통계 처리
+     * 
+     * HTTP 방식에서는 더 이상 사용하지 않음.
+     * MOTRBILL='Y'일 때는 processMOBilling을 직접 호출하여 처리함.
+     * (HTTP 방식에서는 InsqStat 호출이 VBILLMO 큐 적재와 처리를 함께 수행)
      */
-    private suspend fun enqueueVbillMoTR(
-        qItem: QITEM,
-        request: ResponseTR,
-        gipHttpMoAccess: GipHttpMoAccessEntity
-    ) {
-        val smsQLib: SmsQLib = liveReloadCLibraryFile.getPreInitializedLibrary(0)
-
-        // 1. VBILL용 QITEM 생성 (C 코드 LINE 3930-3955 대응)
-        val trQItem = QITEM()
-
-        trQItem.ucServerType = VSMSS_TYPE.code.toByte()
-
-        // Src CID
-        run {
-            val srcCidBytes = request.data.srcCID.toByteArray(Charsets.US_ASCII)
-            System.arraycopy(
-                srcCidBytes,
-                0,
-                trQItem.szSrcCId,
-                0,
-                minOf(srcCidBytes.size, trQItem.szSrcCId.size)
-            )
-        }
-
-        // Src CallNo → szSrcMinNo
-        run {
-            val srcCallNoStr = request.data.srcCallNo
-            val srcCallNoBytes = srcCallNoStr.toByteArray(Charsets.US_ASCII)
-            System.arraycopy(
-                srcCallNoBytes,
-                0,
-                trQItem.szSrcMinNo,
-                0,
-                minOf(srcCallNoBytes.size, trQItem.szSrcMinNo.size)
-            )
-        }
-
-        // Dest CID → szCId
-        run {
-            val destCidBytes = request.data.destCID.toByteArray(Charsets.US_ASCII)
-            System.arraycopy(
-                destCidBytes,
-                0,
-                trQItem.szCId,
-                0,
-                minOf(destCidBytes.size, trQItem.szCId.size)
-            )
-        }
-
-        // Dest CallNo → szMinNo
-        run {
-            val destCallNoStr = request.data.destCallNo
-            val destCallNoBytes = destCallNoStr.toByteArray(Charsets.US_ASCII)
-            System.arraycopy(
-                destCallNoBytes,
-                0,
-                trQItem.szMinNo,
-                0,
-                minOf(destCallNoBytes.size, trQItem.szMinNo.size)
-            )
-        }
-
-        // MsgCode / SubCode
-        trQItem.usMsgCode = QTYPE_SM_REQ.toShort()
-        trQItem.usMsgSubCode = SM_REQ_TRANS_RESULT.toShort()
-
-        // MsgStatus, MsgId는 기존 qItem에서 복사 (C: ptrTransRes 기반)
-        trQItem.ucMsgStatus = qItem.ucMsgStatus
-        System.arraycopy(qItem.ucMsgId, 0, trQItem.ucMsgId, 0, trQItem.ucMsgId.size)
-
-        // 2. VBILL_MO Queue 번호 획득
-        val vbillMoQueueNo = getVbillMoQueueNo()
-
-        // 3. 큐 적재
-        val ret = smsQLib.InsertIntoSmsQWithQNo(trQItem, vbillMoQueueNo)
-
-        // 4. 결과에 따른 통계 처리 (C 코드 3973-3983 대응)
-        if (ret < 0) {
-            smsQLib.InsqStat(
-                trQItem,
-                MESSAGE_TR,
-                0,
-                gServerID,
-                MODULEID_GIPEVENT_C,
-                SERVICEID_GIPEVENT,
-                ERRORID_CP_MO_TR_FAIL,
-                ST_Q_INSERT_FAIL_VBILLMO,
-                vbillMoQueueNo,
-                SmsDef.TID_SAVE,
-                LT_TRACE,
-                0
-            )
-
-            witcomLog.c_write(
-                getLoggerName(
-                    request.data.destCID,
-                    gipHttpMoAccess.ipAddr,
-                    gipHttpMoAccess.portNo
-                ),
-                Level.ERROR,
-                "Insert VBILL_MO Q Error QNO($vbillMoQueueNo)",
-                Thread.currentThread().id
-            )
-        } else {
-            smsQLib.InsqStat(
-                trQItem,
-                MESSAGE_TR,
-                0,
-                gServerID,
-                MODULEID_GIPEVENT_C,
-                SERVICEID_GIPEVENT,
-                ERRORID_CP_MO_TR_FAIL,   // C 코드와 동일: SUCCESS 아님에 주의
-                ST_GIPEVENT_MOTR_OK,
-                vbillMoQueueNo,
-                SmsDef.TID_SAVE,
-                LT_TRACE,
-                0
-            )
-        }
-    }
+    // private suspend fun enqueueVbillMoTR(
+    //     qItem: QITEM,
+    //     request: ResponseTR,
+    //     gipHttpMoAccess: GipHttpMoAccessEntity
+    // ) {
+    //     // HTTP 방식에서는 더 이상 사용하지 않음
+    //     // MOTRBILL='Y'일 때는 processMOBilling을 직접 호출하여 처리함
+    // }
     
     /**
      * SelectGIPMOCallInfo 함수
      * 
-     * C 코드 참고: GIDBLib.c LINE 2528-2607, 3254-3317
-     * SELECT MOSUBTIME, MSGLEN, ROAMINGID, CB, ROAMPMN, W_ZONE, TRACE_ID, 
-     *        ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME
-     * FROM MOCALLINFO
-     * WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ?
+     * msgId만으로 조회하도록 변경
+     * 
+     * SELECT * FROM MOCALLINFO
+     * WHERE MSGID = ?
+     * ORDER BY MOSUBTIME DESC
      * 
      * DELETE FROM MOCALLINFO
-     * WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ? (조회 후 삭제)
+     * WHERE MSGID = ? (조회 후 삭제)
      * 
+     * @param msgId 메시지 ID
      * @return MOCallInfoEntity 또는 null (데이터 없음)
      */
     @Transactional
     open suspend fun selectGIPMOCallInfo(
-        srcCallNo: String,
-        destCId: String,
         msgId: String
     ): MOCallInfoEntity? {
-        val loggerName = getLoggerName(destCId, null, null)
+        val loggerName = getLoggerName(null, null, null)
         return try {
-            // ROWNUM = 1로 첫 번째 결과만 조회 (가장 최근 것)
-            val moCallInfo = moCallInfoRepository.findBySrcCallNoAndDestCIdAndMsgId(srcCallNo, destCId, msgId)
+            // msgId만으로 조회 (가장 최근 것)
+            val moCallInfo = moCallInfoRepository.findByMsgId(msgId)
             
-            // C 코드 LINE 3254-3317: SELECT 성공 후 DELETE 수행
+            // 조회 결과 로깅
             if (moCallInfo != null) {
-                val deleteResult = moCallInfoRepository.deleteBySrcCallNoAndDestCIdAndMsgId(srcCallNo, destCId, msgId)
-                if (deleteResult > 0) {
-                    witcomLog.c_write(
-                        loggerName,
-                        Level.DEBUG,
-                        String.format("SelectGIPMOCallInfo() Deleted: SourceCallNo(%s) DestCID(%s) MsgId(%s) DeleteResult(%d)",
-                            srcCallNo, destCId, msgId, deleteResult),
-                        Thread.currentThread().getId()
-                    )
-                }
+                witcomLog.c_write(
+                    loggerName,
+                    Level.DEBUG,
+                    String.format("SelectGIPMOCallInfo() 조회 성공: MsgId(%s), srcCallNo(%s), destCID(%s), traceId(%s), moSubTime(%s)",
+                        msgId,
+                        moCallInfo.srcCallNo ?: "",
+                        moCallInfo.destCId ?: "",
+                        moCallInfo.traceId ?: "", 
+                        moCallInfo.moSubTime ?: ""),
+                    Thread.currentThread().getId()
+                )
+            } else {
+                witcomLog.c_write(
+                    loggerName,
+                    Level.WARN,
+                    String.format("SelectGIPMOCallInfo() ⚠️ 조회 실패: MsgId(%s) - 레코드 없음. MO 메시지 수신 시 insertGIPMOCallInfo로 레코드가 생성되어야 함",
+                        msgId),
+                    Thread.currentThread().getId()
+                )
             }
             
             moCallInfo
@@ -1451,10 +1635,47 @@ open class SmsResServiceImpl(
             witcomLog.c_write(
                 loggerName,
                 Level.ERROR,
-                String.format("SelectGIPMOCallInfo() Select Error: %s", e.message),
+                String.format("SelectGIPMOCallInfo() Select Error: msgId(%s), error(%s)", msgId, e.message),
                 Thread.currentThread().getId()
             )
             null
+        }
+    }
+    
+    /**
+     * DeleteGIPMOCallInfo 함수
+     * 
+     * 조회한 Entity로 삭제 (복합 키를 모두 사용하여 정확히 삭제)
+     * 
+     * @param moCallInfo 삭제할 MOCallInfoEntity
+     */
+    @Transactional
+    open suspend fun deleteGIPMOCallInfo(moCallInfo: MOCallInfoEntity) {
+        val loggerName = getLoggerName(moCallInfo.destCId, null, null)
+        try {
+            moCallInfoRepository.delete(moCallInfo)
+            moCallInfoRepository.flush()  // 즉시 DB에 반영
+            
+            witcomLog.c_write(
+                loggerName,
+                Level.DEBUG,
+                String.format("DeleteGIPMOCallInfo() 삭제 완료: MsgId(%s), srcCId(%s), destCId(%s)",
+                    moCallInfo.msgId ?: "",
+                    moCallInfo.srcCId ?: "",
+                    moCallInfo.destCId ?: ""),
+                Thread.currentThread().getId()
+            )
+        } catch (e: Exception) {
+            witcomLog.c_write(
+                loggerName,
+                Level.ERROR,
+                String.format("DeleteGIPMOCallInfo() ⚠️ 삭제 실패: MsgId(%s), srcCId(%s), destCId(%s), error(%s)",
+                    moCallInfo.msgId ?: "",
+                    moCallInfo.srcCId ?: "",
+                    moCallInfo.destCId ?: "",
+                    e.message),
+                Thread.currentThread().getId()
+            )
         }
     }
     
@@ -1484,26 +1705,18 @@ open class SmsResServiceImpl(
             // updateGIPMOCallInfo()는 실제로 아무 작업도 하지 않거나,
             // 단순히 레코드 존재 여부만 확인하면 됨
             
-            val srcCallNo = request.data.srcCallNo
-            val destCId = request.data.destCID
             val msgId = request.data.msgId ?: ""  // MO와 MO-TR 모두 동일한 msgID
             
-            // 원본 레코드가 존재하는지 확인만 하면 됨
-            val moCallInfo = moCallInfoRepository.findBySrcCallNoAndDestCIdAndMsgId(
-                srcCallNo,
-                destCId,
-                msgId
-            )
+            // 원본 레코드가 존재하는지 확인만 하면 됨 (msgId만으로 조회)
+            val moCallInfo = moCallInfoRepository.findByMsgId(msgId)
             
             if (moCallInfo == null) {
-                // 레코드가 없으면 에러 처리
+                // 레코드가 없으면 에러 처리 (경고 레벨로 변경 - processMOBilling에서 재시도)
                 witcomLog.c_write(
                     loggerName,
-                    Level.ERROR,
+                    Level.WARN,
                     String.format(
-                        "UpdateGIPMOCallInfo() 레코드 없음: SourceCallNo(%s) DestCID(%s) MsgId(%s) - MO-TR 통합 환경에서는 원본 레코드가 존재해야 함",
-                        srcCallNo,
-                        destCId,
+                        "UpdateGIPMOCallInfo() ⚠️ 레코드 없음: MsgId(%s) - MO-TR 통합 환경에서는 원본 레코드가 존재해야 함. MO 메시지 수신 시 insertGIPMOCallInfo로 레코드가 생성되어야 함. processMOBilling에서 재조회 시도",
                         msgId
                     ),
                     Thread.currentThread().getId()
@@ -1513,10 +1726,12 @@ open class SmsResServiceImpl(
                     loggerName,
                     Level.INFO,
                     String.format(
-                        "UpdateGIPMOCallInfo() 레코드 확인 완료: SourceCallNo(%s) DestCID(%s) MsgId(%s) - MO-TR 통합 환경: 새 레코드 생성 불필요, 원본 레코드 사용",
-                        srcCallNo,
-                        destCId,
-                        msgId
+                        "UpdateGIPMOCallInfo() 레코드 확인 완료: MsgId(%s), srcCallNo(%s), destCID(%s), traceId(%s), moSubTime(%s) - MO-TR 통합 환경: 새 레코드 생성 불필요, 원본 레코드 사용",
+                        msgId,
+                        moCallInfo.srcCallNo ?: "",
+                        moCallInfo.destCId ?: "",
+                        moCallInfo.traceId ?: "",
+                        moCallInfo.moSubTime ?: ""
                     ),
                     Thread.currentThread().getId()
                 )
@@ -1649,52 +1864,6 @@ open class SmsResServiceImpl(
                 Thread.currentThread().getId()
             )
             return -1
-        }
-    }
-    
-    /**
-     * bprintf 과금 데이터 출력 함수
-     * 
-     * C 코드 참고: bprintf.c LINE 114-210
-     * 로그 파일 경로: $SMS_VCDR/LOG/ (환경변수 SMS_VCDR 사용)
-     * 파일명 형식: {모듈번호}_{YYYYMMDDHHMM} (5분 단위)
-     * 
-     * @param billingLine 과금 데이터 라인
-     */
-    private fun writeBillingLog(billingLine: String, loggerName: String) {
-        try {
-            val now = Calendar.getInstance()
-            val currentMinute = now.get(Calendar.MINUTE)
-            
-            // 분이 변경되면 파일 재생성 (C 코드 LINE 156-164)
-            if (lastBillingLogMinute != currentMinute) {
-                billingLogFile?.close()
-                
-                val logFile = File(billingLogDir)
-                if (!logFile.exists()) {
-                    logFile.mkdirs()
-                }
-                
-                // C 코드 LINE 93: 파일명 형식 {모듈번호}_{YYYYMMDDHHMM}
-                val moduleNo = "00"  // 모듈 번호 00으로 고정
-                val fileDate = SimpleDateFormat("yyyyMMddHHmm").format(now.time)
-                val fileName = "$billingLogDir/${moduleNo}_$fileDate"
-                
-                val billingFile = File(fileName)
-                billingLogFile = FileWriter(billingFile, true)
-                lastBillingLogMinute = currentMinute
-            }
-            
-            // C 코드 LINE 205: vfprintf로 데이터 출력
-            billingLogFile?.write(billingLine)
-            billingLogFile?.flush()
-        } catch (e: Exception) {
-            witcomLog.c_write(
-                loggerName,
-                Level.ERROR,
-                String.format("bprintf write error: %s", e.message),
-                Thread.currentThread().getId()
-            )
         }
     }
     

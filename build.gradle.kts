@@ -3,6 +3,7 @@ plugins {
 	id("org.springframework.boot") version "2.7.15"
 	id("io.spring.dependency-management") version "1.1.0"
 	kotlin("jvm") version "1.7.22"  // Kotlin 버전은 1.7~1.8 권장
+	id("org.sonarqube") version "5.0.0.4638"
 }
 
 group = "com.infra.mo"
@@ -53,4 +54,44 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+// SonarQube 설정 - Java와 Kotlin 모두 감지
+sonar {
+	properties {
+		property("sonar.projectKey", "GIPHTTP_MO")
+		property("sonar.projectName", "GIPHTTP_MO")
+		property("sonar.projectVersion", version.toString())
+		property("sonar.token", "sqp_ef042497cb41e1c58de846c7a53c6c490b35a880")
+
+		// 소스 코드 경로
+		property("sonar.sources", "src/main/java")
+		property("sonar.tests", "src/test/java")
+
+		// Java 설정
+		property("sonar.java.source", "17")
+		property("sonar.java.target", "17")
+		property("sonar.java.binaries", "build/classes/java/main,build/classes/kotlin/main")
+		property("sonar.java.test.binaries", "build/classes/java/test,build/classes/kotlin/test")
+
+		// Kotlin 설정
+		property("sonar.kotlin.detected", "true")
+
+		// 파일 확장자 명시
+		property("sonar.java.file.suffixes", ".java")
+		property("sonar.kotlin.file.suffixes", ".kt")
+
+		// 인코딩
+		property("sonar.sourceEncoding", "UTF-8")
+
+		// 제외할 파일/디렉토리
+		property("sonar.exclusions",
+			"**/bin/**,**/build/**,**/*.class,**/generated-sources/**,**/*.so,**/*.dll,**/*.pdf")
+
+		// 테스트 제외
+		property("sonar.test.exclusions", "**/test/**")
+
+		// 소나큐브 운영서버
+		property("sonar.host.url", "http://121.124.125.247:9000/")
+	}
 }

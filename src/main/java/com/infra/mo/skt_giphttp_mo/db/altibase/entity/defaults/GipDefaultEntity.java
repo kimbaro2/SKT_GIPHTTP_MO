@@ -38,8 +38,9 @@ public class GipDefaultEntity {
     @Column(name = "TC", columnDefinition = "NUMERIC(1)")
     public int tc;                                                 //LINE :: Timeout시 몇 초 동안 기다릴 건지 나타내는 Flag
 
-    @Column(name = "FLAG017", length = 1)
-    public String flag017;                                         //LINE :: 017 수신 여부 0:미수신 1:수신
+    // FLAG017 제거 - 주석처리
+    // @Column(name = "FLAG017", length = 1)
+    // public String flag017;                                         //LINE :: 017 수신 여부 0:미수신 1:수신
 
     @Column(name = "DESCRIPTION", length = 200)
     public String description;                                     //LINE :: CP 서비스 설명
@@ -59,8 +60,9 @@ public class GipDefaultEntity {
     @Column(name = "SKT_PHONE", length = 30)
     public String sktPhone;                                        //LINE :: CP의 SKT 담당자 연락처
 
-    @Column(name = "PORTED_FLAG", columnDefinition = "NUMERIC(1)")
-    public int portedFlag;                                         //LINE :: CP로 PORTED 정보 전송 여부 0:미전송, 1:전송 default 0
+    // PORTED_FLAG 제거 - 주석처리
+    // @Column(name = "PORTED_FLAG", columnDefinition = "NUMERIC(1)")
+    // public int portedFlag;                                         //LINE :: CP로 PORTED 정보 전송 여부 0:미전송, 1:전송 default 0
 
     @Column(name = "CP_TEAM", length = 30)
     public String cpTeam;                                          //LINE :: CP의 서비스 주관 팀
@@ -77,11 +79,13 @@ public class GipDefaultEntity {
     @Column(name = "BILL_TYPE", length = 1)
     public String billType;                                        //LINE :: 과금 Format 유형 1:비과금, 2:발신자 과금, 3:착신자 과금, 4:선물 과금, 5:비과금 정산용 default 0
 
-    @Column(name = "COIS_TYPE", length = 1)
-    public String coisType;                                        //LINE :: COIS 정보 검색 N:비검색(일반형), Y:검색(가입형) default N
+    // COIS_TYPE 제거 - 주석처리
+    // @Column(name = "COIS_TYPE", length = 1)
+    // public String coisType;                                        //LINE :: COIS 정보 검색 N:비검색(일반형), Y:검색(가입형) default N
 
-    @Column(name = "REPLY_FLAG", length = 1)
-    public String replyFlag;                                       //LINE :: TR 수신 여부 설정 N:0 TR미수신 , Y:CP로 부터 수신한 값 default Y
+    // REPLY_FLAG 제거 - 주석처리
+    // @Column(name = "REPLY_FLAG", length = 1)
+    // public String replyFlag;                                       //LINE :: TR 수신 여부 설정 N:0 TR미수신 , Y:CP로 부터 수신한 값 default Y
 
     @Column(name = "LOG_FLAG", columnDefinition = "smallint")
     public int logFlag;                                            //LINE :: LOG Level(0:CRITICAL,ERROR,WARNING,REPAIR, 1:NORMAL, 2:DEBUG,SYS,CONFIG, 3:MSG_DEBUG,TCP_DATA)
@@ -89,17 +93,20 @@ public class GipDefaultEntity {
     @Column(name = "LIMIT_CHECK_FLAG", length = 1)
     public String limitCheckFlag;                                  //LINE :: 한도차단 체크 여부 N:비체크, Y:체크 default N
 
-    @Column(name = "DETECT_CID_FLAG", length = 2)
-    public String detectCidFlag;                                   //LINE :: 착신전환 차단 여부 N:비체크, Y:체크 default
+    // DETECT_CID_FLAG 제거 - 주석처리
+    // @Column(name = "DETECT_CID_FLAG", length = 2)
+    // public String detectCidFlag;                                   //LINE :: 착신전환 차단 여부 N:비체크, Y:체크 default
 
-    @Column(name = "CB_CHECK_FLAG", length = 1)
-    public String cbCheckFlag;                                     //LINE :: 회신번호 변경 알림 서비스 N:미허용, Y:허용 default N
+    // CB_CHECK_FLAG 제거 - 주석처리
+    // @Column(name = "CB_CHECK_FLAG", length = 1)
+    // public String cbCheckFlag;                                     //LINE :: 회신번호 변경 알림 서비스 N:미허용, Y:허용 default N
 
     @Column(name = "GIPVERID", columnDefinition = "NUMERIC(5)")
     public int gipverid;                                           //LINE :: GIP Version default 462
 
-    @Column(name = "AUTH_FLAG", length = 1)
-    public String authFlag;                                        //LINE :: 안심마크 표시 N:미표시, Y:표시 default N
+    // AUTH_FLAG 제거 - 주석처리
+    // @Column(name = "AUTH_FLAG", length = 1)
+    // public String authFlag;                                        //LINE :: 안심마크 표시 N:미표시, Y:표시 default N
 
     @Column(name = "DESIRE_NODE", length = 20)
     public String desireNode;                                      //LINE :: 지정한 연동 VM
@@ -110,8 +117,9 @@ public class GipDefaultEntity {
     @Column(name = "RM_FLAG", columnDefinition = "NUMERIC(1)")
     public int rmFlag;                                             //RM 기능 Flag (0:OFF, 1:BLOCK 처리, 2:Priority=1 로 설정, 3:BACKUP SMSC로 전송)
 
-    @Column(name = "PCS_FLAG", columnDefinition = "NUMERIC(1)")
-    public int pcsFlag;                                             //PCS FLAG 기능 Flag (0:OFF, 1:ON,  ON인 경우 타사 전송 허용)
+    // PCS_FLAG 제거 - 주석처리
+    // @Column(name = "PCS_FLAG", columnDefinition = "NUMERIC(1)")
+    // public int pcsFlag;                                             //PCS FLAG 기능 Flag (0:OFF, 1:ON,  ON인 경우 타사 전송 허용)
 
     @Transient
     private String tableName;
@@ -145,27 +153,27 @@ public class GipDefaultEntity {
                 ", flag = " + flag +
                 ", rc = " + rc +
                 ", tc = " + tc +
-                ", flag017 = " + flag017 +
+                // ", flag017 = " + flag017 +  // 제거: FLAG017
                 ", description = " + description +
                 ", updateFlag = " + updateFlag +
                 ", cpName = " + cpName +
                 ", cpPhone = " + cpPhone +
                 ", sktName = " + sktName +
                 ", sktPhone = " + sktPhone +
-                ", portedFlag = " + portedFlag +
+                // ", portedFlag = " + portedFlag +  // 제거: PORTED_FLAG
                 ", cpTeam = " + cpTeam +
                 ", cpPersonnel = " + cpPersonnel +
                 ", cpSktTeam = " + cpSktTeam +
                 ", msgType = " + msgType +
                 ", billType = " + billType +
-                ", coisType = " + coisType +
-                ", replyFlag = " + replyFlag +
+                // ", coisType = " + coisType +  // 제거: COIS_TYPE
+                // ", replyFlag = " + replyFlag +  // 제거: REPLY_FLAG
                 ", logFlag = " + logFlag +
                 ", limitCheckFlag = " + limitCheckFlag +
-                ", detectCidFlag = " + detectCidFlag +
-                ", cbCheckFlag = " + cbCheckFlag +
+                // ", detectCidFlag = " + detectCidFlag +  // 제거: DETECT_CID_FLAG
+                // ", cbCheckFlag = " + cbCheckFlag +  // 제거: CB_CHECK_FLAG
                 ", gipverid = " + gipverid +
-                ", authFlag = " + authFlag +
+                // ", authFlag = " + authFlag +  // 제거: AUTH_FLAG
                 ", desireNode = " + desireNode +
                 ", currentNode = " + currentNode +
                 ", rmFlag = " + rmFlag;

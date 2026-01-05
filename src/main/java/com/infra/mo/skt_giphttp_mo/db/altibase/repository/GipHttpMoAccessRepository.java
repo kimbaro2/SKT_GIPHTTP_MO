@@ -13,21 +13,21 @@ public interface GipHttpMoAccessRepository extends JpaRepository<GipHttpMoAccess
 
     @org.springframework.data.jpa.repository.Query(value = """
         SELECT *
-        FROM SMS.GIPHTTP_MO_ACCESS;
+        FROM SMS.HTTP_MOSEND_ACCESS;
             """, nativeQuery = true)
     public Optional<List<GipHttpMoAccessEntity>> findAllEntity();
 
     // MSG_TYPE으로 필터링하여 조회
     @org.springframework.data.jpa.repository.Query(value = """
         SELECT *
-        FROM SMS.GIPHTTP_MO_ACCESS
+        FROM SMS.HTTP_MOSEND_ACCESS
         WHERE MSG_TYPE = :msgType
             """, nativeQuery = true)
     public Optional<List<GipHttpMoAccessEntity>> findAllByMsgType(@Param("msgType") String msgType);
 
     @org.springframework.data.jpa.repository.Query(value = """
         SELECT CID
-        FROM SMS.GIPHTTP_MO_ACCESS
+        FROM SMS.HTTP_MOSEND_ACCESS
         GROUP BY CID;
             """, nativeQuery = true)
     public Optional<List<String>> findAllGroupByCid();

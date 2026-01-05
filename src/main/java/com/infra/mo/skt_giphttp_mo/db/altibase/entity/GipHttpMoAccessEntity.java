@@ -9,7 +9,7 @@ import javax.persistence.Entity;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "GIPHTTP_MO_ACCESS")
+@Table(name = "HTTP_MOSEND_ACCESS")
 @DynamicUpdate
 @Data
 @AllArgsConstructor
@@ -17,11 +17,13 @@ import javax.persistence.Table;
 @Builder
 @ToString
 public class GipHttpMoAccessEntity extends GipDefaultEntity {
-    @Column(name = "TRUST_FLAG", length = 1)
-    private String trustFlag;                                       //LINE :: 인증용 CID N:인증 CID정보 미참조, Y:인증 CID정보 참조 default N
+    // TRUST_FLAG 제거 - 주석처리
+    // @Column(name = "TRUST_FLAG", length = 1)
+    // private String trustFlag;                                       //LINE :: 인증용 CID N:인증 CID정보 미참조, Y:인증 CID정보 참조 default N
 
-    @Column(name = "PORTED_AUTCON", length = 1)
-    private Integer portedAutcon;                                    //LINE :: PORTED OUT MT로 자동 변환 기능 0:OFF, 1:ON default 0
+    // PORTED_AUTCON 제거 - 주석처리
+    // @Column(name = "PORTED_AUTCON", length = 1)
+    // private Integer portedAutcon;                                    //LINE :: PORTED OUT MT로 자동 변환 기능 0:OFF, 1:ON default 0
 
 
     @Column(name = "AES_KEY_BASE64", columnDefinition = "VARCHAR(2048)")
@@ -47,33 +49,33 @@ public class GipHttpMoAccessEntity extends GipDefaultEntity {
         this.flag = entity.getFlag();
         this.rc = entity.getRc();
         this.tc = entity.getTc();
-        this.flag017 = entity.getFlag017();
+        // this.flag017 = entity.getFlag017();  // 제거: FLAG017
         this.description = entity.getDescription();
         this.updateFlag = entity.getUpdateFlag();
         this.cpName = entity.getCpName();
         this.cpPhone = entity.getCpPhone();
         this.sktName = entity.getSktName();
         this.sktPhone = entity.getSktPhone();
-        this.portedFlag = entity.getPortedFlag();
+        // this.portedFlag = entity.getPortedFlag();  // 제거: PORTED_FLAG
         this.cpTeam = entity.getCpTeam();
         this.cpPersonnel = entity.getCpPersonnel();
         this.cpSktTeam = entity.getCpSktTeam();
         this.msgType = entity.getMsgType();
         this.billType = entity.getBillType();
-        this.portedAutcon = entity.getPortedAutcon();
-        this.coisType = entity.getCoisType();
-        this.replyFlag = entity.getReplyFlag();
+        // this.portedAutcon = entity.getPortedAutcon();  // 제거: PORTED_AUTCON
+        // this.coisType = entity.getCoisType();  // 제거: COIS_TYPE
+        // this.replyFlag = entity.getReplyFlag();  // 제거: REPLY_FLAG
         this.logFlag = entity.getLogFlag();
         this.limitCheckFlag = entity.getLimitCheckFlag();
-        this.detectCidFlag = entity.getDetectCidFlag();
-        this.cbCheckFlag = entity.getCbCheckFlag();
+        // this.detectCidFlag = entity.getDetectCidFlag();  // 제거: DETECT_CID_FLAG
+        // this.cbCheckFlag = entity.getCbCheckFlag();  // 제거: CB_CHECK_FLAG
         this.gipverid = entity.getGipverid();
-        this.trustFlag = entity.getTrustFlag();
-        this.authFlag = entity.getAuthFlag();
+        // this.trustFlag = entity.getTrustFlag();  // 제거: TRUST_FLAG
+        // this.authFlag = entity.getAuthFlag();  // 제거: AUTH_FLAG
         this.desireNode = entity.getDesireNode();
         this.currentNode = entity.getCurrentNode();
         this.rmFlag = entity.getRmFlag();
-        this.pcsFlag = entity.getPcsFlag();
+        // this.pcsFlag = entity.getPcsFlag();  // 제거: PCS_FLAG
         this.aesKeyBase64 = entity.getAesKeyBase64();
         this.ivBase64 = entity.getIvBase64();
         this.cpUrl = entity.getCpUrl();
@@ -81,8 +83,8 @@ public class GipHttpMoAccessEntity extends GipDefaultEntity {
     }
 
     public String toString() {
-        return super.toString() +
-                ", trustFlag = " + trustFlag;
+        return super.toString();
+        // ", trustFlag = " + trustFlag;  // 제거: TRUST_FLAG
     }
 
 

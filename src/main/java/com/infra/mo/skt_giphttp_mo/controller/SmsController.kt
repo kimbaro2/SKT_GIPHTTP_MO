@@ -71,7 +71,11 @@ class SmsController(
                 ?: remoteAddress
                 ?: "unknown"
             
-            // 서버 리스닝 포트 추출
+            // URI에서 프로토콜 확인하여 DB 조회용 포트 결정: HTTP -> 8544, HTTPS -> 8500
+            val scheme = exchange.request.uri.scheme
+            val dbPort = if ("https".equals(scheme, ignoreCase = true)) 8500 else 8544
+            
+            // 서버 리스닝 포트 추출 (실제 인입 포트)
             val localPort = exchange.request.localAddress?.port
             val uriPort = if (exchange.request.uri.port != -1) exchange.request.uri.port else 0
             val serverPort = localPort ?: uriPort
@@ -112,7 +116,7 @@ class SmsController(
                     ))
             }
             
-            // loggerName 생성 (destCID, clientIp, serverPort 조합)
+            // loggerName 생성 (destCID, clientIp, serverPort 조합) - 실제 인입 포트 사용
             val loggerName = "$destCIDValue-$clientIp-$serverPort"
             
             // msgSubCode 검증: SM_REQ_TRANS_RESULT (9)만 허용
@@ -215,13 +219,14 @@ class SmsController(
             }
             
             witcomLog.c_write(loggerName, Level.DEBUG, 
-                String.format("[mo-report] IP/PORT 추출 - X-Forwarded-For(%s), remoteAddress(%s), clientIp(%s), localPort(%s), uriPort(%d), serverPort(%d)",
+                String.format("[mo-report] IP/PORT 추출 - X-Forwarded-For(%s), remoteAddress(%s), clientIp(%s), localPort(%s), uriPort(%d), serverPort(%d), scheme(%s)",
                     xForwardedFor ?: "null",
                     remoteAddress ?: "null",
                     clientIp,
                     localPort?.toString() ?: "null",
                     uriPort,
-                    serverPort
+                    serverPort,
+                    scheme
                 ),
                 Thread.currentThread().getId()
             )
@@ -230,11 +235,12 @@ class SmsController(
             // SM_REQ_TRANS_RESULT (9)는 MO-TR 결과이므로 MSG_TYPE='4' (MO-TR)
             val msgType = "4"  // MO-TR
             witcomLog.c_write(loggerName, Level.DEBUG, 
-                String.format("[mo-report] IF 분기 6: gipHttpMoAccess 조회 시작 - destCID(%s), clientIp(%s), serverPort(%d), msgType(%s)",
+                String.format("[mo-report] IF 분기 6: gipHttpMoAccess 조회 시작 - destCID(%s), clientIp(%s), serverPort(%d), msgType(%s), scheme(%s)",
                     destCIDValue,
                     clientIp,
                     serverPort,
-                    msgType
+                    msgType,
+                    scheme
                 ),
                 Thread.currentThread().getId()
             )
@@ -242,7 +248,7 @@ class SmsController(
                 val result = gipHttpMoAccessRepository.findByCidAndIpAddrAndPortNoAndMsgType(
                     destCIDValue,
                     clientIp,
-                    serverPort,
+                    serverPort,  // 실제 인입 포트 사용 (7500 또는 7544)
                     msgType
                 ).orElse(null)
                 witcomLog.c_write(loggerName, Level.DEBUG, 
@@ -262,11 +268,12 @@ class SmsController(
                 witcomLog.c_write(
                     loggerName,
                     Level.ERROR,
-                    String.format("[mo-report] IF 분기 6 예외: gipHttpMoAccess 조회 실패 - destCID(%s), clientIp(%s), serverPort(%d), msgType(%s), error(%s)",
+                    String.format("[mo-report] IF 분기 6 예외: gipHttpMoAccess 조회 실패 - destCID(%s), clientIp(%s), serverPort(%d), msgType(%s), scheme(%s), error(%s)",
                         destCIDValue,
                         clientIp,
                         serverPort,
                         msgType,
+                        scheme,
                         e.message
                     ),
                     Thread.currentThread().getId()
@@ -283,7 +290,7 @@ class SmsController(
                 Thread.currentThread().getId()
             )
             if (gipHttpMoAccess == null) {
-                val errorMsg = "GIPHTTP_MO_ACCESS not found with MSG_TYPE='4' (MO-TR): destCID($destCIDValue), clientIp($clientIp), serverPort($serverPort). Please register MSG_TYPE='4' record for MO-TR processing."
+                val errorMsg = "GIPHTTP_MO_ACCESS not found with MSG_TYPE='4' (MO-TR): destCID($destCIDValue), clientIp($clientIp), serverPort($serverPort), scheme($scheme). Please register MSG_TYPE='4' record for MO-TR processing."
                 witcomLog.c_write(loggerName, Level.ERROR, errorMsg, Thread.currentThread().getId())
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(mapOf(
@@ -375,6 +382,50 @@ class SmsController(
             witcomLog.c_write(resLoggerName, Level.DEBUG, resTransResultLog, Thread.currentThread().getId())
 
             ResponseEntity.ok(responseBody)
+        } catch (e: IllegalStateException) {
+            // traceId 관련 에러 또는 기타 비즈니스 로직 에러
+            e.printStackTrace()
+            // 예외 발생 시 loggerName 생성 (가능한 정보만 사용)
+            val errorDestCID = request.data.destCID ?: "unknown"
+            val errorClientIp = try {
+                exchange.request.headers.getFirst("X-Forwarded-For")
+                    ?.split(",")?.firstOrNull()?.trim()
+                    ?: exchange.request.remoteAddress?.address?.hostAddress
+                    ?: "unknown"
+            } catch (ex: Exception) {
+                "unknown"
+            }
+            val errorServerPort = try {
+                exchange.request.localAddress?.port
+                    ?: (if (exchange.request.uri.port != -1) exchange.request.uri.port else 0)
+            } catch (ex: Exception) {
+                0
+            }
+            val errorLoggerName = "$errorDestCID-$errorClientIp-$errorServerPort"
+            val errorMessage = e.message ?: "Unknown error"
+            
+            witcomLog.c_write(
+                errorLoggerName,
+                Level.ERROR,
+                String.format(
+                    "[mo-report] 비즈니스 로직 에러 발생: msgCode(%d), msgSubCode(%d), msgId(%s), error(%s), stackTrace(%s)",
+                    request.data.msgCode,
+                    request.data.msgSubCode,
+                    request.data.msgId ?: "null",
+                    errorMessage,
+                    e.stackTraceToString()
+                ),
+                Thread.currentThread().getId()
+            )
+            
+            // traceId 관련 에러는 BAD_REQUEST로 응답
+            ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(
+                    mapOf(
+                        "status" to "error",
+                        "message" to errorMessage
+                    )
+                )
         } catch (e: Exception) {
             e.printStackTrace()
             // 예외 발생 시 loggerName 생성 (가능한 정보만 사용)

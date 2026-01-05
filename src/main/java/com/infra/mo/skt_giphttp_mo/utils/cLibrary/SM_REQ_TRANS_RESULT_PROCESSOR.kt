@@ -54,11 +54,8 @@ object SM_REQ_TRANS_RESULT_PROCESSOR {
             }
         }
         /*2.*/
-        if (ptrQItem.dataEncoding == DCS_TYPE_KSC5601) {
-            ptrTransRes.ucDataEncoding = DATA_TYPE_TEXT_KOR;
-        } else {
-            ptrTransRes.ucDataEncoding = DATA_TYPE_BINARY;
-        }
+        // 원본 인코딩 그대로 유지 (UCS2 -> UCS2, CP949 -> CP949, ASCII7 -> ASCII7, GSM7 -> GSM7)
+        ptrTransRes.ucDataEncoding = ptrQItem.dataEncoding
 
         ptrTransRes.szSrcCId = ptrQItem.srcCid.toByteArray();
         ptrTransRes.szSrcMinNo = ptrQItem.srcMinNo.toByteArray();
