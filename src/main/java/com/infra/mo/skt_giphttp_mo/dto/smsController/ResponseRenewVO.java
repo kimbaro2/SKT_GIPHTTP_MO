@@ -1,10 +1,7 @@
 package com.infra.mo.skt_giphttp_mo.dto.smsController;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.infra.mo.skt_giphttp_mo.utils.TimeZoneConstants;
 import lombok.*;
 import org.springframework.http.HttpStatus;
 
@@ -18,6 +15,8 @@ import java.time.ZoneId;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ResponseRenewVO {
+    private static final String SEOUL_TIMEZONE = "Asia/Seoul";
+    private static final ZoneId SEOUL_ZONE_ID = ZoneId.of(SEOUL_TIMEZONE);
 
     @NotNull
     public Integer status;  /* HTTP status */
@@ -51,7 +50,7 @@ public class ResponseRenewVO {
         return ResponseRenewVO.builder()
                 .status(httpStatusCode.value())
                 .msgId(this.msgId)
-                .serverTime(LocalDateTime.now(ZoneId.of("Asia/Seoul")))
+                .serverTime(LocalDateTime.now(TimeZoneConstants.SEOUL_ZONE_ID))
                 .build();
     }
 
@@ -60,7 +59,7 @@ public class ResponseRenewVO {
         return ResponseRenewVO.builder()
                 .status(status.value())
                 .msgId(msgId)
-                .serverTime(LocalDateTime.now(ZoneId.of("Asia/Seoul")))
+                .serverTime(LocalDateTime.now(TimeZoneConstants.SEOUL_ZONE_ID))
                 .responseTR(new ResponseTR(5, 0, new ResponseTR.DataBody()))
                 .build();
     }
@@ -69,11 +68,14 @@ public class ResponseRenewVO {
     public static ResponseRenewVO error(HttpStatus status, Integer msgStatus, String type, String description) {
         return ResponseRenewVO.builder()
                 .status(status.value())
-                .serverTime(LocalDateTime.now(ZoneId.of("Asia/Seoul")))
+                .serverTime(LocalDateTime.now(TimeZoneConstants.SEOUL_ZONE_ID))
                 .error(new Error(msgStatus, type, description))
                 .build();
     }
 
+    // 프로덕션 환경에서는 디버그용 main 메서드 제거
+    // 개발/테스트 환경에서만 필요시 주석 해제하여 사용
+    /*
     public static void main(String[] args) {
         printJson(ResponseRenewVO.success(HttpStatus.OK, "1FAFED6B2"));
         printJson(ResponseRenewVO.error(HttpStatus.BAD_REQUEST, 0, "UNKNOWN_TYPE", "알 수 없는 상태"));
@@ -85,9 +87,10 @@ public class ResponseRenewVO {
             mapper.registerModule(new JavaTimeModule());
             mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            System.out.println(mapper.writeValueAsString(obj));
+            log.debug("ResponseRenewVO JSON: {}", mapper.writeValueAsString(obj));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("JSON 변환 실패: {}", e.getMessage(), e);
         }
     }
+    */
 }

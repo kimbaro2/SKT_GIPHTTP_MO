@@ -174,34 +174,94 @@ object QItemServiceUtil {
     data class QueueResult(val result: SMReqTransResult?, val qItem: QITEM?)
 
     fun fetchAndConvert2(queueNo: Int, smsQLib: SmsQLib, witcomLog: WitcomLog): QueueResult {
-        val qItem = QITEM()
-        val result = smsQLib.GetAMsgFromSmsQ(queueNo, qItem)
+        return try {
+            val qItem = QITEM()
+            val result = smsQLib.GetAMsgFromSmsQ(queueNo, qItem)
+            
+            // GetAMsgFromSmsQ 호출 결과 로깅
+            witcomLog.p_write(
+                Level.DEBUG,
+                String.format(
+                    "[GetAMsgFromSmsQ] QueueNo(%d), 반환값(%d), Q_DELETE_SUCCESS(%d), Q_DELETE_FAIL_Q_EMPTY(%d), SMS_Q_LOCK_FAIL_TRY_AGAIN(%d), SMS_Q_LOCK_FAIL_INVALID_SEMID(%d)",
+                    queueNo,
+                    result,
+                    SmsDef.Q_DELETE_SUCCESS,
+                    SmsDef.Q_DELETE_FAIL_Q_EMPTY,
+                    SmsDef.SMS_Q_LOCK_FAIL_TRY_AGAIN,
+                    SmsDef.SMS_Q_LOCK_FAIL_INVALID_SEMID
+                )
+            )
 
-        return when (result) {
-            SmsDef.Q_DELETE_FAIL_Q_EMPTY -> {
-//                witcomLog.p_write(Level.INFO, "Q_EMPTY for queueNo=$queueNo")
-                QueueResult(null, null)
+            when (result) {
+                SmsDef.Q_DELETE_FAIL_Q_EMPTY -> {
+                    // 큐가 비어있음 - 정상적인 경우
+                    QueueResult(null, null)
+                }
+
+                SmsDef.SMS_Q_LOCK_FAIL_TRY_AGAIN -> {
+                    witcomLog.p_write(Level.INFO, "LOCK_FAIL_TRY_AGAIN for queueNo=$queueNo")
+                    QueueResult(null, null)
+                }
+
+                SmsDef.SMS_Q_LOCK_FAIL_INVALID_SEMID -> {
+                    witcomLog.p_write(Level.ERROR, "LOCK_FAIL_INVALID_SEMID for queueNo=$queueNo")
+                    QueueResult(null, null)
+                }
+
+                SmsDef.Q_DELETE_SUCCESS -> {
+                    // dequeue 성공
+                    qItem.read()
+                    val smReqTransResult = QItemConverter.toSMReqTransResult(qItem)
+                    witcomLog.p_write(
+                        Level.DEBUG,
+                        String.format(
+                            "[GetAMsgFromSmsQ] Dequeue 성공: QueueNo(%d), MsgSeqNo(%d)",
+                            queueNo,
+                            qItem.uMsgSerialNo
+                        )
+                    )
+                    QueueResult(smReqTransResult, qItem)
+                }
+
+                -1 -> {
+                    // C 코드에서 QueueNo를 찾을 수 없을 때 반환하는 값 (SW ERROR)
+                    // SmsQLib.c의 GetAMsgFromSmsQ에서 stQInfo에 해당 QueueNo가 없을 때 반환
+                    witcomLog.p_write(
+                        Level.ERROR,
+                        String.format(
+                            "[GetAMsgFromSmsQ] 큐 번호를 찾을 수 없음 (SW ERROR): QueueNo(%d), 반환값(%d). stQInfo에 해당 QueueNo가 등록되지 않았습니다.",
+                            queueNo,
+                            result
+                        )
+                    )
+                    QueueResult(null, null)
+                }
+
+                else -> {
+                    // 기타 오류
+                    witcomLog.p_write(
+                        Level.WARN,
+                        String.format(
+                            "[GetAMsgFromSmsQ] 알 수 없는 반환값: QueueNo(%d), 반환값(%d)",
+                            queueNo,
+                            result
+                        )
+                    )
+                    QueueResult(null, null)
+                }
             }
-
-            SmsDef.SMS_Q_LOCK_FAIL_TRY_AGAIN -> {
-                witcomLog.p_write(Level.INFO, "LOCK_FAIL_TRY_AGAIN for queueNo=$queueNo")
-                QueueResult(null, null)
-            }
-
-            SmsDef.SMS_Q_LOCK_FAIL_INVALID_SEMID -> {
-                witcomLog.p_write(Level.INFO, "LOCK_FAIL_INVALID_SEMID for queueNo=$queueNo")
-                QueueResult(null, null)
-            }
-
-            else -> {
-                qItem.read()
-                val smReqTransResult = QItemConverter.toSMReqTransResult(qItem)
-                //                printQItem2(qItem)
-//                printQItem3(qItem, witcomLog, null) // loggerName이 없으면 p_write 사용
-
-
-                QueueResult(smReqTransResult, qItem)
-            }
+        } catch (e: Exception) {
+            witcomLog.p_write(
+                Level.ERROR,
+                String.format(
+                    "[GetAMsgFromSmsQ] 예외 발생: QueueNo(%d), 예외타입(%s), 예외메시지(%s), 예외스택(%s)",
+                    queueNo,
+                    e.javaClass.simpleName,
+                    e.message ?: "null",
+                    e.stackTraceToString()
+                )
+            )
+            QueueResult(null, null)
         }
     }
 
@@ -376,6 +436,80 @@ object QItemServiceUtil {
                 String(msgBytes, Charsets.UTF_8)
             }
         }.trimEnd('\u0000')
+    }
+
+    /**
+     * QITEM의 szMsg를 DataEncoding에 맞게 디코딩하여 문자 평문으로 반환
+     * @param qItem QITEM 객체
+     * @return 디코딩된 메시지 문자열 (null 문자 제거됨)
+     * 
+     * C 코드 참고: qItemToMsgHdr LINE 3671
+     * - UCS2: ucMsgLen 그대로 사용 (바이트 수는 짝수여야 함)
+     * - 다른 인코딩: ucMsgLen + 1 사용
+     */
+    fun decodeQItemMessage(qItem: QITEM): String? {
+        return try {
+            val dataEncodingValue = qItem.ucDataEncoding.toInt() and 0xFF
+            val encodingType = SmsEncodingTypeAnalyzer.analyze(dataEncodingValue)
+            
+            // EncodingType에 따라 바이트 배열 길이 결정
+            // C 코드 LINE 3671 참고: UCS2는 ucMsgLen 그대로, 다른 인코딩은 ucMsgLen + 1
+            val msgLength = when (encodingType) {
+                SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN -> {
+                    // UCS2: 바이트 수는 짝수여야 함 (홀수면 1바이트 제거)
+                    val len = qItem.ucMsgLen
+                    if (len % 2 == 0) len else len - 1
+                }
+                else -> {
+                    // 다른 인코딩: ucMsgLen + 1 (C 코드와 동일)
+                    qItem.ucMsgLen + 1
+                }
+            }
+            
+            if (msgLength <= 0 || msgLength > qItem.szMsg.size) {
+                null
+            } else {
+                val msgBytes = qItem.szMsg.sliceArray(0 until msgLength)
+                
+                // GSM7은 별도 처리 필요
+                val decodedMsg = when (encodingType) {
+                    SmsEncodingTypeAnalyzer.MessageType.GSM_7BIT -> {
+                        // GSM7: 7bit 패킹 디코딩
+                        gsm7bitDecodeToString(msgBytes)
+                    }
+                    else -> {
+                        // 다른 인코딩: decode 함수 사용
+                        decode(msgBytes, encodingType)
+                    }
+                }
+                
+                val trimmedMsg = decodedMsg.trimEnd('\u0000').trim { it <= ' ' }
+                if (trimmedMsg.isNotBlank()) {
+                    trimmedMsg
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            // 디코딩 실패 시 CP949로 폴백
+            try {
+                val msgLength = qItem.ucMsgLen
+                if (msgLength <= 0 || msgLength > qItem.szMsg.size) {
+                    null
+                } else {
+                    val msgBytes = qItem.szMsg.sliceArray(0 until msgLength)
+                    val fallbackMsg = String(msgBytes, Charset.forName("CP949"))
+                    val trimmedMsg = fallbackMsg.trimEnd('\u0000').trim { it <= ' ' }
+                    if (trimmedMsg.isNotBlank()) {
+                        trimmedMsg
+                    } else {
+                        null
+                    }
+                }
+            } catch (e2: Exception) {
+                null
+            }
+        }
     }
 
     /**
@@ -871,18 +1005,9 @@ object QItemServiceUtil {
 
         // C 코드 LINE 4181: memcpy(ptrDestQItem->szMsg, ptrCallInfo->szMsg, ptrCallInfo->ucMsgLen)
         val ptrCallInfo_szMsg = ptrCallInfo.msg ?: ""
-        // dataEncoding 값에 따라 동적으로 인코딩 처리
-        val dataEncoding = ptrCallInfo.dcsType ?: 14
-        val encodingType = SmsEncodingTypeAnalyzer.analyze(dataEncoding)
-        val charset = when (encodingType) {
-            SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN -> Charset.forName("UTF-16BE")
-            SmsEncodingTypeAnalyzer.MessageType.KSC5601_CP949 -> Charset.forName("CP949")
-            SmsEncodingTypeAnalyzer.MessageType.ASCII_7BIT -> StandardCharsets.US_ASCII
-            SmsEncodingTypeAnalyzer.MessageType.BINARY_8BIT -> StandardCharsets.ISO_8859_1
-            SmsEncodingTypeAnalyzer.MessageType.GSM_7BIT -> StandardCharsets.US_ASCII // GSM7BIT은 별도 처리 필요
-            else -> Charset.forName("CP949") // 기본값
-        }
-        val msgBytes = ptrCallInfo_szMsg.toByteArray(charset)
+        // ⚠️ DB에서 읽은 데이터는 이미 바이트 형태로 저장되어 있으므로
+        // CP949를 기본으로 사용 (DB 저장 시 사용한 인코딩과 동일하게)
+        val msgBytes = ptrCallInfo_szMsg.toByteArray(Charset.forName("CP949"))
         val msgCopySize = minOf(msgBytes.size, ptrDestQItem.szMsg.size, ptrDestQItem.ucMsgLen)
         System.arraycopy(msgBytes, 0, ptrDestQItem.szMsg, 0, msgCopySize)
 
@@ -1000,6 +1125,8 @@ object QItemServiceUtil {
                     )
                 )
                 //InsqStat 호출 필요 (C 코드 LINE 3540-3541)
+                // nInforNo: ptrQItem.usSource 사용 (dequeue된 QITEM의 usSource는 항상 유효한 값)
+                // IF_NULL은 에러 케이스이므로 사용하지 않음
                 smsQLib.InsqStat(
                     ptrQItem,
                     MESSAGE_MO,
@@ -1009,7 +1136,7 @@ object QItemServiceUtil {
                     SERVICEID_GIPALL,
                     ERRORID_CP_INVALID_SUBSCRIBER,
                     ST_GIP_INVALID_SMIN_SMSMANAGER,
-                    IF_NULL,
+                    ptrQItem.usSource,  // nInforNo: ptrQItem.usSource 직접 사용
                     TID_NO_SAVE,
                     LT_TRACE,
                     0
@@ -1240,29 +1367,13 @@ object QItemServiceUtil {
             System.arraycopy(packedMsg, 0, ptrQItem.szMsg, 0, copySize)
             ptrQItem.ucMsgLen = copySize.toInt()
         }
-        // C 코드 LINE 3669-3713: 기타 인코딩 처리
+        // C 코드 LINE 3669-3713: 기타 인코딩 처리 (KSC5601, ASCII, BINARY 등)
         else {
-            // dataEncoding 값에 따라 적절한 Charset 선택
-            val dataEncoding = ptrQItem.ucDataEncoding.toInt() and 0xFF
-            val encodingType = SmsEncodingTypeAnalyzer.analyze(dataEncoding)
-            val charset = when (encodingType) {
-                SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN -> Charset.forName("UTF-16BE")
-                SmsEncodingTypeAnalyzer.MessageType.KSC5601_CP949 -> Charset.forName("CP949")
-                SmsEncodingTypeAnalyzer.MessageType.ASCII_7BIT -> StandardCharsets.US_ASCII
-                SmsEncodingTypeAnalyzer.MessageType.BINARY_8BIT -> StandardCharsets.ISO_8859_1
-                SmsEncodingTypeAnalyzer.MessageType.GSM_7BIT -> StandardCharsets.US_ASCII
-                else -> Charset.forName("CP949") // 기본값
-            }
-            
             // C 코드 LINE 3671: memcpy(msg, ptrQItem->szMsg, ptrQItem->ucMsgLen + 1)
-            // UCS2는 2바이트/문자이므로 바이트 수는 짝수여야 함. +1을 하면 홀수 바이트가 되어 디코딩이 깨짐
-            val msgLength = if (encodingType == SmsEncodingTypeAnalyzer.MessageType.UCS2_BIGENDIAN) {
-                ptrQItem.ucMsgLen  // UCS2는 바이트 수 그대로 사용
-            } else {
-                ptrQItem.ucMsgLen + 1  // 다른 인코딩은 +1 사용
-            }
-            val msg = ptrQItem.szMsg.sliceArray(0 until msgLength)
-            val msgStr = String(msg, charset)
+            // ⚠️ 주의: 이 블록은 UCS2, GSM7, ASCII7을 제외한 나머지 인코딩만 처리
+            // UCS2는 이미 위에서 처리되었으므로 여기서는 CP949 기반 처리만 수행
+            val msg = ptrQItem.szMsg.sliceArray(0 until (ptrQItem.ucMsgLen + 1))
+            val msgStr = String(msg, Charset.forName("CP949"))
 
             // C 코드 LINE 3673: tok = strstr(msg, "[FW]")
             var tok = msgStr.indexOf("[FW]")
@@ -1276,7 +1387,7 @@ object QItemServiceUtil {
                 }
 
             // C 코드 LINE 3687-3690: msg와 ptrQItem->szMsg 업데이트
-            val ResultmsgBytes = Resultmsg.toByteArray(charset)
+            val ResultmsgBytes = Resultmsg.toByteArray(Charset.forName("CP949"))
             val resultMsgLen = minOf(ResultmsgBytes.size, ptrQItem.szMsg.size)
             System.arraycopy(ResultmsgBytes, 0, ptrQItem.szMsg, 0, resultMsgLen)
             ptrQItem.ucMsgLen = resultMsgLen
@@ -1285,7 +1396,7 @@ object QItemServiceUtil {
             val msgAfterFW =
                 String(
                     ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
-                    charset
+                    Charset.forName("CP949")
                 )
             tok = msgAfterFW.indexOf("[N+]")
 
@@ -1297,7 +1408,7 @@ object QItemServiceUtil {
                     msgAfterFW
                 }
 
-            val Resultmsg2Bytes = Resultmsg2.toByteArray(charset)
+            val Resultmsg2Bytes = Resultmsg2.toByteArray(Charset.forName("CP949"))
             val resultMsg2Len = minOf(Resultmsg2Bytes.size, ptrQItem.szMsg.size)
             System.arraycopy(Resultmsg2Bytes, 0, ptrQItem.szMsg, 0, resultMsg2Len)
             ptrQItem.ucMsgLen = resultMsg2Len
@@ -1306,10 +1417,10 @@ object QItemServiceUtil {
             val msgFinal =
                 String(
                     ptrQItem.szMsg.sliceArray(0 until ptrQItem.ucMsgLen),
-                    charset
+                    Charset.forName("CP949")
                 )
             val finalMsg = "${curTime}6$msgFinal"
-            val finalMsgBytes = finalMsg.toByteArray(charset)
+            val finalMsgBytes = finalMsg.toByteArray(Charset.forName("CP949"))
             val copySize = minOf(finalMsgBytes.size, ptrQItem.szMsg.size)
             System.arraycopy(finalMsgBytes, 0, ptrQItem.szMsg, 0, copySize)
             ptrQItem.ucMsgLen = copySize

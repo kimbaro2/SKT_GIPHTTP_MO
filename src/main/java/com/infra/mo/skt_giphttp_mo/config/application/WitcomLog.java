@@ -48,158 +48,157 @@ public class WitcomLog {
 
     // WorkerThread 번호를 매개변수로 받는 메서드
     public void c_write(String loggerName, Level logLevel, String message, long workerThreadId) {
-        GipHttpAccessEntity e = gipHttpAccessMap.get(loggerName);
-        
-        // loggerName에서 직접 찾지 못한 경우, loggerName에서 cid를 추출해서 검색
-        if (e == null && loggerName != null && loggerName.contains("-")) {
-            // loggerName 형식: "${cid}-${ipAddr}-${portNo}"
-            String cid = loggerName.substring(0, loggerName.indexOf("-"));
-            // gipHttpAccessMap의 모든 엔티티를 순회하면서 cid로 매칭
-            for (GipHttpAccessEntity entity : gipHttpAccessMap.values()) {
-                if (entity != null && cid.equals(entity.getCid())) {
-                    e = entity;
-                    break;
-                }
-            }
+        GipHttpAccessEntity entity = findGipHttpAccessEntity(loggerName);
+        if (entity == null) {
+            handleEntityNotFound(loggerName);
+            return;
         }
-        
-        // 엔티티를 찾지 못한 경우: GIPHTTP_MO_ACCESS에 등록된 IP, 포트 조합이 일치하지 않음
-        if (e == null) {
-            System.err.println("ERROR: loggerName not found in gipHttpAccessMap: " + loggerName + 
-                " (GIPHTTP_MO_ACCESS 테이블에 등록된 IP, 포트 조합이 일치하지 않습니다)");
-            // 에러 로그를 p_write로 기록하고 조기 반환
-            try {
-                p_write(Level.ERROR, String.format(
-                    "c_write 실패: loggerName(%s)을 gipHttpAccessMap에서 찾을 수 없습니다. GIPHTTP_MO_ACCESS 테이블에 등록된 IP, 포트 조합을 확인하세요.",
-                    loggerName
-                ));
-            } catch (Exception ex) {
-                System.err.println("Failed to write error log: " + ex.getMessage());
-            }
-            return; // 조기 반환 - 로그 파일 생성하지 않음
-        }
-        
-        // 엔티티를 찾은 경우 정상 처리
-        int logGradeFlag = e.getLogFlag();
-        NumberFormat formatter = new DecimalFormat("0000");
-        String logNo = formatter.format(Long.valueOf(e.getLogNo()));
-        
-        THREAD_LOG_GRADE.set(logGradeFlag);
 
-        // 전달받은 WorkerThread 번호 사용
-        String threadNo = String.valueOf(workerThreadId);
-
-        // 현재 시간 기반 타임스탬프 생성 (MMdd_HH)
+        String logNo = formatLogNo(entity.getLogNo());
+        THREAD_LOG_GRADE.set(entity.getLogFlag());
+        
         String timestamp = new SimpleDateFormat("MMdd_HH").format(new Date());
-
-        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-        // dynamicLoggerName에 시간 정보 포함하여 시간 변경 시 새 Logger 생성
+        String threadNo = String.valueOf(workerThreadId);
         String dynamicLoggerName = loggerName + "-" + logNo + "-" + threadNo + "-" + timestamp;
+        
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         Logger logger = context.getLogger(dynamicLoggerName);
-
         logger.setLevel(logLevel);
         logger.setAdditive(false);
 
-        // FileAppender가 없거나 파일이 삭제된 경우 재생성
-        if (!logger.iteratorForAppenders().hasNext()) {
-            FileAppender<ILoggingEvent> fileAppender = new FileAppender<>();
-            fileAppender.setContext(context);
-
-            // 파일명 패턴: GIPHTTPMO_C_{logNo}_{threadNo}_{MMdd}_{HH}
-            String logFile = cFilePath + "GIPHTTPMO_C_" + logNo + "_" + threadNo + "_" + timestamp;
-
-            fileAppender.setFile(logFile);
-            fileAppender.setAppend(true);
-
-            PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-            encoder.setContext(context);
-            encoder.setPattern("[%d{HH:mm:ss:SSSS}] [%-5level] %msg%n");
-            encoder.start();
-
-            fileAppender.setEncoder(encoder);
-            fileAppender.start();
-
-            logger.addAppender(fileAppender);
-        } else {
-            // 기존 FileAppender가 있지만 파일이 삭제되었을 수 있으므로 확인
-            java.util.Iterator<ch.qos.logback.core.Appender<ILoggingEvent>> appenderIterator = 
-                logger.iteratorForAppenders();
-            if (appenderIterator.hasNext()) {
-                ch.qos.logback.core.Appender<ILoggingEvent> appender = appenderIterator.next();
-                if (appender instanceof FileAppender) {
-                    FileAppender<ILoggingEvent> fileAppender = (FileAppender<ILoggingEvent>) appender;
-                    String currentFile = fileAppender.getFile();
-                    java.io.File file = new java.io.File(currentFile);
-                    // 파일이 존재하지 않거나 디렉토리가 없는 경우 FileAppender 재생성
-                    if (currentFile != null && (!file.exists() || (file.getParentFile() != null && !file.getParentFile().exists()))) {
-                        logger.detachAppender(fileAppender);
-                        fileAppender.stop();
-                        
-                        // 새로운 FileAppender 생성
-                        FileAppender<ILoggingEvent> newFileAppender = new FileAppender<>();
-                        newFileAppender.setContext(context);
-                        String logFile = cFilePath + "GIPHTTPMO_C_" + logNo + "_" + threadNo + "_" + timestamp;
-                        newFileAppender.setFile(logFile);
-                        newFileAppender.setAppend(true);
-                        
-                        PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-                        encoder.setContext(context);
-                        encoder.setPattern("[%d{HH:mm:ss:SSSS}] [%-5level] %msg%n");
-                        encoder.start();
-                        
-                        newFileAppender.setEncoder(encoder);
-                        newFileAppender.start();
-                        logger.addAppender(newFileAppender);
-                    }
-                }
-            }
-        }
-
-        // 로그 작성 시 예외 처리
-        try {
-            switch (logLevel.levelStr) {
-                case "TRACE" -> logger.trace(message);
-                case "DEBUG" -> logger.debug(message);
-                case "INFO" -> logger.info(message);
-                case "WARN" -> logger.warn(message);
-                case "ERROR" -> logger.error(message);
-                default -> logger.info(message);
-            }
-        } catch (Exception ex) {
-            // 파일 쓰기 실패 시 FileAppender 재생성 시도
-            System.err.println("Error writing log, attempting to recreate FileAppender: " + ex.getMessage());
-            logger.detachAndStopAllAppenders();
-            
-            FileAppender<ILoggingEvent> fileAppender = new FileAppender<>();
-            fileAppender.setContext(context);
-            String logFile = cFilePath + "GIPHTTPMO_C_" + logNo + "_" + threadNo + "_" + timestamp;
-            fileAppender.setFile(logFile);
-            fileAppender.setAppend(true);
-            
-            PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-            encoder.setContext(context);
-            encoder.setPattern("[%d{HH:mm:ss:SSSS}] [%-5level] %msg%n");
-            encoder.start();
-            
-            fileAppender.setEncoder(encoder);
-            fileAppender.start();
-            logger.addAppender(fileAppender);
-            
-            // 재시도
-            try {
-                switch (logLevel.levelStr) {
-                    case "TRACE" -> logger.trace(message);
-                    case "DEBUG" -> logger.debug(message);
-                    case "INFO" -> logger.info(message);
-                    case "WARN" -> logger.warn(message);
-                    case "ERROR" -> logger.error(message);
-                    default -> logger.info(message);
-                }
-            } catch (Exception retryEx) {
-                System.err.println("Failed to write log after retry: " + retryEx.getMessage());
-            }
-        }
+        ensureFileAppenderExists(logger, context, logNo, threadNo, timestamp);
+        writeLogMessage(logger, logLevel, message, context, logNo, threadNo, timestamp);
+        
         THREAD_LOG_GRADE.remove();
+    }
+
+    private GipHttpAccessEntity findGipHttpAccessEntity(String loggerName) {
+        GipHttpAccessEntity entity = gipHttpAccessMap.get(loggerName);
+        if (entity != null) {
+            return entity;
+        }
+        
+        if (loggerName == null || !loggerName.contains("-")) {
+            return null;
+        }
+        
+        String cid = loggerName.substring(0, loggerName.indexOf("-"));
+        for (GipHttpAccessEntity e : gipHttpAccessMap.values()) {
+            if (e != null && cid.equals(e.getCid())) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    private void handleEntityNotFound(String loggerName) {
+        try {
+            p_write(Level.ERROR, String.format(
+                "c_write 실패: loggerName(%s)을 gipHttpAccessMap에서 찾을 수 없습니다. GIPHTTP_MO_ACCESS 테이블에 등록된 IP, 포트 조합을 확인하세요.",
+                loggerName
+            ));
+        } catch (Exception ex) {
+            // 프로덕션 환경에서는 조용히 실패 (로깅 실패는 무시)
+        }
+    }
+
+    private String formatLogNo(String logNo) {
+        NumberFormat formatter = new DecimalFormat("0000");
+        String logNoStr = logNo != null ? logNo : "0";
+        long logNoLong = logNoStr.isEmpty() ? 0L : Long.parseLong(logNoStr);
+        return formatter.format(logNoLong);
+    }
+
+    private void ensureFileAppenderExists(Logger logger, LoggerContext context, String logNo, String threadNo, String timestamp) {
+        if (!logger.iteratorForAppenders().hasNext()) {
+            createAndAddFileAppender(logger, context, logNo, threadNo, timestamp);
+            return;
+        }
+        
+        FileAppender<ILoggingEvent> existingAppender = getExistingFileAppender(logger);
+        if (existingAppender != null && isFileAppenderInvalid(existingAppender)) {
+            recreateFileAppender(logger, context, logNo, threadNo, timestamp, existingAppender);
+        }
+    }
+
+    private FileAppender<ILoggingEvent> createAndAddFileAppender(Logger logger, LoggerContext context, 
+                                                                 String logNo, String threadNo, String timestamp) {
+        FileAppender<ILoggingEvent> fileAppender = new FileAppender<>();
+        fileAppender.setContext(context);
+        fileAppender.setFile(cFilePath + "GIPHTTPMO_C_" + logNo + "_" + threadNo + "_" + timestamp);
+        fileAppender.setAppend(true);
+
+        PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("[%d{HH:mm:ss:SSSS}] [%-5level] %msg%n");
+        encoder.start();
+
+        fileAppender.setEncoder(encoder);
+        fileAppender.start();
+        logger.addAppender(fileAppender);
+        return fileAppender;
+    }
+
+    private FileAppender<ILoggingEvent> getExistingFileAppender(Logger logger) {
+        java.util.Iterator<ch.qos.logback.core.Appender<ILoggingEvent>> appenderIterator = logger.iteratorForAppenders();
+        if (!appenderIterator.hasNext()) {
+            return null;
+        }
+        
+        ch.qos.logback.core.Appender<ILoggingEvent> appender = appenderIterator.next();
+        if (appender instanceof FileAppender) {
+            return (FileAppender<ILoggingEvent>) appender;
+        }
+        return null;
+    }
+
+    private boolean isFileAppenderInvalid(FileAppender<ILoggingEvent> fileAppender) {
+        String currentFile = fileAppender.getFile();
+        if (currentFile == null) {
+            return true;
+        }
+        
+        java.io.File file = new java.io.File(currentFile);
+        return !file.exists() || (file.getParentFile() != null && !file.getParentFile().exists());
+    }
+
+    private void recreateFileAppender(Logger logger, LoggerContext context, String logNo, 
+                                      String threadNo, String timestamp, FileAppender<ILoggingEvent> oldAppender) {
+        logger.detachAppender(oldAppender);
+        oldAppender.stop();
+        createAndAddFileAppender(logger, context, logNo, threadNo, timestamp);
+    }
+
+    private void writeLogMessage(Logger logger, Level logLevel, String message, 
+                                LoggerContext context, String logNo, String threadNo, String timestamp) {
+        try {
+            writeLogByLevel(logger, logLevel, message);
+        } catch (Exception ex) {
+            handleLogWriteFailure(logger, context, logNo, threadNo, timestamp, logLevel, message);
+        }
+    }
+
+    private void writeLogByLevel(Logger logger, Level logLevel, String message) {
+        switch (logLevel.levelStr) {
+            case "TRACE" -> logger.trace(message);
+            case "DEBUG" -> logger.debug(message);
+            case "INFO" -> logger.info(message);
+            case "WARN" -> logger.warn(message);
+            case "ERROR" -> logger.error(message);
+            default -> logger.info(message);
+        }
+    }
+
+    private void handleLogWriteFailure(Logger logger, LoggerContext context, String logNo, 
+                                      String threadNo, String timestamp, Level logLevel, String message) {
+        logger.detachAndStopAllAppenders();
+        createAndAddFileAppender(logger, context, logNo, threadNo, timestamp);
+        
+        try {
+            writeLogByLevel(logger, logLevel, message);
+        } catch (Exception retryEx) {
+            // 프로덕션 환경에서는 조용히 실패 (로깅 실패는 무시)
+        }
     }
 
     // LoggerName은 'P-1571799999-175.125.130.76-8500' 형태
@@ -240,8 +239,6 @@ public class WitcomLog {
 
                 logger.setLevel(logLevel);
                 logger.setAdditive(false);
-
-                System.out.println("▶ New log file created: " + logFilePath);
             }
 
             // 로그 작성
@@ -254,8 +251,8 @@ public class WitcomLog {
                 default -> logger.info(message);
             }
         } catch (Exception e) {
-            System.err.println("Error in p_write: " + e.getMessage());
-            e.printStackTrace();
+            // 프로덕션 환경에서는 조용히 실패 (로깅 실패는 무시)
+            // 디버그 출력 제거: log.error, e.printStackTrace()
         } finally {
             THREAD_LOG_GRADE.remove();
         }

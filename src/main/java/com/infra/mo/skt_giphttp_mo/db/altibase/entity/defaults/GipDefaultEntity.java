@@ -73,9 +73,6 @@ public class GipDefaultEntity {
     @Column(name = "CP_SKT_TEAM", length = 30)
     public String cpSktTeam;                                       //LINE :: CP의 SKT 담당팀
 
-    @Column(name = "MSG_TYPE", length = 1)
-    public String msgType;                                         //LINE :: Msg 호 처리 유형 1:MO, 2:MT, 3:선물 default 0, 4:MO-TR, 5:MT-TR
-
     @Column(name = "BILL_TYPE", length = 1)
     public String billType;                                        //LINE :: 과금 Format 유형 1:비과금, 2:발신자 과금, 3:착신자 과금, 4:선물 과금, 5:비과금 정산용 default 0
 
@@ -164,7 +161,6 @@ public class GipDefaultEntity {
                 ", cpTeam = " + cpTeam +
                 ", cpPersonnel = " + cpPersonnel +
                 ", cpSktTeam = " + cpSktTeam +
-                ", msgType = " + msgType +
                 ", billType = " + billType +
                 // ", coisType = " + coisType +  // 제거: COIS_TYPE
                 // ", replyFlag = " + replyFlag +  // 제거: REPLY_FLAG

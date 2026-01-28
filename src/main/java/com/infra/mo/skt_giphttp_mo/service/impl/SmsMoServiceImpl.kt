@@ -63,7 +63,7 @@ class SmsMoServiceImpl(
     /**
      * MoTRBill 값 조회
      */
-    override fun getMoTRBill(gipHttpMoAccess: GipHttpMoAccessEntity?): String {
+    override fun getMoTRBill(gipHttpMoAccess: GipHttpMoAccessEntity?): Int {
         return moTRBillHandler.getMoTRBill(gipHttpMoAccess)
     }
     

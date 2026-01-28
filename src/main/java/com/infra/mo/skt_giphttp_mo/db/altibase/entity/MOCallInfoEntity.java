@@ -89,5 +89,45 @@ public class MOCallInfoEntity {
     
     @Column(name = "VIRTUAL_NUM", length = 20)
     public String virtualNum;  // Virtual Number (AI Survey 등에서 사용)
+    
+    @Column(name = "EXPIRETIME")
+    public java.util.Date expireTime;  // 만료 시간
+    
+    @Column(name = "SEGMENT", columnDefinition = "NUMERIC(10)")
+    public Integer segment;  // 세그먼트 정보 (segSeq)
+    
+    @Column(name = "TID", length = 6)
+    public String tid;  // TID
+    
+    @Column(name = "CENTERNO", columnDefinition = "NUMERIC(2)")
+    public Integer centerno;  // Center 번호
+    
+    @Column(name = "MSG", length = 300)
+    public String msg;  // 메시지 내용 (szMsg)
+    
+    @Column(name = "RETURNQNO", columnDefinition = "NUMERIC(10)")
+    public Integer returnQno;  // Return Queue 번호 (ReturnQ_No)
+    
+    @Column(name = "W2PMSGID", length = 10)
+    public String w2pMsgId;  // W2P MSGID (Relay MO 전용)
+    
+    @Column(name = "FWD_SRC", length = 20)
+    public String fwdSrc;  // 전달 소스 (szFWD_NO)
+    
+    @Column(name = "NPDB_QUERY_CNT", columnDefinition = "NUMERIC(10)")
+    public Integer npdbQueryCnt;  // NPDB 조회 횟수
+    
+    @Column(name = "ESMCLASS", columnDefinition = "NUMERIC(3)")
+    public Integer esmClass;  // ESM Class (nRsv4Protocol[11])
+    
+    // DB 테이블에 없을 수 있는 필드들 (C 모듈에서 저장하지 않음) - @Transient로 표시
+    @Transient
+    public Integer notiFlag;  // NOTI 타입 여부 (0: 일반, 1: NOTI)
+    
+    @Transient
+    public Integer splitSeq;  // 분할 메시지 시퀀스 (segSeq)
+    
+    @Transient
+    public Integer splitMsglen;  // 분할 메시지 총 개수 (totalSeg)
 }
 

@@ -17,14 +17,6 @@ public interface GipHttpMoAccessRepository extends JpaRepository<GipHttpMoAccess
             """, nativeQuery = true)
     public Optional<List<GipHttpMoAccessEntity>> findAllEntity();
 
-    // MSG_TYPE으로 필터링하여 조회
-    @org.springframework.data.jpa.repository.Query(value = """
-        SELECT *
-        FROM SMS.HTTP_MOSEND_ACCESS
-        WHERE MSG_TYPE = :msgType
-            """, nativeQuery = true)
-    public Optional<List<GipHttpMoAccessEntity>> findAllByMsgType(@Param("msgType") String msgType);
-
     @org.springframework.data.jpa.repository.Query(value = """
         SELECT CID
         FROM SMS.HTTP_MOSEND_ACCESS
@@ -37,10 +29,6 @@ public interface GipHttpMoAccessRepository extends JpaRepository<GipHttpMoAccess
     @Transactional(readOnly = true)
     public Optional<GipHttpMoAccessEntity> findByCidAndIpAddrAndPortNo(String cid, String ipAddr, int portNo);
 
-    // 유니크 제약조건 (CID, IP_ADDR, PORT_NO, MSG_TYPE)으로 조회
-    @Transactional(readOnly = true)
-    public Optional<GipHttpMoAccessEntity> findByCidAndIpAddrAndPortNoAndMsgType(String cid, String ipAddr, int portNo, String msgType);
-
     // CID로 조회
     @Transactional(readOnly = true)
     public Optional<GipHttpMoAccessEntity> findByCid(String cid);
@@ -49,13 +37,7 @@ public interface GipHttpMoAccessRepository extends JpaRepository<GipHttpMoAccess
     @Transactional(readOnly = true)
     public Optional<GipHttpMoAccessEntity> findByCidAndIpAddr(String cid, String ipAddr);
 
-    // CID와 IP로 MSG_TYPE 포함하여 조회
-    @Transactional(readOnly = true)
-    public Optional<GipHttpMoAccessEntity> findByCidAndIpAddrAndMsgType(String cid, String ipAddr, String msgType);
-
-    // CID로 MSG_TYPE 포함하여 조회
-    @Transactional(readOnly = true)
-    public Optional<GipHttpMoAccessEntity> findByCidAndMsgType(String cid, String msgType);
+    // NOTE: MSG_TYPE 컬럼 삭제됨. 관련 조회/쿼리는 모두 제거되었으며, 분기 기준은 MO_TR_BILL로 처리한다.
 
     // AES 키와 IV 업데이트를 위한 커스텀 쿼리
     @org.springframework.data.jpa.repository.Modifying

@@ -4,6 +4,7 @@ import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpAccessEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.repository.GipHttpAccessRepository
 import com.infra.mo.skt_giphttp_mo.db.altibase.repository.GipHttpMoAccessRepository
+import com.infra.mo.skt_giphttp_mo.utils.LimitCheckFlags
 import kotlinx.coroutines.*
 import javax.annotation.PreDestroy
 import org.slf4j.Logger
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 
@@ -27,6 +29,7 @@ import java.util.concurrent.Executors
 open class GipHttpMoAccessList_ThreadPool(
     @Qualifier("GipHttpMoAccessList") private val gipHttpMoAccessList: CopyOnWriteArrayList<GipHttpMoAccessEntity>,
     @Qualifier("GipHttpAccessMap") private val gipHttpAccessMap: java.util.concurrent.ConcurrentHashMap<String, GipHttpAccessEntity>,
+    @Qualifier("LimitCheckFlagsMap") private val limitCheckFlagsMap: ConcurrentHashMap<String, LimitCheckFlags>,
     private val context: ApplicationContext,
     private val gipHttpMoAccessRepository: GipHttpMoAccessRepository
 ) {
@@ -67,24 +70,49 @@ open class GipHttpMoAccessList_ThreadPool(
                             log.warn("🔹[Worker-$index] Spring 컨텍스트가 비활성화됨 - DB 접근 스킵, 계속 실행: ${Thread.currentThread().name}")
                         } else {
                             // 컨텍스트가 활성화되어 있으면 DB 접근
-                            // MO 메시지 전송용이므로 MSG_TYPE='1' (MO)만 조회
-                            val gipHttpMoAccessToEntityList = gipHttpMoAccessRepository.findAllByMsgType("1")
+                            // 모든 MSG_TYPE 조회 (MO, MO-TR 모두 처리)
+                            val gipHttpMoAccessToEntityList = gipHttpMoAccessRepository.findAllEntity()
 //                            val gipHttpAccessToEntityList = gipHttpAccessRepository.findAllGroupByCid()
                             if (gipHttpMoAccessToEntityList.isPresent) {
+                                val entityList = gipHttpMoAccessToEntityList.get()
                                 gipHttpMoAccessList.clear()
-                                gipHttpMoAccessList.addAll(gipHttpMoAccessToEntityList.get())
+                                gipHttpMoAccessList.addAll(entityList)
                                 
                                 // GipHttpAccessMap도 업데이트 (로깅용)
                                 gipHttpAccessMap.clear()
-                                gipHttpMoAccessToEntityList.get().forEach { moEntity ->
+                                entityList.forEach { moEntity ->
                                     val loggerName = "${moEntity.cid}-${moEntity.ipAddr}-${moEntity.portNo}"
                                     // GipHttpMoAccessEntity를 GipHttpAccessEntity로 변환 (생성자 사용)
                                     val accessEntity = GipHttpAccessEntity(moEntity)
                                     gipHttpAccessMap[loggerName] = accessEntity
                                 }
+                                
+                                // LimitCheckFlags 캐시 갱신 (C 코드 GetLimitCheck() 패턴)
+                                limitCheckFlagsMap.clear()
+                                entityList.forEach { entity ->
+                                    val limitFlags = LimitCheckFlags.from(entity)
+                                    limitCheckFlagsMap[entity.logNo] = limitFlags
+                                }
+                                
+                                // 로그 포맷 개선: 리스트 크기와 주요 정보만 출력
+                                log.info("UPDATE ---> HTTP_MOSEND_ACCESS 총 {}개 레코드 로드, LimitCheckFlags 캐시 갱신 완료", entityList.size)
+                                if (log.isDebugEnabled) {
+                                    entityList.forEach { entity ->
+                                        val limitFlags = limitCheckFlagsMap[entity.logNo]
+                                        log.debug("  - LOG_NO: {}, CID: {}, IP: {}, PORT: {}, QUEUE_NO: {}, BILL_TYPE: {} (validated: {}), MO_TR_BILL: {}, LIMIT_FLAGS: [MO:{}, MT:{}, GIVE:{}], DESCRIPTION: {}",
+                                            entity.logNo, entity.cid, entity.ipAddr, entity.portNo, entity.queueNo,
+                                            entity.billType,
+                                            com.infra.mo.skt_giphttp_mo.utils.BillTypeValidator.validateAndNormalize(entity.billType),
+                                            entity.moTrBill,
+                                            limitFlags?.limitMO ?: false,
+                                            limitFlags?.limitMT ?: false,
+                                            limitFlags?.limitGIVE ?: false,
+                                            entity.description)
+                                    }
+                                }
+                            } else {
+                                log.warn("UPDATE ---> HTTP_MOSEND_ACCESS 레코드 없음")
                             }
-
-                            log.info("UPDATE ---> {}", gipHttpMoAccessToEntityList.toString())
                         }
                     } catch (e: CancellationException) {
                         // 코루틴 취소 시 정상 종료

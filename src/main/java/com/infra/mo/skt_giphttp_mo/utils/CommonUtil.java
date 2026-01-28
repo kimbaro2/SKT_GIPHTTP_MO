@@ -232,9 +232,10 @@ public class CommonUtil {
 	           Date original_date = original_format.parse(date);
 	           new_date = new_format.format(original_date);
 	           
-	       } catch (ParseException e) {
-	           e.printStackTrace();
-	       }
+       } catch (ParseException e) {
+           // 프로덕션 환경에서는 조용히 실패 (디버그 출력 제거)
+           // 날짜 파싱 실패 시 빈 문자열 반환
+       }
 	       return new_date;
 		}
 	
@@ -284,9 +285,10 @@ public class CommonUtil {
 	      InputStream inputstream = proc.getInputStream();
 	      InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
 	      bufferedreader = new BufferedReader(inputstreamreader);
-	    } catch (Exception e) {
-	      e.printStackTrace();
-	    } 
+    } catch (Exception e) {
+      // 프로덕션 환경에서는 조용히 실패 (디버그 출력 제거)
+      // 프로세스 실행 실패 시 null 반환
+    }
 		return bufferedreader;
 	  }	
 }

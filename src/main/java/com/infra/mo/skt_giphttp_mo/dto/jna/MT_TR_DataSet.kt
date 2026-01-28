@@ -70,12 +70,10 @@ data class SMReqTransResult(
     var relayCID: String,           // szRelayCID
     var resultCode: Int = 0,         // 처리 상태 코드 (0=OK)
     var usSource: Int = 0,          // usSource
-
 )
 
 
 object QItemConverter {
-
     fun toSMReqTransResult(qitem: QITEM): SMReqTransResult {
         // ✅ 인코딩 타입 분석
         val encodingType = SmsEncodingTypeAnalyzer.analyze(qitem.ucDataEncoding.toInt())

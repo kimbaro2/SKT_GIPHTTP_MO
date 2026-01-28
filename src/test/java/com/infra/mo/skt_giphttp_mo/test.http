@@ -2,18 +2,49 @@ POST http://121.124.125.212:7500/sms/mo-report
 Content-Type: application/json
 
 {
-  "msgVerId": 0,
+  "msgVerId": 510,
   "encFlag": 0,
   "data": {
-    "srcCallNo": "01048004512",
-    "destCID": "1570501699",
-    "msgCode": 11,
-    "msgSubCode": 9,
-    "msgId": "3B639FBF",
-    "result": 0,
-    "msgStatus" : 2
+    "cid": "1584",
+    "msgId": "DB0C8C84",
+    "traceId": "01126011418500720607",
+    "status": 2
   }
 }
+
 ###
-/*MsgStatus (int) - 2:DELIVERED, 3:EXPIRED, 5:UNDELIVERED 등*/
+IP_ADDR, PORT_NO, CID
+
+/* ============================================================
+* MsgStatus 관련 상수 정의 (SmsDef.h 기준)
+* ============================================================ */
+
+/* 기본 상태 상수 */
+#define SM_STATE_FWD_DETECT_CID        0   /* 착신차단 감지 */
+#define SM_STATE_MRMSPAM               1   /* MRM 스팸 */
+#define SM_STATE_DELIVERED             2   /* 전송 완료 (SEND_OK와 동일) */
+#define SM_STATE_EXPIRED               3   /* 유효기간 만료 */
+#define SM_STATE_DELETED               4   /* 삭제됨 */
+#define SM_STATE_UNDELIVERABLE         5   /* 전송 불가 */
+#define SM_STATE_ACCEPTED              6   /* 수락됨 */
+
+/* 번호이동(Ported) 관련 상수 */
+#define SM_STATE_PORTED_OUT            7   /* 번호이동 */
+#define SM_STATE_PORTEDOUT             7   /* 번호이동 (별칭) */
+#define SM_STATE_PORTEDOUT_KTF         8   /* KTF 번호이동 */
+#define SM_STATE_PORTEDOUT_LGT         9   /* LGT 번호이동 */
+#define SM_STATE_PORTEDOUT_SKT        10   /* SKT 번호이동 */
+
+/* 기타 상태 상수 */
+#define SM_STATE_FORWARD              12   /* 전달 */
+#define SM_STATE_NCHANGE              13   /* 번호 변경 */
+#define SM_STATE_FWDFAIL              14   /* 전달 실패 */
+#define SM_STATE_SPAMERR              16   /* 스팸 오류 */
+#define SM_STATE_SPAM_BLOCK           16   /* 스팸 차단 (SPAMERR와 동일) */
+#define SM_STATE_USERDEL              17   /* 사용자 삭제 */
+#define SM_STATE_NPREFIX              19   /* NP Prefix 오류 */
+#define SM_STATE_ADMCANC              20   /* 관리자 취소 */
+
+/* SEND_OK 상수 */
+#define SEND_OK                        2   /* 전송 성공 (SM_STATE_DELIVERED와 동일) */
 

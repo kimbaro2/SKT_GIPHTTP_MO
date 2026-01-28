@@ -4,6 +4,7 @@ import com.infra.mo.skt_giphttp_mo.db.altibase.entity.CfgEtcEntity;
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpAccessEntity;
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity;
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.SpcodeEntity;
+import com.infra.mo.skt_giphttp_mo.utils.LimitCheckFlags;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -54,5 +55,12 @@ public class CacheBeanBucket {
     @Bean("MsgIdCacheMap")
     public ConcurrentHashMap<String, String> msgIdCacheMap() {
         return new ConcurrentHashMap<String, String>();
+    }
+
+    /*한도체크 플래그 캐시 맵 - LOG_NO별 LimitCheckFlags 관리*/
+    /*C 코드 참고: GetLimitCheck() 함수의 반환값을 캐싱*/
+    @Bean("LimitCheckFlagsMap")
+    public ConcurrentHashMap<String, LimitCheckFlags> limitCheckFlagsMap() {
+        return new ConcurrentHashMap<String, LimitCheckFlags>();
     }
 }

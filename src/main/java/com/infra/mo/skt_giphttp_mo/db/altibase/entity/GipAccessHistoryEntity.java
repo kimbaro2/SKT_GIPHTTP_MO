@@ -96,17 +96,14 @@ public class GipAccessHistoryEntity extends HistoryEMSDefaultEntity {
     @Column(name = "CP_SKT_TEAM", length = 30)
     private String cpSktTeam;
 
-    @Column(name = "MSG_TYPE", length = 1)
-    private String msgType;
-
     @Column(name = "BILL_TYPE", length = 1)
     private String billType;
 
     @Column(name = "PORTED_AUTCON", length = 1)
     private String portedAutcon;
 
-    @Column(name = "MO_TR_BILL", length = 1)
-    private String moTrBill;
+    @Column(name = "MO_TR_BILL", columnDefinition = "NUMERIC(1)")
+    private Integer moTrBill;
 
     @Column(name = "COIS_TYPE", length = 1)
     private String coisType;

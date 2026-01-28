@@ -1015,6 +1015,7 @@ object SmsDef {
     const val SM_STATE_FWD_DETECT_CID = 0                       /* 2013.10.14 - 2013_2Q_PN/CR */
 
     const val SM_STATE_MRMSPAM = 1                        /* 2015.07.27 - added by jws cause code */
+    const val SM_STATE_DELIVERED = 2                      /* 전송 완료 (SEND_OK와 동일) */
 
     const val ERRORID_CP_INSERTQ_FAIL = 24
 
@@ -1421,6 +1422,7 @@ object SmsDef {
 
     const val ERRORID_CP_MT_LIMIT = 1
     const val ERRORID_CP_MO_LIMIT = 2
+    const val ERRORID_CP_GIVEBILL_LIMIT = 3
 
     /* CFG_ETC Table Select Key-word */
     const val KEY_NS_START_TM = "NS_START_TM"

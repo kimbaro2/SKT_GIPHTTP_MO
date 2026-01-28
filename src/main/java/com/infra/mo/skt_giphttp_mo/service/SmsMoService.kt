@@ -49,7 +49,7 @@ interface SmsMoService {
      * @param gipHttpMoAccess GIPHTTP_MO_ACCESS 엔티티
      * @return MoTRBill 값
      */
-    fun getMoTRBill(gipHttpMoAccess: GipHttpMoAccessEntity?): String
+    fun getMoTRBill(gipHttpMoAccess: GipHttpMoAccessEntity?): Int
     
     /**
      * EsmClass 값 조회

@@ -42,8 +42,17 @@ public class AltibaseJPADatabaseConfig {
     public DataSource altiDataSourceForJPA() {
         DataSourceProperties props = altibaseJPADataSourceProperties();
         
+        // driverClassName이 null인 경우 기본값 사용
+        String driverClassName = props.getDriverClassName();
+        if (driverClassName == null || driverClassName.trim().isEmpty()) {
+            driverClassName = "Altibase.jdbc.driver.AltibaseDriver";
+            LoggerFactory.getLogger(AltibaseJPADatabaseConfig.class).warn(
+                "spring.datasource.altibase.jpa.driver-class-name이 설정되지 않아 기본값을 사용합니다: {}", driverClassName
+            );
+        }
+        
         HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setDriverClassName(props.getDriverClassName());
+        hikariConfig.setDriverClassName(driverClassName);
         hikariConfig.setJdbcUrl(props.getUrl());
         hikariConfig.setUsername(props.getUsername());
         hikariConfig.setPassword(props.getPassword());

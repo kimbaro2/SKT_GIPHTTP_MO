@@ -1,7 +1,7 @@
 package com.infra.mo.skt_giphttp_mo.service.handler
 
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.BILLTYPE_NOT
+import com.infra.mo.skt_giphttp_mo.utils.BillTypeValidator
 import org.springframework.stereotype.Component
 
 /**
@@ -12,28 +12,28 @@ import org.springframework.stereotype.Component
 class BillTypeHandler {
     
     /**
-     * BillType 값 조회
+     * BillType 값 조회 (검증 포함)
      * @param gipHttpMoAccess GIPHTTP_MO_ACCESS 엔티티
-     * @return BillType 값 (기본값: "2" - SRC)
+     * @return 검증된 BillType 값 (기본값: "2" - SRC)
      */
     fun getBillType(gipHttpMoAccess: GipHttpMoAccessEntity?): String {
-        return gipHttpMoAccess?.billType ?: "2"  // 기본값: '2' (SRC)
+        return BillTypeValidator.validateAndNormalize(gipHttpMoAccess?.billType)
     }
     
     /**
      * 비과금 여부 확인 (BillType == "1")
      * C 코드: gBILLTYPE == '1'
      */
-    fun isNotBilling(billType: String): Boolean {
-        return billType == BILLTYPE_NOT.toString()
+    fun isNotBilling(billType: String?): Boolean {
+        return BillTypeValidator.isNotBilling(billType)
     }
     
     /**
      * 발신자 과금 여부 확인 (BillType == "2")
      * C 코드: gBILLTYPE == BILLTYPE_SRC
      */
-    fun isSrcBilling(billType: String): Boolean {
-        return billType == "2"
+    fun isSrcBilling(billType: String?): Boolean {
+        return BillTypeValidator.isSrcBilling(billType)
     }
     
     /**
@@ -44,9 +44,9 @@ class BillTypeHandler {
      * @param isNotiPlus NOTI_PLUS 여부
      * @return true: InsertMO_NOTISEND, false: InsertGIPMOCallInfo
      */
-    fun shouldInsertMO_NOTISEND(billType: String, isNotiPlus: Boolean): Boolean {
+    fun shouldInsertMO_NOTISEND(billType: String?, isNotiPlus: Boolean): Boolean {
         // C 코드 LINE 1605: gBILLTYPE != '1' && NOTI_PLUS
-        return !isNotBilling(billType) && isNotiPlus
+        return !BillTypeValidator.isNotBilling(billType) && isNotiPlus
     }
     
     /**
@@ -56,9 +56,9 @@ class BillTypeHandler {
      * @param billType BillType 값
      * @return true: 즉시 과금 처리 (SelectGIPMOCallInfo + bprintf)
      */
-    fun shouldProcessImmediateBilling(billType: String): Boolean {
+    fun shouldProcessImmediateBilling(billType: String?): Boolean {
         // C 코드 LINE 1995: gBILLTYPE == '1' 케이스
-        return isNotBilling(billType)
+        return BillTypeValidator.isNotBilling(billType)
     }
 }
 

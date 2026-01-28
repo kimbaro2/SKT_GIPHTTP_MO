@@ -33,8 +33,8 @@ public class GipHttpAccessEntity extends GipDefaultEntity {
     @Column(name = "CP_URL", columnDefinition = "VARCHAR(200) not null")
     public String cpUrl;                                             //평문 암호화 키 (Base64 인코딩 문자열)
 
-    @Column(name = "MO_TR_BILL", columnDefinition = "CHAR(1)    default 'N'")
-    public String moTrBill;                                     //LINE :: 회신번호 변경 알림 서비스 N:미허용, Y:허용 default N
+    @Column(name = "MO_TR_BILL", columnDefinition = "NUMERIC(1) default 0")
+    public Integer moTrBill;                                     //LINE :: 회신번호 변경 알림 서비스 0:미허용, 1:허용 default 0
 
     public GipHttpAccessEntity(GipHttpAccessEntity entity) {
         this.logNo = entity.getLogNo();
@@ -58,7 +58,6 @@ public class GipHttpAccessEntity extends GipDefaultEntity {
         this.cpTeam = entity.getCpTeam();
         this.cpPersonnel = entity.getCpPersonnel();
         this.cpSktTeam = entity.getCpSktTeam();
-        this.msgType = entity.getMsgType();
         this.billType = entity.getBillType();
         this.portedAutcon = entity.getPortedAutcon();
         // this.coisType = entity.getCoisType();  // 제거: COIS_TYPE
@@ -103,7 +102,6 @@ public class GipHttpAccessEntity extends GipDefaultEntity {
         this.cpTeam = moEntity.getCpTeam();
         this.cpPersonnel = moEntity.getCpPersonnel();
         this.cpSktTeam = moEntity.getCpSktTeam();
-        this.msgType = moEntity.getMsgType();
         this.billType = moEntity.getBillType();
         // this.portedAutcon = moEntity.getPortedAutcon();  // 제거: PORTED_AUTCON
         // this.coisType = moEntity.getCoisType();  // 제거: COIS_TYPE

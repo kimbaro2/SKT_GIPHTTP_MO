@@ -56,6 +56,20 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+// 빌드 후 jar 파일을 프로젝트 루트로 복사
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+	finalizedBy("copyJarToRoot")
+}
+
+tasks.register<Copy>("copyJarToRoot") {
+	from("build/libs/${project.name}-${version}.jar")
+	into(".")
+	rename { "GIPHTTP_MO-${version}.jar" }
+	dependsOn("bootJar")
+	mustRunAfter("jar", "inspectClassesForKotlinIC")
+	doNotTrackState("Copying to project root directory with .gradle folder")
+}
+
 // SonarQube 설정 - Java와 Kotlin 모두 감지
 sonar {
 	properties {

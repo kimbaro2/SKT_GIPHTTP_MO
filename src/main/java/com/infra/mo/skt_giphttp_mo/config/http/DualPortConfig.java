@@ -58,6 +58,8 @@ public class DualPortConfig {
     private final ApplicationContext applicationContext;
     private DisposableServer httpsServer;
     private int httpPort;  // server.port + 44
+    private boolean httpServerStarted = false;
+    private boolean httpsServerStarted = false;
 
     public DualPortConfig(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -118,11 +120,27 @@ public class DualPortConfig {
         log.info("✅ HTTP 서버 설정: 포트 {} (SSL 없음, HTTP/1.1 전용, 특정 IP 대역만 허용)", httpPort);
         log.info("   - HTTP/2 업그레이드 핸들러 제거 (HTTP/1.1만 지원)");
         log.info("   - Spring Boot 기본 서버는 이 Factory로 대체됨 (server.port={} 무시, httpPort={} 사용)", serverPort, httpPort);
+        
+        // HTTP 서버 시작 상태 추적을 위한 커스터마이저 추가
+        factory.addServerCustomizers(new NettyServerCustomizer() {
+            @Override
+            public HttpServer apply(HttpServer httpServer) {
+                return httpServer.doOnBound(disposableServer -> {
+                    httpServerStarted = true;
+                    log.info("✅ HTTP 서버 바인딩 완료: 포트 {}", httpPort);
+                }).doOnUnbound(disposableServer -> {
+                    httpServerStarted = false;
+                    log.warn("⚠️ HTTP 서버 언바인딩: 포트 {}", httpPort);
+                });
+            }
+        });
+        
         return factory;
     }
 
     /**
      * HTTPS 서버를 server.port에서 시작
+     * HTTP와 HTTPS 두 포트는 항상 모두 시작되어야 함
      */
     @PostConstruct
     public void startHttpsServer() {
@@ -141,29 +159,61 @@ public class DualPortConfig {
                 .applicationContext(applicationContext)
                 .build();
 
-            // Netty SslContext 로드
-            SslContext sslContext = loadNettySslContext();
+            // SSL이 활성화되어 있고 키스토어 파일이 있으면 HTTPS 서버 시작
+            if (sslEnabled) {
+                try {
+                    // Netty SslContext 로드
+                    SslContext sslContext = loadNettySslContext();
 
-            // HTTPS 서버 시작 (server.port 사용)
-            HttpServer httpServer = HttpServer.create()
-                .port(serverPort)  // 입력받은 포트를 HTTPS로 사용
-                .secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
+                    // HTTPS 서버 시작 (server.port 사용)
+                    HttpServer httpServer = HttpServer.create()
+                        .port(serverPort)  // 입력받은 포트를 HTTPS로 사용
+                        .secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
 
-            // HTTPS 포트에서만 HTTP/2 활성화
-            // 참고: ReactorNetty는 SSL이 활성화된 경우 자동으로 HTTP/2를 지원합니다.
-            if (http2Enabled) {
-                log.info("   - HTTP/2 활성화 (HTTP/1.1 fallback 지원, ALPN 협상)");
+                    // HTTPS 포트에서만 HTTP/2 활성화
+                    // 참고: ReactorNetty는 SSL이 활성화된 경우 자동으로 HTTP/2를 지원합니다.
+                    if (http2Enabled) {
+                        log.info("   - HTTP/2 활성화 (HTTP/1.1 fallback 지원, ALPN 협상)");
+                    }
+
+                    httpsServer = httpServer
+                        .doOnBound(disposableServer -> {
+                            httpsServerStarted = true;
+                            log.info("✅ HTTPS 서버 바인딩 완료: 포트 {}", serverPort);
+                        })
+                        .doOnUnbound(disposableServer -> {
+                            httpsServerStarted = false;
+                            log.warn("⚠️ HTTPS 서버 언바인딩: 포트 {}", serverPort);
+                        })
+                        .handle(new ReactorHttpHandlerAdapter(httpHandler))
+                        .bindNow();
+
+                    log.info("✅ HTTPS 서버 시작 완료: 포트 {} (SSL 활성화, 모든 클라이언트 허용)", serverPort);
+                    log.info("   - HTTP 서버: 포트 {} (SSL 없음, 특정 IP 대역만 허용)", httpPort);
+                    log.info("   - HTTPS 서버: 포트 {} (SSL 활성화, 모든 클라이언트 허용)", serverPort);
+                } catch (IllegalStateException e) {
+                    // 키스토어 파일이 없을 경우 경고만 출력하고 HTTP 서버는 정상 작동
+                    if (e.getMessage() != null && e.getMessage().contains("키스토어 파일을 찾을 수 없습니다")) {
+                        log.warn("⚠️ 키스토어 파일을 찾을 수 없습니다: {}", keyStorePath);
+                        log.warn("   - HTTPS 서버를 시작할 수 없습니다. HTTP 서버만 시작됩니다.");
+                        log.warn("   - 키스토어 파일을 생성하거나 server.ssl.enabled=false로 설정하세요.");
+                        log.info("✅ HTTP 서버만 시작: 포트 {} (SSL 없음, 특정 IP 대역만 허용)", httpPort);
+                    } else {
+                        log.error("❌ HTTPS 서버 시작 실패: {}", e.getMessage(), e);
+                        log.info("✅ HTTP 서버는 정상 작동: 포트 {} (SSL 없음, 특정 IP 대역만 허용)", httpPort);
+                    }
+                } catch (Exception e) {
+                    log.error("❌ HTTPS 서버 시작 실패: {}", e.getMessage(), e);
+                    log.info("✅ HTTP 서버는 정상 작동: 포트 {} (SSL 없음, 특정 IP 대역만 허용)", httpPort);
+                }
+            } else {
+                // SSL이 비활성화되어 있으면 HTTPS 서버를 시작하지 않음
+                log.info("ℹ️ SSL이 비활성화되어 있습니다 (server.ssl.enabled=false). HTTPS 서버를 시작하지 않습니다.");
+                log.info("✅ HTTP 서버만 시작: 포트 {} (SSL 없음, 특정 IP 대역만 허용)", httpPort);
             }
-
-            httpsServer = httpServer
-                .handle(new ReactorHttpHandlerAdapter(httpHandler))
-                .bindNow();
-
-            log.info("✅ HTTPS 서버 시작 완료: 포트 {} (SSL 활성화, 모든 클라이언트 허용)", serverPort);
-            log.info("   - HTTP 서버: 포트 {} (SSL 없음, 특정 IP 대역만 허용)", httpPort);
-            log.info("   - HTTPS 서버: 포트 {} (SSL 활성화, 모든 클라이언트 허용)", serverPort);
         } catch (Exception e) {
-            log.error("❌ HTTPS 서버 시작 실패: {}", e.getMessage(), e);
+            log.error("❌ HTTPS 서버 초기화 실패: {}", e.getMessage(), e);
+            log.info("✅ HTTP 서버는 정상 작동: 포트 {} (SSL 없음, 특정 IP 대역만 허용)", httpPort);
         }
     }
 
@@ -199,7 +249,40 @@ public class DualPortConfig {
     public void stopHttpsServer() {
         if (httpsServer != null) {
             httpsServer.disposeNow();
+            httpsServerStarted = false;
             log.info("HTTPS 서버 종료 완료");
+        }
+    }
+
+    /**
+     * 서버 상태 확인 메서드
+     */
+    public ServerStatus getServerStatus() {
+        return new ServerStatus(
+            serverPort,
+            httpPort,
+            httpServerStarted,
+            httpsServerStarted,
+            sslEnabled
+        );
+    }
+
+    /**
+     * 서버 상태 정보 클래스
+     */
+    public static class ServerStatus {
+        public final int httpsPort;
+        public final int httpPort;
+        public final boolean httpServerRunning;
+        public final boolean httpsServerRunning;
+        public final boolean sslEnabled;
+
+        public ServerStatus(int httpsPort, int httpPort, boolean httpServerRunning, boolean httpsServerRunning, boolean sslEnabled) {
+            this.httpsPort = httpsPort;
+            this.httpPort = httpPort;
+            this.httpServerRunning = httpServerRunning;
+            this.httpsServerRunning = httpsServerRunning;
+            this.sslEnabled = sslEnabled;
         }
     }
 }
