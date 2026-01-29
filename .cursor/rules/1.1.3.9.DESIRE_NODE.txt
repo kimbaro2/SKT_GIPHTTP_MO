@@ -1,0 +1,91 @@
+1.1.3
+1.1.3.9 DESIRE_NODE
+======================================================================================================================================================
+[
+  {
+    "LOG_NO": "988",
+    "CID": "1571707589",
+    "IP_ADDR": "175.125.130.76",
+    "PORT_NO": 8544,
+    "QUEUE_NO": 11038,
+    "FX": 500,
+    "FY": 10,
+    "FLAG": "0",
+    "RC": 3,
+    "TC": 3,
+    "DESCRIPTION": "JWS_TESTHTTP",
+    "UPDATE_FLAG": "R",
+    "CP_NAME": "JWS_TEST",
+    "CP_PHONE": "02-2149-7762",
+    "SKT_NAME": "SKT",
+    "SKT_PHONE": "02-2149-7762",
+    "CP_TEAM": "WITCOM_INFRA",
+    "CP_PERSONNEL": "JWS",
+    "CP_SKT_TEAM": "SKT_TEST",
+    "MSG_TYPE": "2",
+    "BILL_TYPE": "4",
+    "PORTED_AUTCON": "1",
+    "REPLY_FLAG": "Y",
+    "LOG_FLAG": 3,
+    "LIMIT_CHECK_FLAG": "Y",
+    "DETECT_CID_FLAG": "N",
+    "CB_CHECK_FLAG": "Y",
+    "GIPVERID": 510,
+    "AUTH_FLAG": "N",
+    "DESIRE_NODE": null,
+    "CURRENT_NODE": null,
+    "RM_FLAG": 0,
+    "PCS_FLAG": 0,
+    "AES_KEY_BASE64": "+ujTciN2AoT+iWAR/Wtw8lIjtzTHVj3NT2OBAoBEHY8=",
+    "IV_BASE64": "E3fVT9zZoke5lcF8s8upSw==",
+    "CP_URL": "http://175.125.130.76:8500/sms/send/result"
+  }
+]
+
+DESIRE_NODE = null
+DESIRE_NODE = smss1_2
+DESIRE_NODE = aaabbbccc
+======================================================================================================================================================
+<GIPHTTP_RECV>,DESIRE_NODE = null
+cat GIPHTTPRECV_P
+[16:43:43:0259] [INFO ] TOKEN PARSING RESULT - CID[1571707589] IP[175.125.130.76] PORT[8500]
+[16:43:43:0282] [INFO ] CLIENT_IP[175.125.130.76]   METHOD[POST]    API[/sms/send/request]   CLIENT_DEVICE[RequestDTO]   MSG[DECRY
+PT_SUCCESS - All encrypted fields decrypted successfully]
+[16:43:43:0282] [INFO ] ? MsgID 갱신 (캐시 사용): 3AF2B25F -> 3AF2B260 (CacheKey: 175.125.130.76-8500, ProcNo: 988)
+[16:43:43:0371] [INFO ] [INGRESS->RESPONSE_LATENCY] TraceID[01226012116434327906] | Ingress[1768981423279] Enqueue[1768981423364]
+Response[1768981423371] | IngressToResponse[92ms] EnqueueToResponse[7ms] | ResultCode[0]
+
+<CP>
+Status : 200
+ResultCode = 0
+ResultMessage = 성공
+
+<GIPHTTP_RECV>,DESIRE_NODE = smss1_2
+cat GIPHTTPRECV_P
+[16:40:15:0031] [INFO ] TOKEN PARSING RESULT - CID[1571707589] IP[175.125.130.76] PORT[8500]
+[16:40:15:0050] [INFO ] CLIENT_IP[175.125.130.76]   METHOD[POST]    API[/sms/send/request]   CLIENT_DEVICE[RequestDTO]   MSG[DECRY
+PT_SUCCESS - All encrypted fields decrypted successfully]
+[16:40:15:0051] [INFO ] ? MsgID 갱신 (캐시 사용): 3AF2B25D -> 3AF2B25E (CacheKey: 175.125.130.76-8500, ProcNo: 988)
+[16:40:15:0219] [INFO ] [INGRESS->RESPONSE_LATENCY] TraceID[01226012116401504702] | Ingress[1768981215047] Enqueue[1768981215215]
+Response[1768981215219] | IngressToResponse[172ms] EnqueueToResponse[4ms] | ResultCode[0]
+
+<CP>
+Status : 200
+ResultCode = 0
+ResultMessage = 성공
+
+<GIPHTTP_RECV>,DESIRE_NODE = aaabbbccc
+cat GIPHTTPRECV_P
+[16:37:19:0576] [INFO ] TOKEN PARSING RESULT - CID[1571707589] IP[175.125.130.76] PORT[8500]
+[16:37:19:0813] [INFO ] CLIENT_IP[175.125.130.76]   METHOD[POST]    API[/sms/send/request]   CLIENT_DEVICE[RequestDTO]   MSG[DECRY
+PT_SUCCESS - All encrypted fields decrypted successfully]
+[16:37:19:0817] [INFO ] ? MsgID 갱신 (캐시 사용): 3AF2B25D (CacheKey: 175.125.130.76-8500, ProcNo: 988)
+[16:37:19:0872] [ERROR] [DESIRE_NODE_MISMATCH] CID[1571707589] IP[175.125.130.76] Port[8544] | DB_DesireNode[aaabbbccc] != Current
+Node[smss1_2] | ResultCode[75]
+[16:37:19:0892] [INFO ] [INGRESS->RESPONSE_LATENCY] TraceID[01226012116371980900] | Ingress[1768981039809] Enqueue[0] Response[176
+8981039892] | IngressToResponse[83ms] EnqueueToResponse[-1ms] | ResultCode[75]
+
+<CP>
+Status : 400
+ResultCode = 75
+ResultMessage = 실패

@@ -177,20 +177,6 @@ object QItemServiceUtil {
         return try {
             val qItem = QITEM()
             val result = smsQLib.GetAMsgFromSmsQ(queueNo, qItem)
-            
-            // GetAMsgFromSmsQ 호출 결과 로깅
-            witcomLog.p_write(
-                Level.DEBUG,
-                String.format(
-                    "[GetAMsgFromSmsQ] QueueNo(%d), 반환값(%d), Q_DELETE_SUCCESS(%d), Q_DELETE_FAIL_Q_EMPTY(%d), SMS_Q_LOCK_FAIL_TRY_AGAIN(%d), SMS_Q_LOCK_FAIL_INVALID_SEMID(%d)",
-                    queueNo,
-                    result,
-                    SmsDef.Q_DELETE_SUCCESS,
-                    SmsDef.Q_DELETE_FAIL_Q_EMPTY,
-                    SmsDef.SMS_Q_LOCK_FAIL_TRY_AGAIN,
-                    SmsDef.SMS_Q_LOCK_FAIL_INVALID_SEMID
-                )
-            )
 
             when (result) {
                 SmsDef.Q_DELETE_FAIL_Q_EMPTY -> {
@@ -346,7 +332,7 @@ object QItemServiceUtil {
         }
     }
 
-    private fun formatQItem4(q: QITEM): String {
+    fun formatQItem4(q: QITEM): String {
         val time = SimpleDateFormat("HH:mm:ss:SSSS").format(Date())
 
         fun bArrToStr(bytes: ByteArray): String =

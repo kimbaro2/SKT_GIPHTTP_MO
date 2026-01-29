@@ -236,6 +236,7 @@ object TraceDef{
     const val ST_SMSMOR_TR_ADMCANC =                       -330         /* DIS_ADMIN_BAR(TR) */
     const val ST_SMSMOR_TR_FWDFAIL =                       -332         /* FWD_2_FAIL(TR) */
     const val ST_SMSMOR_TR_NPREFIX =                       -333         /* NO_PREFIX_INFO(TR) */
+    const val ST_SMSMOR_TR_SEND =                          -331         /* SEND_OK(TR) */                    /* C 코드 기준: msgStatus==2 */
     const val ST_SMSMOR_TR_PORTOUT =                       -334         /* PORTOUT(TR) */
     const val ST_SMSMOR_TR_SPAMERR =                       -335         /* SPAM_BLOCK(TR) */
     const val ST_SMSMOR_TR_UNDELIVERED =                   -336         /*UNDELIVERED(TR)*/                  /*메시지 ID, Status:stQItem.ucMsgStatus*/

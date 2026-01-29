@@ -73,17 +73,17 @@ class EsmClassHandler {
     }
     
     /**
-     * CID 2580/6381 + ESMCLASS 1 (NORMAL_MO) 조합 확인
+     * 문자메신저서비스(2580) 또는 문자매니저서비스(6381) 여부 확인 (ESMClass 기준)
+     * CID prefix 기반 구분 제거, ESMClass 기준으로 판단
      * C 코드: 서드파티 일반 MO 처리 시 bprintf 및 특정 InsqStat 스킵
      * 
      * @param esmClass EsmClass 값
-     * @param cid CID 값 (null 또는 빈 문자열 가능)
-     * @return true: CID 2580/6381 + ESMCLASS 1 조합, false: 그 외
+     * @return true: 문자메신저서비스 또는 문자매니저서비스, false: 그 외
      */
     fun isNormalMoWithSpecialCid(esmClass: Int, cid: String?): Boolean {
-        if (cid.isNullOrEmpty()) return false
+        // CID 파라미터는 호환성을 위해 유지하지만 사용하지 않음 (ESMClass 기준으로만 판단)
         return esmClass == NORMAL_MO && 
-               (cid.startsWith("2580") || cid.startsWith("6381"))
+               (isSmsMessengerService(esmClass) || isSmsManagerService(esmClass))
     }
     
     /**
@@ -119,6 +119,34 @@ class EsmClassHandler {
             BIZ_NUMBER_CDMA_ROAMING_MO,     // 72
             BIZ_NUMBER_GSM_ROAMING_MO       // 73
         )
+    }
+    
+    /**
+     * ESM 값을 기준으로 문자메신저서비스(2580) 판단
+     * CID prefix 기반 구분 대신 ESMClass 기준으로 판단
+     * 
+     * @param esmClass ESM 값
+     * @return true: 문자메신저서비스, false: 그 외
+     */
+    fun isSmsMessengerService(esmClass: Int): Boolean {
+        // TODO: ESM 값으로 문자메신저서비스(2580)를 구분하는 로직 구현 필요
+        // 실제 ESM 값 매핑은 요구사항에 따라 수정 필요
+        // 예: return esmClass == 특정_ESM_값
+        return false
+    }
+    
+    /**
+     * ESM 값을 기준으로 문자매니저서비스(6381) 판단
+     * CID prefix 기반 구분 대신 ESMClass 기준으로 판단
+     * 
+     * @param esmClass ESM 값
+     * @return true: 문자매니저서비스, false: 그 외
+     */
+    fun isSmsManagerService(esmClass: Int): Boolean {
+        // TODO: ESM 값으로 문자매니저서비스(6381)를 구분하는 로직 구현 필요
+        // 실제 ESM 값 매핑은 요구사항에 따라 수정 필요
+        // 예: return esmClass == 특정_ESM_값
+        return false
     }
 }
 

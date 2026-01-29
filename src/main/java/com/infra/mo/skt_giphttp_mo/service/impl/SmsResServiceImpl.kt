@@ -35,9 +35,13 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SMReqTransResult
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_FAIL
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_NODATA
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CENTER_MO_SUCCESS
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_TR_FAIL
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_TR_SUCCESS
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_TR_SUCCESS
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CENTER_TR_SUCCESS
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CENTER_TR_EXPIRED
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CENTER_TR_PORTOUT
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.GI_RES_NO_ERR
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.IF_NULL
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.LT_BOTH
@@ -51,6 +55,13 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.NOTI_PLUS_PORTED_MO
 import com.infra.mo.skt_giphttp_mo.service.handler.EsmClassHandler
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.NOTI_NORMAL_MO
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.NOTI_PORTED_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.NORMAL_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.PORTED_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.FORWARD_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.NUMBER_PLUS_CDMA_ROAMING_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.NUMBER_PLUS_GSM_ROAMING_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.BIZ_NUMBER_CDMA_ROAMING_MO
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.BIZ_NUMBER_GSM_ROAMING_MO
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.QTYPE_SM_REQ
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.RCS_RESULT_ETC
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.RCS_RESULT_SENT
@@ -84,6 +95,10 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_SPAMERR
 import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_USERDEL
 import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_NPREFIX
 import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_ADMCANC
+import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_SEND
+import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_PORTOUT
+import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_FORWARD
+import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_SMSMOR_TR_UNDELIVERED
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.dto.smsController.MoReportRequest
 import com.infra.mo.skt_giphttp_mo.service.SmsResService
@@ -140,6 +155,77 @@ open class SmsResServiceImpl(
         return qItem.usSource
     }
     
+    /**
+     * bprintf 호출 후 VSTAT 15 InsqStat 호출 (MO-ACK 성공 시)
+     *
+     * @param qItem QITEM
+     * @param request ResponseTR
+     * @param smsQLib SmsQLib
+     * @param loggerName 로거 이름
+     * @param destCID 목적지 CID
+     */
+    private fun recordVstat15AfterBprintf(
+        qItem: QITEM,
+        request: ResponseTR,
+        smsQLib: SmsQLib,
+        loggerName: String,
+        destCID: String
+    ) {
+        val ackResult = request.data.ackResult ?: GI_RES_NO_ERR
+        val isMOACKForVstat15 = request.data.msgSubCode.toInt() == SM_REQ_SIMPLE
+        val shouldRecordVstat15 = (ackResult == GI_RES_NO_ERR) && isMOACKForVstat15
+
+        if (!shouldRecordVstat15) {
+            return
+        }
+
+        val msgId = request.data.msgId ?: ""
+
+        witcomLog.c_write(
+            loggerName,
+            Level.INFO,
+            String.format(
+                "[processMOBilling] bprintf 호출 후 InsqStat(VSTAT 15 + TRC) 기록 시작 - destCID(%s), ackResult(%d), msgId(%s)",
+                destCID,
+                ackResult,
+                msgId
+            ),
+            Thread.currentThread().getId()
+        )
+
+        // InsqStat 호출: VSTAT 15와 TRC를 모두 기록 (LT_BOTH)
+        // C 코드 LINE 2219-2220 패턴과 동일하게, 같은 MsgId로 35/15 두 번 InsqStat 호출
+        // nErrorID 파라미터가 실제 VSTAT 파일에 기록되는 값이므로 15를 사용
+        // nInforNo: qItem.usSource 사용 (IF_NULL은 에러 케이스이므로 사용하지 않음)
+        val insqStatResult15 = smsQLib.InsqStat(
+            qItem,
+            MESSAGE_MO,
+            0,
+            gServerID,
+            MODULEID_GIPEVENT_C,
+            SERVICEID_GIPEVENT,
+            ERRORID_CP_MO_SUCCESS,  // 15 (VSTAT 파일에 기록되는 실제 값)
+            ST_GIPEVENT_MOACK_BILL_OK,  // 80 (과금성공(MOACK))
+            getNInforNo(qItem),  // qItem.usSource (nInforNo)
+            TID_NO_SAVE,
+            LT_BOTH,  // VSTAT(15) + TRC 모두 기록 (VVST 옵션=15 저장)
+            0
+        )
+
+        witcomLog.c_write(
+            loggerName,
+            if (insqStatResult15 == 1) Level.INFO else Level.ERROR,
+            String.format(
+                "[processMOBilling] InsqStat(VSTAT 15 + TRC) 호출 결과: 반환값(%d), 성공여부(%b), destCID(%s), msgId(%s)",
+                insqStatResult15,
+                insqStatResult15 == 1,
+                destCID,
+                msgId
+            ),
+            Thread.currentThread().getId()
+        )
+    }
+    
     // bprintf 로그 파일 경로: C 코드 bprintf.c LINE 78 - getenv("SMS_VCDR")/LOG/
     // JNA bprintf 함수가 내부적으로 파일 경로를 처리하므로 여기서는 주석으로만 남김
     // private val vcdrDir: String = System.getenv("SMS_VCDR") ?: "/APP/sms/vcdr"
@@ -193,6 +279,24 @@ open class SmsResServiceImpl(
     override suspend fun processSMRes(request: ResponseTR, clientIp: String?, serverPort: Int?, queueNo: Int?, loggerName: String?) {
         // loggerName: 전달받은 값 사용, 없으면 자동 생성
         val effectiveLoggerName = loggerName ?: getLoggerName(request.data.destCID, clientIp, serverPort)
+        
+        // 중복 호출 방지: 같은 msgId에 대해 이미 처리 중이거나 처리 완료된 경우 스킵
+        val msgId = request.data.msgId ?: ""
+        val msgSubCodeValue = request.data.msgSubCode?.toInt() ?: -1
+        val processingCacheKey = "PROCESSING_SMRES:$msgId:$msgSubCodeValue"
+        
+        // 동시성 제어: putIfAbsent를 사용하여 원자적 연산 보장
+        // 이미 처리 중이거나 처리 완료된 경우 스킵
+        val alreadyProcessing = cacheMap.putIfAbsent(processingCacheKey, true) != null
+        
+        if (alreadyProcessing) {
+            witcomLog.c_write(effectiveLoggerName, Level.WARN,
+                String.format("[processSMRes] 중복 호출 스킵: 이미 처리 중이거나 처리 완료됨 - msgId(%s), msgSubCode(%d), destCID(%s)",
+                    msgId, msgSubCodeValue, request.data.destCID ?: "null"),
+                Thread.currentThread().getId()
+            )
+            return
+        }
 
         try {
             witcomLog.c_write(effectiveLoggerName, Level.INFO,
@@ -201,8 +305,8 @@ open class SmsResServiceImpl(
                     request.data.destCID ?: "null",
                     clientIp ?: "null",
                     serverPort ?: 0,
-                    request.data.msgSubCode?.toInt() ?: -1,
-                    request.data.msgId ?: "null"
+                    msgSubCodeValue,
+                    msgId
                 ),
                 Thread.currentThread().getId()
             )
@@ -212,7 +316,7 @@ open class SmsResServiceImpl(
             qItem.ucServerType = VSMSS_TYPE.code.toByte()
             
             // C 코드 LINE 1981: switch(ptrMsgHdr->usMsgSubCode)
-            val msgSubCodeValue = request.data.msgSubCode.toInt()
+            // msgSubCodeValue는 이미 위에서 추출됨
             witcomLog.c_write(effectiveLoggerName, Level.INFO, 
             String.format("[processSMRes] 분기 진입: msgSubCode(%d), msgCode(%d), destCID(%s), srcCallNo(%s), msgId(%s), result(%s)",
                 msgSubCodeValue,
@@ -265,14 +369,18 @@ open class SmsResServiceImpl(
                 Level.ERROR,
                 String.format("[processSMRes] 예외 발생: destCID(%s), msgId(%s), error(%s), stackTrace(%s)",
                     request.data.destCID ?: "null",
-                    request.data.msgId ?: "null",
+                    msgId,
                     e.message ?: "null",
                     e.stackTraceToString()
                 ),
                 Thread.currentThread().getId()
             )
+            // 예외 발생 시 캐시 정리 (재처리 가능하도록)
+            cacheMap.remove(processingCacheKey)
             throw e
         }
+        // 정상 완료 시 캐시는 유지 (같은 요청이 다시 들어오면 중복 방지)
+        // 메모리 누수 방지를 위해서는 별도의 TTL 기반 캐시 정리 로직이 필요할 수 있음
     }
     
     /**
@@ -453,93 +561,10 @@ open class SmsResServiceImpl(
             
             // CDMA 1584 항목 체크
             val destCIDValue = request.data.destCID ?: ""
-            val isCid1584Prefix = destCIDValue.startsWith("1584")
             
-            witcomLog.c_write(loggerName, Level.INFO,
-                String.format("[processSMReqSimple] destCID 체크: destCID(%s), isCid1584Prefix(%b), gMOTRBILL(%s)", 
-                    destCIDValue, isCid1584Prefix, if (gMOTRBILL) "Y" else "N"),
-                Thread.currentThread().getId()
-            )
-            
-            // MO_TR_BILL=0(즉시 과금)일 때만 VSTAT 35 기록
-            // MO_TR_BILL=1(MO-TR 과금)일 때는 VSTAT 35 기록 스킵
-            if (!gMOTRBILL) {
-                witcomLog.c_write(loggerName, Level.INFO,
-                    String.format("[processSMReqSimple] MO_TR_BILL=0: VSTAT 35 기록 시작 - destCID(%s)", destCIDValue),
-                    Thread.currentThread().getId()
-                )
-                // VSTAT 35 기록 (ST_GIPEVENT_MORS_OK)
-                smsQLib.InsqStat(
-                    qItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPEVENT_C,
-                    SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_SUCCESS,
-                    ST_GIPEVENT_MORS_OK,
-                    ackResult,
-                    TID_NO_SAVE,
-                    LT_BOTH,  // 통계에 35 값 기록
-                    0
-                )
-            } else {
-                witcomLog.c_write(loggerName, Level.INFO,
-                    String.format("[processSMReqSimple] MO_TR_BILL=1: VSTAT 35 기록 스킵 (MO-TR 단계에서 과금) - destCID(%s)", destCIDValue),
-                    Thread.currentThread().getId()
-                )
-            }
-            
-            // VSTAT 15 기록: HTTP 정상 송신 확인 후 기록 (MO-ACK 성공 시)
-            // C 코드와 동일하게 같은 MsgId에 대해 35, 15 두 번 VSTAT 기록이 필요하므로 LT_BOTH 사용
-            // HTTP 정상 송신이 확인된 경우(ackResult == GI_RES_NO_ERR)에만 기록
-            val shouldRecordVstat15 = (ackResult == GI_RES_NO_ERR)
-            
-            witcomLog.c_write(loggerName, Level.INFO,
-                String.format("[processSMReqSimple] VSTAT 15 기록 조건 체크: destCID(%s), ackResult(%d), GI_RES_NO_ERR(%d), shouldRecordVstat15(%b)",
-                    destCIDValue, ackResult, GI_RES_NO_ERR, shouldRecordVstat15),
-                Thread.currentThread().getId()
-            )
-            
-            if (shouldRecordVstat15) {
-                witcomLog.c_write(loggerName, Level.INFO,
-                    String.format("[processSMReqSimple] HTTP 정상 송신 확인 후 VSTAT 15 기록 시작 - destCID(%s), ackResult(%d)",
-                        destCIDValue, ackResult),
-                    Thread.currentThread().getId()
-                )
-                // VSTAT 15 기록 (ST_GIPEVENT_MOACK_BILL_OK=80, ERRORID_CP_MO_SUCCESS=15)
-                // C 코드 LINE 2219-2220 패턴과 동일하게, 같은 MsgId로 35/15 두 번 VSTAT 기록
-                // nInforNo: qItem.usSource 사용 (IF_NULL은 에러 케이스이므로 사용하지 않음)
-                val insqStatResult15 = smsQLib.InsqStat(
-                    qItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPEVENT_C,
-                    SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_SUCCESS,  // 15
-                    ST_GIPEVENT_MOACK_BILL_OK,  // 80 (과금성공(MOACK))
-                    getNInforNo(qItem),  // qItem.usSource (nInforNo)
-                    TID_NO_SAVE,
-                    LT_BOTH,  // VSTAT(15) + TRC 모두 기록 (VVST 옵션=15 저장)
-                    0
-                )
-                witcomLog.c_write(loggerName,
-                    if (insqStatResult15 == 1) Level.INFO else Level.ERROR,
-                    String.format("[processSMReqSimple] VSTAT 15 기록 InsqStat 호출 결과: 반환값(%d), 성공여부(%b), destCID(%s)",
-                        insqStatResult15,
-                        insqStatResult15 == 1,
-                        destCIDValue
-                    ),
-                    Thread.currentThread().getId()
-                )
-            } else {
-                witcomLog.c_write(loggerName, Level.WARN,
-                    String.format("[processSMReqSimple] VSTAT 15 기록 스킵: HTTP 정상 송신 미확인 - ackResult(%d) != GI_RES_NO_ERR(%d), destCID(%s)",
-                        ackResult, GI_RES_NO_ERR, destCIDValue),
-                    Thread.currentThread().getId()
-                )
-            }
+            // 기존 구현: MO_TR_BILL=0(즉시 과금)일 때 VSTAT 35(ST_GIPEVENT_MORS_OK)를 기록했으나,
+            // 전체 플로우에서 35가 두 번 기록되는 문제가 있어 여기서의 VSTAT 35 기록은 제거함.
+            // 35(HTTP 전송 시도)는 상위 플로우에서 한 번만 기록되도록 한다.
             
             witcomLog.c_write(
                 loggerName,
@@ -1010,6 +1035,9 @@ open class SmsResServiceImpl(
                             String.format("[processMOBilling] bprintf 호출 완료 (Color/Avata, 가입자 번호): 반환값(%d)", bprintfResult),
                             Thread.currentThread().getId()
                         )
+                        
+                        // bprintf 호출 후 VSTAT 15 InsqStat 호출 (MO-ACK 성공 시)
+                        recordVstat15AfterBprintf(qItem, request, smsQLib, loggerName, dbDestCId)
                     } else {
                         // C 코드 LINE 2179: bprintf 호출 (일반 번호 형식: %d)
                         val bprintfResult = smsQLib.bprintf(
@@ -1040,6 +1068,9 @@ open class SmsResServiceImpl(
                             String.format("[processMOBilling] bprintf 호출 완료 (Color/Avata, 일반 번호): 반환값(%d)", bprintfResult),
                             Thread.currentThread().getId()
                         )
+                        
+                        // bprintf 호출 후 VSTAT 15 InsqStat 호출 (MO-ACK 성공 시)
+                        recordVstat15AfterBprintf(qItem, request, smsQLib, loggerName, dbDestCId)
                     }
                 } else {
                     // C 코드 LINE 2190: bprintf 호출 (일반 DestCID)
@@ -1091,25 +1122,15 @@ open class SmsResServiceImpl(
             
             // request.data.destCID 우선 사용, 없으면 함수 진입 시점의 qItem.szCId 사용 (DB 조회 없이 내부 코드에서 직접 체크)
             val destCID = request.data.destCID ?: destCIDAtEntry
-            val isCid2580Prefix = destCID.startsWith("2580")  // CID가 2580으로 시작하는지 체크
-            val isCid6381Prefix = destCID.startsWith("6381")  // CID가 6381으로 시작하는지 체크
-            val isCid1584Prefix = destCID.startsWith("1584")  // CID가 1584로 시작하는지 체크 (CDMA)
-            // MO-ACK 단계는 processSMReqSimple()에서 이미 InsqStat/VSTAT 처리가 되므로 기본 스킵.
-            // CID 2580/6381 예외 케이스는 아래 else-if 분기에서 별도 처리.
-            val shouldSkipInsqStat = isMOACK
             
-            witcomLog.c_write(loggerName, Level.DEBUG,
-                String.format("[processMOBilling] 분기 체크: isMOACK(%b), gMOTRBILL(%b), destCID(%s), isCid2580Prefix(%b), isCid6381Prefix(%b), isCid1584Prefix(%b), shouldSkipInsqStat(%b), isFromMOCallInfo(%b)",
-                    isMOACK,
-                    gMOTRBILL,
-                    destCID,
-                    isCid2580Prefix,
-                    isCid6381Prefix,
-                    isCid1584Prefix,
-                    shouldSkipInsqStat,
-                    isFromMOCallInfo),
-                Thread.currentThread().getId()
-            )
+            // ESMClass 기준으로 서비스 구분 (CID prefix 기반 구분 제거)
+            val esmClassHandler = EsmClassHandler()
+            val isSmsMessengerService = esmClassHandler.isSmsMessengerService(qItemEsmClass)  // 문자메신저서비스(2580)
+            val isSmsManagerService = esmClassHandler.isSmsManagerService(qItemEsmClass)  // 문자매니저서비스(6381)
+            
+            // MO-ACK 단계는 processSMReqSimple()에서 이미 InsqStat/VSTAT 처리가 되므로 기본 스킵.
+            // ESMClass 기반 예외 케이스는 아래 else-if 분기에서 별도 처리.
+            val shouldSkipInsqStat = isMOACK
             
             if (shouldSkipInsqStat) {
                 // MSG_TYPE='1'이고 MO-ACK 단계: InsqStat은 이미 processSMReqSimple()에서 호출했으므로 스킵
@@ -1158,13 +1179,13 @@ open class SmsResServiceImpl(
                     )
                 }
             }
-            else if (isMOACK && isMoTrBillExplicitDisabled && isCid2580Prefix) {
-                // MO-ACK 단계이고 MOTRBILL='N'이고 CID가 2580으로 시작하는 경우: MODULEID_GIPEVENT_C로 InsqStat 호출
+            else if (isMOACK && isMoTrBillExplicitDisabled && isSmsMessengerService) {
+                // MO-ACK 단계이고 MOTRBILL='N'이고 문자메신저서비스(ESMClass 기준)인 경우: MODULEID_GIPEVENT_C로 InsqStat 호출
                 // VSTAT에 35만 기록되도록 LT_TRACE 사용 (기존 MO-ACK 패턴 35-15가 아닌 35만)
                 witcomLog.c_write(loggerName, Level.INFO,
-                    String.format("[processMOBilling] MO-ACK 단계 CID 2580: InsqStat 호출 시작 - msgId(%s), destCID(%s), LT_TRACE 사용 (VSTAT에 기록 안 함, TRC에만 기록)",
+                    String.format("[processMOBilling] MO-ACK 단계 문자메신저서비스: InsqStat 호출 시작 - msgId(%s), ESMCLASS(%d), LT_TRACE 사용 (VSTAT에 기록 안 함, TRC에만 기록)",
                         msgId,
-                        destCID),
+                        qItemEsmClass),
                     Thread.currentThread().getId()
                 )
                 
@@ -1172,59 +1193,59 @@ open class SmsResServiceImpl(
                 qItem.ucServerType = VSMSS_TYPE.code.toByte()
                 
                 // nInforNo: qItem.usSource 사용 (IF_NULL은 에러 케이스이므로 사용하지 않음)
-                val insqStatResult = smsQLib.InsqStat(
-                    qItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPEVENT_C,
-                    SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_SUCCESS,
-                    ST_GIPEVENT_MO_OK,
-                    getNInforNo(qItem),  // qItem.usSource (nInforNo)
-                    TID_NO_SAVE,
-                    LT_TRACE,  // TRC 파일에만 기록, VSTAT에는 기록하지 않음 (15가 VSTAT에 기록되지 않도록)
-                    0
-                )
+//                val insqStatResult = smsQLib.InsqStat(
+//                    qItem,
+//                    MESSAGE_MO,
+//                    0,
+//                    gServerID,
+//                    MODULEID_GIPEVENT_C,
+//                    SERVICEID_GIPEVENT,
+//                    ERRORID_CP_MO_SUCCESS,
+//                    ST_GIPEVENT_MO_OK,
+//                    getNInforNo(qItem),  // qItem.usSource (nInforNo)
+//                    TID_NO_SAVE,
+//                    LT_TRACE,  // TRC 파일에만 기록, VSTAT에는 기록하지 않음 (15가 VSTAT에 기록되지 않도록)
+//                    0
+//                )
                 
-                witcomLog.c_write(loggerName,
-                    if (insqStatResult == 1) Level.INFO else Level.ERROR,
-                    String.format("[processMOBilling] MO-ACK 단계 CID 2580: InsqStat 호출 결과 - 반환값(%d), 성공여부(%b), msgId(%s), destCID(%s)",
-                        insqStatResult,
-                        insqStatResult == 1,
-                        msgId,
-                        destCID),
-                    Thread.currentThread().getId()
-                )
+//                witcomLog.c_write(loggerName,
+//                    if (insqStatResult == 1) Level.INFO else Level.ERROR,
+//                    String.format("[processMOBilling] MO-ACK 단계 문자메신저서비스: InsqStat 호출 결과 - 반환값(%d), 성공여부(%b), msgId(%s), ESMCLASS(%d)",
+//                        insqStatResult,
+//                        insqStatResult == 1,
+//                        msgId,
+//                        qItemEsmClass),
+//                    Thread.currentThread().getId()
+//                )
                 
                 // MOCALLINFO 삭제
                 if (moCallInfo != null) {
                     witcomLog.c_write(loggerName, Level.DEBUG,
-                        String.format("[processMOBilling] MO-ACK 단계 CID 2580: MOCALLINFO 삭제 시작 - MsgId(%s)",
+                        String.format("[processMOBilling] MO-ACK 단계 문자메신저서비스: MOCALLINFO 삭제 시작 - MsgId(%s)",
                             msgId),
                         Thread.currentThread().getId()
                     )
                     deleteGIPMOCallInfo(moCallInfo)
                     witcomLog.c_write(loggerName, Level.INFO,
-                        String.format("[processMOBilling] MO-ACK 단계 CID 2580: MOCALLINFO 삭제 완료 - MsgId(%s)",
+                        String.format("[processMOBilling] MO-ACK 단계 문자메신저서비스: MOCALLINFO 삭제 완료 - MsgId(%s)",
                             msgId),
                         Thread.currentThread().getId()
                     )
                 } else {
                     witcomLog.c_write(loggerName, Level.WARN,
-                        String.format("[processMOBilling] MO-ACK 단계 CID 2580: ⚠️ MOCALLINFO 삭제 스킵 - moCallInfo가 NULL - msgId(%s)",
+                        String.format("[processMOBilling] MO-ACK 단계 문자메신저서비스: ⚠️ MOCALLINFO 삭제 스킵 - moCallInfo가 NULL - msgId(%s)",
                             msgId),
                         Thread.currentThread().getId()
                     )
                 }
             }
-            else if (isMOACK && isMoTrBillExplicitDisabled && isCid6381Prefix) {
-                // MO-ACK 단계이고 MOTRBILL='N'이고 CID가 6381으로 시작하는 경우: MODULEID_GIPEVENT_C로 InsqStat 호출
+            else if (isMOACK && isMoTrBillExplicitDisabled && isSmsManagerService) {
+                // MO-ACK 단계이고 MOTRBILL='N'이고 문자매니저서비스(ESMClass 기준)인 경우: MODULEID_GIPEVENT_C로 InsqStat 호출
                 // VSTAT에 35만 기록되도록 LT_BOTH 사용 (ST_GIPEVENT_MOACK_BILL_OK는 스킵하므로 15는 기록되지 않음)
                 witcomLog.c_write(loggerName, Level.INFO,
-                    String.format("[processMOBilling] MO-ACK 단계 CID 6381: InsqStat 호출 시작 - msgId(%s), destCID(%s), LT_BOTH 사용 (VSTAT에 35만 기록)",
+                    String.format("[processMOBilling] MO-ACK 단계 문자매니저서비스: InsqStat 호출 시작 - msgId(%s), ESMCLASS(%d), LT_BOTH 사용 (VSTAT에 35만 기록)",
                         msgId,
-                        destCID),
+                        qItemEsmClass),
                     Thread.currentThread().getId()
                 )
                 
@@ -1232,47 +1253,47 @@ open class SmsResServiceImpl(
                 qItem.ucServerType = VSMSS_TYPE.code.toByte()
 
                 // nInforNo: qItem.usSource 사용 (IF_NULL은 에러 케이스이므로 사용하지 않음)
-                val insqStatResult = smsQLib.InsqStat(
-                    qItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPEVENT_C,
-                    SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_SUCCESS,
-                    ST_GIPEVENT_MO_OK,
-                    getNInforNo(qItem),  // qItem.usSource (nInforNo)
-                    TID_NO_SAVE,
-                    LT_TRACE,  // TRC 파일에만 기록, VSTAT에는 기록하지 않음 (15가 VSTAT에 기록되지 않도록)
-                    0
-                )
+//                val insqStatResult = smsQLib.InsqStat(
+//                    qItem,
+//                    MESSAGE_MO,
+//                    0,
+//                    gServerID,
+//                    MODULEID_GIPEVENT_C,
+//                    SERVICEID_GIPEVENT,
+//                    ERRORID_CP_MO_SUCCESS,
+//                    ST_GIPEVENT_MO_OK,
+//                    getNInforNo(qItem),  // qItem.usSource (nInforNo)
+//                    TID_NO_SAVE,
+//                    LT_TRACE,  // TRC 파일에만 기록, VSTAT에는 기록하지 않음 (15가 VSTAT에 기록되지 않도록)
+//                    0
+//                )
                 
-                witcomLog.c_write(loggerName,
-                    if (insqStatResult == 1) Level.INFO else Level.ERROR,
-                    String.format("[processMOBilling] MO-ACK 단계 CID 6381: InsqStat 호출 결과 - 반환값(%d), 성공여부(%b), msgId(%s), destCID(%s)",
-                        insqStatResult,
-                        insqStatResult == 1,
-                        msgId,
-                        destCID),
-                    Thread.currentThread().getId()
-                )
+//                witcomLog.c_write(loggerName,
+//                    if (insqStatResult == 1) Level.INFO else Level.ERROR,
+//                    String.format("[processMOBilling] MO-ACK 단계 문자매니저서비스: InsqStat 호출 결과 - 반환값(%d), 성공여부(%b), msgId(%s), ESMCLASS(%d)",
+//                        insqStatResult,
+//                        insqStatResult == 1,
+//                        msgId,
+//                        qItemEsmClass),
+//                    Thread.currentThread().getId()
+//                )
                 
                 // MOCALLINFO 삭제
                 if (moCallInfo != null) {
                     witcomLog.c_write(loggerName, Level.DEBUG,
-                        String.format("[processMOBilling] MO-ACK 단계 CID 6381: MOCALLINFO 삭제 시작 - MsgId(%s)",
+                        String.format("[processMOBilling] MO-ACK 단계 문자매니저서비스: MOCALLINFO 삭제 시작 - MsgId(%s)",
                             msgId),
                         Thread.currentThread().getId()
                     )
                     deleteGIPMOCallInfo(moCallInfo)
                     witcomLog.c_write(loggerName, Level.INFO,
-                        String.format("[processMOBilling] MO-ACK 단계 CID 6381: MOCALLINFO 삭제 완료 - MsgId(%s)",
+                        String.format("[processMOBilling] MO-ACK 단계 문자매니저서비스: MOCALLINFO 삭제 완료 - MsgId(%s)",
                             msgId),
                         Thread.currentThread().getId()
                     )
                 } else {
                     witcomLog.c_write(loggerName, Level.WARN,
-                        String.format("[processMOBilling] MO-ACK 단계 CID 6381: ⚠️ MOCALLINFO 삭제 스킵 - moCallInfo가 NULL - msgId(%s)",
+                        String.format("[processMOBilling] MO-ACK 단계 문자매니저서비스: ⚠️ MOCALLINFO 삭제 스킵 - moCallInfo가 NULL - msgId(%s)",
                             msgId),
                         Thread.currentThread().getId()
                     )
@@ -1370,20 +1391,20 @@ open class SmsResServiceImpl(
                 )
                 
                 // nInforNo: qItem.usSource 사용 (IF_NULL은 에러 케이스이므로 사용하지 않음)
-                val insqStatResult = smsQLib.InsqStat(
-                    qItem,
-                    MESSAGE_TR,  // C 코드와 동일: MESSAGE_TR
-                    0,
-                    gServerID,
-                    MODULEID_VBILLMO,  // C 코드와 동일: MODULEID_VBILLMO
-                    SERVICEID_GIPEVENT,
-                    errorId,  // ERRORID_CP_MO_TR_SUCCESS (27) 또는 ERRORID_CP_TR_SUCCESS (25)
-                    statTraceId,  // ST_VBILLMO_OK 또는 ST_VBILLMO_NOTISEND_OK
-                    getNInforNo(qItem),  // qItem.usSource (nInforNo)
-                    TID_NO_SAVE,
-                    LT_BOTH,  // C 코드와 동일: LT_BOTH (과금 + 통계 기록)
-                    0
-                )
+//                val insqStatResult = smsQLib.InsqStat(
+//                    qItem,
+//                    MESSAGE_TR,  // C 코드와 동일: MESSAGE_TR
+//                    0,
+//                    gServerID,
+//                    MODULEID_VBILLMO,  // C 코드와 동일: MODULEID_VBILLMO
+//                    SERVICEID_GIPEVENT,
+//                    errorId,  // ERRORID_CP_MO_TR_SUCCESS (27) 또는 ERRORID_CP_TR_SUCCESS (25)
+//                    statTraceId,  // ST_VBILLMO_OK 또는 ST_VBILLMO_NOTISEND_OK
+//                    getNInforNo(qItem),  // qItem.usSource (nInforNo)
+//                    TID_NO_SAVE,
+//                    LT_BOTH,  // C 코드와 동일: LT_BOTH (과금 + 통계 기록)
+//                    0
+//                )
                 
                 // InsqStat 호출 후: 원본 값 복원
                 System.arraycopy(originalSzCId, 0, qItem.szCId, 0, 16)
@@ -1391,35 +1412,35 @@ open class SmsResServiceImpl(
                 System.arraycopy(originalSzMinNo, 0, qItem.szMinNo, 0, 12)
                 System.arraycopy(originalSzSrcMinNo, 0, qItem.szSrcMinNo, 0, 12)
                 
-                witcomLog.c_write(loggerName,
-                    if (insqStatResult == 1) Level.DEBUG else Level.ERROR,
-                    String.format("[processMOBilling] InsqStat 호출 결과: 반환값(%d), 성공여부(%b)",
-                        insqStatResult,
-                        insqStatResult == 1
-                    ),
-                    Thread.currentThread().getId()
-                )
-                
-                // MOTRBILL='Y'이고 MO-TR 단계: msgId로 조회하여 존재한다면 삭제 처리
-                // 규칙: MOTRBILL='Y'인 경우 MO-TR 단계에서만 삭제 (MO-ACK 단계에서는 삭제 안 함)
-                witcomLog.c_write(loggerName, Level.DEBUG,
-                    String.format("[processMOBilling] 삭제 조건 체크: isMOACK(%b), insqStatResult(%d), moCallInfo(%s), msgId(%s), destCID(%s)",
-                        isMOACK,
-                        insqStatResult,
-                        if (moCallInfo != null) "NOT_NULL" else "NULL",
-                        msgId,
-                        request.data.destCID ?: destCIDAtEntry),
-                    Thread.currentThread().getId()
-                )
+//                witcomLog.c_write(loggerName,
+//                    if (insqStatResult == 1) Level.DEBUG else Level.ERROR,
+//                    String.format("[processMOBilling] InsqStat 호출 결과: 반환값(%d), 성공여부(%b)",
+//                        insqStatResult,
+//                        insqStatResult == 1
+//                    ),
+//                    Thread.currentThread().getId()
+//                )
+//
+//                // MOTRBILL='Y'이고 MO-TR 단계: msgId로 조회하여 존재한다면 삭제 처리
+//                // 규칙: MOTRBILL='Y'인 경우 MO-TR 단계에서만 삭제 (MO-ACK 단계에서는 삭제 안 함)
+//                witcomLog.c_write(loggerName, Level.DEBUG,
+//                    String.format("[processMOBilling] 삭제 조건 체크: isMOACK(%b), insqStatResult(%d), moCallInfo(%s), msgId(%s), destCID(%s)",
+//                        isMOACK,
+//                        insqStatResult,
+//                        if (moCallInfo != null) "NOT_NULL" else "NULL",
+//                        msgId,
+//                        request.data.destCID ?: destCIDAtEntry),
+//                    Thread.currentThread().getId()
+//                )
                 
                 // MOTRBILL='Y'이고 MO-TR 단계일 때만 삭제 (MO-ACK 단계에서는 삭제 안 함)
                 if (moCallInfo != null && !isMOACK) {
-                    witcomLog.c_write(loggerName, Level.DEBUG,
-                        String.format("[processMOBilling] MO-TR 요청 후 MOCALLINFO 삭제 시작: MsgId(%s), insqStatResult(%d), MOTRBILL='Y'",
-                            msgId,
-                            insqStatResult),
-                        Thread.currentThread().getId()
-                    )
+//                    witcomLog.c_write(loggerName, Level.DEBUG,
+//                        String.format("[processMOBilling] MO-TR 요청 후 MOCALLINFO 삭제 시작: MsgId(%s), insqStatResult(%d), MOTRBILL='Y'",
+//                            msgId,
+//                            insqStatResult),
+//                        Thread.currentThread().getId()
+//                    )
                     deleteGIPMOCallInfo(moCallInfo)
                     witcomLog.c_write(loggerName, Level.INFO,
                         String.format("[processMOBilling] MO-TR 요청 후 MOCALLINFO 삭제 완료: MsgId(%s), MOTRBILL='Y'",
@@ -2905,6 +2926,370 @@ open class SmsResServiceImpl(
     }
     
     /**
+     * C 코드 기준: MsgStatus에 따른 StatId와 ErrorId 매핑
+     * C 코드 로직을 그대로 반영: sndMsg->flags.MsgStatus 값에 따라 StatId와 ErrorId 결정
+     * 
+     * @param msgStatus MSG_STATUS 값 (2, 3, 7-10, 12, 14, 16, 17, 19, 20 등)
+     * @return Pair<StatId, ErrorId?> (ErrorId가 없는 경우 null)
+     */
+    private fun mapMsgStatusToStatAndError(msgStatus: Int): Pair<Int, Int?> {
+        return when (msgStatus) {
+            2 -> Pair(ST_SMSMOR_TR_SEND, ERRORID_CENTER_TR_SUCCESS)  // 전송 성공
+            3 -> Pair(ST_VRECV_TR_EXPIRED, ERRORID_CENTER_TR_EXPIRED)  // 만료 (기존 코드와 호환: ST_VRECV_TR_EXPIRED 사용)
+            7, 8, 9, 10 -> Pair(ST_SMSMOR_TR_PORTOUT, ERRORID_CENTER_TR_PORTOUT)  // PORTOUT
+            12 -> Pair(ST_SMSMOR_TR_FORWARD, null)  // FORWARD (ErrorId 없음)
+            14 -> Pair(ST_SMSMOR_TR_FWDFAIL, null)  // 전달 실패
+            16 -> Pair(ST_SMSMOR_TR_SPAMERR, null)  // 스팸 오류
+            17 -> Pair(ST_SMSMOR_TR_USERDEL, null)  // 사용자 삭제
+            19 -> Pair(ST_SMSMOR_TR_NPREFIX, null)  // NP Prefix 오류
+            20 -> Pair(ST_SMSMOR_TR_ADMCANC, null)  // 관리자 취소
+            else -> Pair(ST_SMSMOR_TR_UNDELIVERED, null)  // 기타 미전달
+        }
+    }
+    
+    /**
+     * ESMClass별 TR 처리 분기 라우터
+     * 
+     * @param qItem QITEM 객체
+     * @param request MoReportRequest
+     * @param esmClass ESMClass 값 (qItem.nRsv4Protocol[11])
+     * @param msgStatus MSG_STATUS 값
+     * @param statId C 코드 매핑으로 결정된 StatId
+     * @param errorId C 코드 매핑으로 결정된 ErrorId (없으면 ERRORID_CP_MO_TR_FAIL)
+     * @param moCallInfo MOCallInfoEntity
+     * @param gipHttpMoAccess GipHttpMoAccessEntity
+     * @param smsQLib SmsQLib
+     * @param loggerName 로거 이름
+     */
+    private suspend fun processTRByEsmClass(
+        qItem: QITEM,
+        request: MoReportRequest,
+        esmClass: Int,
+        msgStatus: Int,
+        statId: Int,
+        errorId: Int,
+        moCallInfo: MOCallInfoEntity,
+        gipHttpMoAccess: GipHttpMoAccessEntity,
+        smsQLib: SmsQLib,
+        loggerName: String
+    ) {
+        when (esmClass) {
+            // 등기문자 (NOTI)
+            NOTI_NORMAL_MO, NOTI_PORTED_MO -> {
+                processTR_Noti(qItem, request, msgStatus, statId, errorId, moCallInfo, gipHttpMoAccess, smsQLib, loggerName)
+            }
+            // 안심문자 (NOTI_PLUS)
+            NOTI_PLUS_NORMAL_MO, NOTI_PLUS_PORTED_MO -> {
+                processTR_NotiPlus(qItem, request, msgStatus, statId, errorId, moCallInfo, gipHttpMoAccess, smsQLib, loggerName)
+            }
+            // CDMA 로밍
+            CDMA_ROAMING, PORTED_CDMA_ROAMING -> {
+                processTR_Roaming_CDMA(qItem, request, msgStatus, statId, errorId, moCallInfo, gipHttpMoAccess, smsQLib, loggerName)
+            }
+            // GSM/WCDMA/BIZ 로밍
+            GSM_WCDMA_ROAMING, PORTED_GSM_WCDMA_ROAMING,
+            NUMBER_PLUS_CDMA_ROAMING_MO, NUMBER_PLUS_GSM_ROAMING_MO,
+            BIZ_NUMBER_CDMA_ROAMING_MO, BIZ_NUMBER_GSM_ROAMING_MO -> {
+                processTR_Roaming_GSM(qItem, request, msgStatus, statId, errorId, moCallInfo, gipHttpMoAccess, smsQLib, loggerName)
+            }
+            // 일반 SMS
+            NORMAL_MO, PORTED_MO, FORWARD_MO -> {
+                processTR_Normal(qItem, request, msgStatus, statId, errorId, moCallInfo, gipHttpMoAccess, smsQLib, loggerName)
+            }
+            // 기타
+            else -> {
+                witcomLog.c_write(loggerName, Level.WARN,
+                    String.format("[processTRByEsmClass] 알 수 없는 ESMClass(%d): 기본 TR 처리 수행", esmClass),
+                    Thread.currentThread().getId()
+                )
+                processTR_Normal(qItem, request, msgStatus, statId, errorId, moCallInfo, gipHttpMoAccess, smsQLib, loggerName)
+            }
+        }
+    }
+    
+    /**
+     * 등기문자 (ESMClass 90, 91) TR 처리
+     */
+    private suspend fun processTR_Noti(
+        qItem: QITEM,
+        request: MoReportRequest,
+        msgStatus: Int,
+        statId: Int,
+        errorId: Int,
+        moCallInfo: MOCallInfoEntity,
+        gipHttpMoAccess: GipHttpMoAccessEntity,
+        smsQLib: SmsQLib,
+        loggerName: String
+    ) {
+        val gMOTRBILL = (gipHttpMoAccess.moTrBill == 1)
+        
+        witcomLog.c_write(loggerName, Level.INFO,
+            String.format("[processTR_Noti] 등기문자 TR 처리 시작: msgId(%s), msgStatus(%d), statId(%d), errorId(%d), MOTRBILL(%s)",
+                request.data.msgId, msgStatus, statId, errorId, if (gMOTRBILL) "Y" else "N"),
+            Thread.currentThread().getId()
+        )
+        
+        // 1. MOTRBILL='Y'이고 msgStatus=2인 경우: 과금 처리
+        if (gMOTRBILL && msgStatus == 2) {
+            val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+            processMOBilling(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        } else {
+//            // 2. VSTAT 기록
+//            qItem.ucServerType = VSMSS_TYPE.code.toByte()
+//            smsQLib.InsqStat(
+//                qItem,
+//                MESSAGE_TR,
+//                0,
+//                gServerID,
+//                MODULEID_VBILLMO,
+//                SERVICEID_GIPEVENT,
+//                errorId,
+//                statId,
+//                getNInforNo(qItem),
+//                TID_NO_SAVE,
+//                LT_BOTH,
+//                0
+//            )
+        }
+        
+        // 3. DB 삭제: MO_NOTISEND
+        val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+        dbDelMO_NOTISEND(responseTR, loggerName)
+        
+        // 4. 메시지 전송: 등기문자 전송 (성공 시에만)
+        if (msgStatus == 2) {
+            mt_NOTISending(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        }
+    }
+    
+    /**
+     * 안심문자 (ESMClass 20, 21) TR 처리
+     */
+    private suspend fun processTR_NotiPlus(
+        qItem: QITEM,
+        request: MoReportRequest,
+        msgStatus: Int,
+        statId: Int,
+        errorId: Int,
+        moCallInfo: MOCallInfoEntity,
+        gipHttpMoAccess: GipHttpMoAccessEntity,
+        smsQLib: SmsQLib,
+        loggerName: String
+    ) {
+        val gMOTRBILL = (gipHttpMoAccess.moTrBill == 1)
+        
+        witcomLog.c_write(loggerName, Level.INFO,
+            String.format("[processTR_NotiPlus] 안심문자 TR 처리 시작: msgId(%s), msgStatus(%d), statId(%d), errorId(%d), MOTRBILL(%s)",
+                request.data.msgId, msgStatus, statId, errorId, if (gMOTRBILL) "Y" else "N"),
+            Thread.currentThread().getId()
+        )
+        
+        // 1. MOTRBILL='Y'이고 msgStatus=2인 경우: 과금 처리
+        if (gMOTRBILL && msgStatus == 2) {
+            val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+            processMOBilling(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        } else {
+            // 2. VSTAT 기록
+//            qItem.ucServerType = VSMSS_TYPE.code.toByte()
+//            smsQLib.InsqStat(
+//                qItem,
+//                MESSAGE_TR,
+//                0,
+//                gServerID,
+//                MODULEID_VBILLMO,
+//                SERVICEID_GIPEVENT,
+//                errorId,
+//                statId,
+//                getNInforNo(qItem),
+//                TID_NO_SAVE,
+//                LT_BOTH,
+//                0
+//            )
+        }
+        
+        // 3. DB 삭제: MO_NOTISEND
+        val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+        dbDelMO_NOTISEND(responseTR, loggerName)
+        
+        // 4. 메시지 전송: 안심문자 전송 (성공 시에만)
+        if (msgStatus == 2) {
+            mt_NOTI_PLUS_Sending(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        }
+    }
+    
+    /**
+     * CDMA 로밍 (ESMClass 36, 37) TR 처리
+     */
+    private suspend fun processTR_Roaming_CDMA(
+        qItem: QITEM,
+        request: MoReportRequest,
+        msgStatus: Int,
+        statId: Int,
+        errorId: Int,
+        moCallInfo: MOCallInfoEntity,
+        gipHttpMoAccess: GipHttpMoAccessEntity,
+        smsQLib: SmsQLib,
+        loggerName: String
+    ) {
+        val gMOTRBILL = (gipHttpMoAccess.moTrBill == 1)
+        val cid = request.data.cid ?: moCallInfo.destCId
+        val esmClass = qItem.nRsv4Protocol[11]
+        
+        // CID 1584 + ESMCLASS 36 (CDMA_ROAMING) 조합만 특별 처리 (C 코드와 동일)
+        val shouldProcessDirectVstat27 = cid?.let { 
+            EsmClassHandler().isCdmaRoamingWithCid1584(esmClass, it)
+        } ?: false
+        
+        witcomLog.c_write(loggerName, Level.INFO,
+            String.format("[processTR_Roaming_CDMA] CDMA 로밍 TR 처리 시작: msgId(%s), msgStatus(%d), statId(%d), errorId(%d), MOTRBILL(%s), CID(%s), shouldProcessDirectVstat27(%b)",
+                request.data.msgId, msgStatus, statId, errorId, if (gMOTRBILL) "Y" else "N", cid ?: "null", shouldProcessDirectVstat27),
+            Thread.currentThread().getId()
+        )
+        
+        // 1. MOTRBILL='Y'이고 msgStatus=2인 경우: 과금 처리
+        if (gMOTRBILL && msgStatus == 2) {
+            val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+            processMOBilling(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        } else {
+//            // 2. VSTAT 기록
+//            qItem.ucServerType = VSMSS_TYPE.code.toByte()
+//            smsQLib.InsqStat(
+//                qItem,
+//                MESSAGE_TR,
+//                0,
+//                gServerID,
+//                MODULEID_VBILLMO,
+//                SERVICEID_GIPEVENT,
+//                errorId,
+//                statId,
+//                getNInforNo(qItem),
+//                TID_NO_SAVE,
+//                LT_BOTH,
+//                0
+//            )
+        }
+        
+        // 3. DB 삭제: MOCALLINFO
+        val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+        dbDelMOCallInfo(responseTR, loggerName)
+        
+        // 4. 메시지 라우팅: PCS로 라우팅 (성공 시에만)
+        if (msgStatus == 2) {
+            routeTRMsg2PCS(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        }
+    }
+    
+    /**
+     * GSM/WCDMA/BIZ 로밍 (ESMClass 40, 41, 69, 70, 72, 73) TR 처리
+     */
+    private suspend fun processTR_Roaming_GSM(
+        qItem: QITEM,
+        request: MoReportRequest,
+        msgStatus: Int,
+        statId: Int,
+        errorId: Int,
+        moCallInfo: MOCallInfoEntity,
+        gipHttpMoAccess: GipHttpMoAccessEntity,
+        smsQLib: SmsQLib,
+        loggerName: String
+    ) {
+        val gMOTRBILL = (gipHttpMoAccess.moTrBill == 1)
+        
+        witcomLog.c_write(loggerName, Level.INFO,
+            String.format("[processTR_Roaming_GSM] GSM/WCDMA/BIZ 로밍 TR 처리 시작: msgId(%s), msgStatus(%d), statId(%d), errorId(%d), MOTRBILL(%s)",
+                request.data.msgId, msgStatus, statId, errorId, if (gMOTRBILL) "Y" else "N"),
+            Thread.currentThread().getId()
+        )
+        
+        // 1. MOTRBILL='Y'이고 msgStatus=2인 경우: 과금 처리
+        if (gMOTRBILL && msgStatus == 2) {
+            val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+            processMOBilling(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        } else {
+            // 2. VSTAT 기록
+            qItem.ucServerType = VSMSS_TYPE.code.toByte()
+            smsQLib.InsqStat(
+                qItem,
+                MESSAGE_TR,
+                0,
+                gServerID,
+                MODULEID_VBILLMO,
+                SERVICEID_GIPEVENT,
+                errorId,
+                statId,
+                getNInforNo(qItem),
+                TID_NO_SAVE,
+                LT_BOTH,
+                0
+            )
+        }
+        
+        // 3. DB 삭제: MOCALLINFO
+        val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+        dbDelMOCallInfo(responseTR, loggerName)
+        
+        // 4. 메시지 라우팅: PCS로 라우팅 (성공 시에만)
+        if (msgStatus == 2) {
+            routeTRMsg2PCS(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        }
+    }
+    
+    /**
+     * 일반 SMS (ESMClass 1, 57, 48) TR 처리
+     */
+    private suspend fun processTR_Normal(
+        qItem: QITEM,
+        request: MoReportRequest,
+        msgStatus: Int,
+        statId: Int,
+        errorId: Int,
+        moCallInfo: MOCallInfoEntity,
+        gipHttpMoAccess: GipHttpMoAccessEntity,
+        smsQLib: SmsQLib,
+        loggerName: String
+    ) {
+        val gMOTRBILL = (gipHttpMoAccess.moTrBill == 1)
+        
+        witcomLog.c_write(loggerName, Level.INFO,
+            String.format("[processTR_Normal] 일반 SMS TR 처리 시작: msgId(%s), msgStatus(%d), statId(%d), errorId(%d), MOTRBILL(%s)",
+                request.data.msgId, msgStatus, statId, errorId, if (gMOTRBILL) "Y" else "N"),
+            Thread.currentThread().getId()
+        )
+        
+        // 1. MOTRBILL='Y'이고 msgStatus=2인 경우: 과금 처리
+        if (gMOTRBILL && msgStatus == 2) {
+            val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+            processMOBilling(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        } else {
+            // 2. VSTAT 기록
+            qItem.ucServerType = VSMSS_TYPE.code.toByte()
+            smsQLib.InsqStat(
+                qItem,
+                MESSAGE_TR,
+                0,
+                gServerID,
+                MODULEID_VBILLMO,
+                SERVICEID_GIPEVENT,
+                errorId,
+                statId,
+                getNInforNo(qItem),
+                TID_NO_SAVE,
+                LT_BOTH,
+                0
+            )
+        }
+        
+        // 3. DB 삭제: MOCALLINFO
+        val responseTR = convertMoReportToResponseTR(request, moCallInfo)
+        dbDelMOCallInfo(responseTR, loggerName)
+        
+        // 4. 메시지 라우팅: PCS로 라우팅 (성공 시에만)
+        if (msgStatus == 2) {
+            routeTRMsg2PCS(qItem, responseTR, gipHttpMoAccess, smsQLib, loggerName)
+        }
+    }
+    
+    /**
      * mo-report API로 수신한 MO-TR 결과 처리
      */
     override suspend fun processMoReport(
@@ -2954,108 +3339,33 @@ open class SmsResServiceImpl(
             return
         }
         
-        // status에 따라 조건 처리 및 InsqStat 호출
-        when (request.data.status) {
-            2 -> {
-                // DELIVERED: 성공, 과금 처리
-                processMoReportDelivered(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            3 -> {
-                // EXPIRED: 만료, 과금 실패
-                processMoReportExpired(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            5 -> {
-                // UNDELIVERABLE: 전송 불가, 과금 실패
-                processMoReportUndelivered(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            14 -> {
-                // FWDFAIL: 전달 실패
-                processMoReportFwdFail(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            16 -> {
-                // SPAMERR: 스팸 오류
-                processMoReportSpamErr(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            17 -> {
-                // USERDEL: 사용자 삭제
-                processMoReportUserDel(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            19 -> {
-                // NPREFIX: NP Prefix 오류
-                processMoReportNPrefix(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            20 -> {
-                // ADMCANC: 관리자 취소
-                processMoReportAdmCanc(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-            else -> {
-                // 기타 상태: 기본 처리
-                processMoReportOther(
-                    qItem,
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    smsQLib,
-                    loggerName
-                )
-            }
-        }
+        // ESMClass 추출
+        val esmClass = qItem.nRsv4Protocol[11]
+        val msgStatus = request.data.status ?: 0
+        
+        // C 코드 매핑: MsgStatus → StatId/ErrorId
+        val (statId, errorIdNullable) = mapMsgStatusToStatAndError(msgStatus)
+        val errorId = errorIdNullable ?: ERRORID_CP_MO_TR_FAIL
+        
+        witcomLog.c_write(loggerName, Level.INFO,
+            String.format("[processMoReport] C 코드 매핑 결과: msgStatus(%d) → statId(%d), errorId(%d), esmClass(%d)",
+                msgStatus, statId, errorId, esmClass),
+            Thread.currentThread().getId()
+        )
+        
+        // ESMClass별 TR 처리 (C 코드 매핑 반영)
+//        processTRByEsmClass(
+//            qItem,
+//            request,
+//            esmClass,
+//            msgStatus,
+//            statId,
+//            errorId,
+//            moCallInfo,
+//            gipHttpMoAccess,
+//            smsQLib,
+//            loggerName
+//        )
         
         // 처리 완료 후 MOCALLINFO 삭제
         // 규칙: MOTRBILL='Y'인 경우 MO-TR 단계에서 삭제, MOTRBILL='N'인 경우 MO-ACK 단계에서 삭제

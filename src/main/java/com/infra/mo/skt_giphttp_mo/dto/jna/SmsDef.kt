@@ -1032,6 +1032,11 @@ object SmsDef {
     // MO-TR 관련 통계/에러 코드 (C inc/StatDef.h, inc/TraceDef.h 기준)
     const val ERRORID_CP_MO_TR_FAIL = 28            /* MO-TR 과금/처리 실패 */
     const val ERRORID_CP_MO_TR_SUCCESS = 27         /* MO-TR 과금 성공 */
+    
+    // C 코드 기준: Center TR 관련 ErrorId (C 코드에서 사용하는 값)
+    const val ERRORID_CENTER_TR_SUCCESS = 2         /* C 코드: msgStatus==2일 때 사용 */
+    const val ERRORID_CENTER_TR_EXPIRED = 3         /* C 코드: msgStatus==3일 때 사용 */
+    const val ERRORID_CENTER_TR_PORTOUT = 7         /* C 코드: msgStatus==7,8,9,10일 때 사용 */
     const val ST_GIPEVENT_MOTR_OK = 66              /* 성공(MO TR) */
     const val ST_Q_INSERT_FAIL_VBILLMO = -316       /* 큐 입력 오류(VBILLMO) */
 

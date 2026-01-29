@@ -1,0 +1,530 @@
+1.1.4
+1.1.4.15 <GIP타사중개사>
+=================================================================================================
+=================================================================================================
+HTTP_MTRECV_ACCESS
+[
+  {
+    "LOG_NO": "898",
+    "CID": "1571707589",
+    "IP_ADDR": "175.125.130.76",
+    "PORT_NO": 8500,
+    "QUEUE_NO": 11038,
+    "FX": 500,
+    "FY": 10,
+    "FLAG": "0",
+    "RC": 3,
+    "TC": 3,
+    "DESCRIPTION": "JWS_TESTHTTP",
+    "UPDATE_FLAG": "R",
+    "CP_NAME": "JWS_TEST",
+    "CP_PHONE": "02-2149-7762",
+    "SKT_NAME": "SKT",
+    "SKT_PHONE": "02-2149-7762",
+    "CP_TEAM": "WITCOM_INFRA",
+    "CP_PERSONNEL": "JWS",
+    "CP_SKT_TEAM": "SKT_TEST",
+    "MSG_TYPE": "2",
+    "BILL_TYPE": "2",
+    "PORTED_AUTCON": "1",
+    "REPLY_FLAG": "Y",
+    "LOG_FLAG": 3,
+    "LIMIT_CHECK_FLAG": "Y",
+    "DETECT_CID_FLAG": "N",
+    "CB_CHECK_FLAG": "Y",
+    "GIPVERID": 510,
+    "AUTH_FLAG": "N",
+    "DESIRE_NODE": null,
+    "CURRENT_NODE": null,
+    "RM_FLAG": 0,
+    "PCS_FLAG": 0,
+    "AES_KEY_BASE64": "+ujTciN2AoT+iWAR/Wtw8lIjtzTHVj3NT2OBAoBEHY8=",
+    "IV_BASE64": "E3fVT9zZoke5lcF8s8upSw==",
+    "CP_URL": "http://175.125.130.76:8500/sms/send/result"
+  }
+]
+
+CFG_PCSIF_SEND
+[
+  {
+    "SIN": 102,
+    "LOG_NO": 9997,
+    "BILLID": "019",
+    "ID": "lgt",
+    "PASSWORD": "lgt",
+    "IP_ADDR": "175.125.130.76",
+    "PORT_NO": 8019,
+    "QUEUE_NO": 20019,
+    "FLOWCTL": 1500,
+    "FLOWTM": 10,
+    "SEND_FLAG": 1,
+    "RCNT": 0,
+    "TM_OUT": 2,
+    "LOG_FLAG": 3,
+    "STAT_CID": "019",
+    "REGDATE": "2025-05-07 09:32:11",
+    "DESCRIPTION": "LGT MO",
+    "MOCALLHIS_FLAG": 0,
+    "MOBILL_RNO": 2,
+    "CALLBACKLENGTH": 20,
+    "UCS_FLAG": 1,
+    "MAX_MSG_LEN": 140,
+    "CONCAT_FLAG": 1,
+    "LINECHECK_FLAG": 1,
+    "STATUS": 0,
+    "DESIRE_NODE": "smss1_2",
+    "CURRENT_NODE": null,
+    "ROAMING_FLAG": 0
+  },
+  {
+    "SIN": 23,
+    "LOG_NO": 4445,
+    "BILLID": "016",
+    "ID": "ktf",
+    "PASSWORD": "ktf",
+    "IP_ADDR": "175.125.130.76",
+    "PORT_NO": 8098,
+    "QUEUE_NO": 20016,
+    "FLOWCTL": 1500,
+    "FLOWTM": 10,
+    "SEND_FLAG": 1,
+    "RCNT": 0,
+    "TM_OUT": 2,
+    "LOG_FLAG": 3,
+    "STAT_CID": "016",
+    "REGDATE": "2025-05-07 09:32:11",
+    "DESCRIPTION": "KT MO",
+    "MOCALLHIS_FLAG": 0,
+    "MOBILL_RNO": 2,
+    "CALLBACKLENGTH": 20,
+    "UCS_FLAG": 1,
+    "MAX_MSG_LEN": 140,
+    "CONCAT_FLAG": 1,
+    "LINECHECK_FLAG": 0,
+    "STATUS": 1,
+    "DESIRE_NODE": "smss1_2",
+    "CURRENT_NODE": "smss1_2",
+    "ROAMING_FLAG": 0
+  }
+]
+
+
+[smss1_2:/APP/sms/bin/config] cdc
+[smss1_2:/APP/sms/bin/config] cat OCS_INFO.cnf 
+...
+# KDY TEST SKT,KTF,LGT
+050160000001 0 0 01041901234
+050160000002 0 0 01031501234
+050160000003 0 0 01079001234
+
+=================================================================================================
+=================================================================================================
+<DB>
+CFG_RELAY_CID_LIST
+[
+  {
+    "CID": "1571707589",
+    "RELAY_FLAG_KT": 1,
+    "RELAY_FLAG_LGU": 0,
+    "RELAY_QUEUE": 11040,
+    "MO_BILLCID": "1234",
+    "NP_PREFIX": 60,
+    "REGI_DATE": "2025-12-17 17:44:25",
+    "DESCRIPTION": "KDY Test"
+  }
+]
+
+<GIPHTTP_RECV>, KT 050160000002
+[17:30:38:0439] [GIPALL_C_0604] [DEBUG] Check 050 AI Survey Service! DestCID[05016] DestCallNo[0000002] ==> VirtualNum[050160000002]
+[17:30:38:0445] [GIPALL_C_0604] [DEBUG] CheckRelayOnCID() : Relay Routing On [SrcCID:1571707589] KT_FLAG[1] LGU_FLAG[0] RELAY_QUEUE[11040]
+[17:30:38:0445] [GIPALL_C_0604] [DEBUG] Relay Routing Applied (ACQ Mode): nRsv4Protocol[0]=1 nRsv4Protocol[1]=11040 ucMsgLen=76
+[17:30:38:0445] [GIPALL_C_0604] [INFO] Processed via Ported Logic: gACQFlag[1] gRelayOn[true] SubType[10]
+[17:30:38:0445] [GIPALL_C_0604] [MsgBodyToQItem] GipHttpAccessEntity에서 REPLY_FLAG 가져옴: Y
+[17:30:38:0445] [GIPALL_C_0604] [MsgBodyToQItem] REPLY_FLAG='Y' or null: rgtDlvFlg=2 (unchanged)
+[17:30:38:0445] [GIPALL_C_0604] [DEBUG] KSC5601_CP949 인코딩 타입으로 처리합니다.
+[17:30:38:0446] [GIPALL_C_0604] [DEBUG] Base64 Decoded Bytes (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4b 0x54 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x32 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:30:38:0446] [GIPALL_C_0604] [DEBUG] Decoded Message: [OCS TID 4098 TEST KT 0000002 가나다라마바사아자차카타파하]
+[17:30:38:0446] [GIPALL_C_0604] [DEBUG] Msg Length: 57 bytes.
+[17:30:38:0446] [GIPALL_C_0604] [DEBUG] msgToByteArray (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4b 0x54 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x32 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:30:38:0446] [GIPALL_C_0604] [DEBUG] Message Encoding and Length check completed successfully.
+[17:30:38:0446] [GIPALL_C_0604] [MsgBodyToQItem] After checkMessageEncodingAndLength: rgtDlvFlg restored from 2 to 2
+[17:30:38:0451] [GIPALL_C_0604] [NORMAL] CID-IP Check Start
+[17:30:38:0454] [GIPALL_C_0604] [NORMAL] IP PORT AND CID MATCH IP: {175.125.130.76}, CID: {1571707589}
+[17:30:38:0461] [GIPALL_C_0604] [DEBUG] VldPrd(50:60) Default(GIP_VLDPRD)=60
+[17:30:38:0461] [GIPALL_C_0604] [DEBUG] VldPrdSeconds(60) CurrentTime(1769416238) ExpireTimeUnix(1769416298)
+[17:30:38:0462] [GIPALL_C_0604] [AI Survey] 일반 모드 처리: VirtualNum[050160000002] n050Flag[1] queueNo[1] usSource[90017] DestCID[90017] DestCallNo[05016]
+[17:30:38:0462] [GIPALL_C_0604] [NORMAL] AI Survey 메시지: CheckTelecom 로직 스킵
+[17:30:39:0307] [GIPALL_C_0604] [INGRESS->DEQUEUE_LATENCY] TraceID[01226012617303843805] | Ingress[1769416238437] Enqueue[1769416238462] Dequeue[1769416239305] | IngressToDequeue[868ms] QueueWait[843ms]
+[17:30:39:0310] [GIPALL_C_0604] [NORMAL] msgToByteArray before copy (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4b 0x54 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x32 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:30:39:0310] [GIPALL_C_0604] [NORMAL] szMsg after copy (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4b 0x54 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x32 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:30:39:0311] [GIPALL_C_0604] [NORMAL] copySize: 57, ucMsgLen: 57, ucDataEncoding: 14
+[17:30:39:0312] [GIPALL_C_0604] [NORMAL] AI Survey 메시지: OCS_QUEUE(90017)로 삽입 (CFG_PREFIX 라우팅 스킵)
+[17:30:39:0312] [GIPALL_C_0604] [NORMAL] AI Survey: usSource에 GIPHTTP_ACCESS QUEUE_NO(11038) 할당
+[17:30:39:0312] [GIPALL_C_0604] [NORMAL] AI Survey: szFWD_NO 및 szVirtualNum에 virtualNum(050160000002) 할당
+[17:30:39:0316] [GIPALL_C_0604] [NORMAL] qItem.szMsg after write/read (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4b 0x54 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x32 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:30:39:0316] [GIPALL_C_0604] [NORMAL] qItem.ucMsgLen: 57, qItem.ucDataEncoding: 14
+[17:30:39:0317] [GIPALL_C_0604] [W2P] 최종 큐 삽입: 자사 처리 (W2P 로직 미경유) - targetQueueNo=90017
+[17:30:39:0317] [GIPALL_C_0604] [NORMAL] InsertIntoSmsQWithQNo 직전 AuthFlag 확인: request.cAuthFlag=0, qItem.usAuthFlag=0
+[17:30:39:0319] [GIPALL_C_0604] [REQ_SIMPLE] [JWS_TESTHTTP->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(05016) DestCallNo(0000002) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(57) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(50:60) RgtDlvFlg(2) CallBack(456123789) OrigCID(111111111) RelayCID(1111) MsgLen(57) OrgMsgTotalLen(0)
+[17:30:39:0319] [GIPALL_C_0604] [DEBUG] GIP MT BODY => VldPrd(60) RgtDlvFlag(2) CallBack(456123789) OrigCID(111111111) RelayCID(1111) MsgLen(57) OrgMsgTotalLen(0)
+[17:30:39:0319] [GIPALL_C_0604] [RES_SIMPLE] [VSMSS#1->JWS_TESTHTTP] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(05016) DestCallNo(0000002) MsgCode(12) MsgSubCode(10) TId(10000000) BodyDataLen(57) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(50:60) RgtDlvFlg(2) CallBack(456123789) OrigCID(111111111) RelayCID(1111) MsgLen(57) OrgMsgTotalLen(0) Result(0:GI_RES_NO_ERR) MsgId(34F1A6C7)
+[17:30:39:0320] [GIPALL_C_0604] [NORMAL] ================== HTTP MT MESSAGE QITEM Print QITEM  ==================
+Server Type                              : V
+Message VersionID                        : 510
+Trace Id                                 : 01226012617303843805
+Msg Id                                  : 34F1A6C7
+========= Source Address =========
+SourceCID                                : 1571707589
+SourceCallNo                             : 0
+Source Return QNO                        : 11
+========= Destination Address =========
+DestCID                                  : 05016
+DestCallNo                               : 0000002
+ModuleNo                                 : 0
+========= Message Code =========
+Message Code                             : 11
+Message SubCode                          : 10
+TeleService ID                           : 4098
+Msg Length                               : 57
+MsgSerialNo                              : 10000000
+TermType                                 : 49
+DataEnconding                            : 14:CP949
+ucRsv                                    : 
+========= Sending Flags =========
+SourceAddr ton                           : 0
+SourceAddr npi                           : 0
+DestAddr ton                             : 0
+DestAddr npi                             : 0
+ProtocolID                               : 0
+VldPrd                                   : 60
+Priority                                 : 0
+RepFlag                                  : 0
+RgtDlvFlg TR/Receipt flag                : 2
+SmDefaultMsgID / callforward count       : 0
+========= IONDINFO =========
+uQC                                      : 0
+nRsv4Protocol[0]                         : 1
+nRsv4Protocol[1]                         : 11040
+nRsv4Protocol[2]                         : 0
+nRsv4Protocol[3]                         : 0
+nRsv4Protocol[4]                         : 0
+nRsv4Protocol[5]                         : 0
+nRsv4Protocol[6]                         : 0
+nRsv4Protocol[7]                         : 0
+nRsv4Protocol[8]                         : 0
+nRsv4Protocol[9]                         : 50
+nRsv4Protocol[10]                        : 11
+nRsv4Protocol[11]                        : 8
+Message : ******
+[MSG_DEBUG] Message                              : OCS TID 4098 TEST KT 0000002 가나다라마바사아자차카타파하
+CallBack                                 : 456123789
+ucLocation                               : 
+ucRsvLocation                            :  
+Foward No                                : 
+Foward No2                               : 
+ReturnQ_No                               : 0
+ConcatenateFlag                          : 0
+ConcatenateInfo                          : 0
+OSFI[1/2/3/4/5/6/7/8]                    : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+OrgCallingNumber                         : 
+OrigMvnoInformation                      : 
+DestMvnoInformation                      : 
+BillType                                 : 2
+FullRN                                   : 
+RcsTag                                   : 
+RcsResult                                : 0
+MsgAddNum                                : 0
+CallBack_Noti                            : 0
+010Plus                                  : 0
+Message Origin                           : 1
+CallBack_Check                           : 456123789
+TraceID                                  : 01226012617303843805
+OrgMsgLen                                : 0
+ChildNumOrd                              : 0
+Auth_Flag                                : 0
+SMS_OSFI[1/2/3/4/5]              : 0x00/0x00/0x00/0x00/0x00
+MoRecvTime                               : 
+szOrigCID                                : 111111111
+szRealyCID                               : 1111
+================== Print QITEM  END ==================
+
+<OCS>
+[17:30:39:8530] [NORMAL] [QUEUE] ServerType(V) SourceCId(1571707589) SourceCallNo(0) DestCId(05016) DestCallNo(0000002) MessageID(34F1A6C7) VirtualNumber(050160000002) DcsType(14) MsgLen(57)
+[17:30:39:8531] [DEBUG] ### Print QITEM  #################################################### 
+[17:30:39:8531] [DEBUG] ### ServerType<V> MsgVerID<510>
+[17:30:39:8531] [DEBUG] ### Source Address : SrcCID<1571707589> SrcCallNo<0> Source ReturnQNo<11038>
+[17:30:39:8531] [DEBUG] ### Destination Address : DestCID<05016> DestCallNo<0000002> ModuleNo<0>
+[17:30:39:8531] [DEBUG] ### Message Code : MessageCode<11> MessageSubCode<10> MsgCodeReserved[0](TID)<4098> EsmClass<8>
+[17:30:39:8531] [DEBUG] ### MsgLen<57> MsgSerialNo<10000000> TermType<49> DataEncoding<CP949>
+[17:30:39:8531] [DEBUG] ### Sending Flags : VldPrd<60> Priority<0> RepFlag<0> RgtDlvFlg<2>
+[17:30:39:8531] [DEBUG] ### ConcatenateFlag<0> ConcatenateInfo<0> SmDefaultMsgID/CALLFW count<0>
+[17:30:39:8531] [DEBUG] ### Message : <*********************************************************>
+[17:30:39:8532] [MSG_DEBUG] Message<OCS TID 4098 TEST KT 0000002 가나다라마바사아자차카타파하>
+[17:30:39:8532] [DEBUG] ### CallBack<456123789> CallBack_Noti<0> CallBack_Check<1> Location<>
+[17:30:39:8532] [DEBUG] ### OrigCID<111111111> RelayCID<1111> FowardNo<> ForwardNo2<> ReturnQ_No<0> OrgMsgLen<0> AuthFlag<0>
+[17:30:39:8532] [DEBUG] ### Print QITEM END #################################################
+[17:30:39:8532] [TCP_DATA]  =============TCP PACKET DATA [SEND]============== 
+[17:30:39:8532] [TCP_DATA]  0x00 0x00 0x00 0x03 0x00 0x00 0x0b 0xb8 0x00 0x00
+[17:30:39:8533] [TCP_DATA]  0x23 0x28 0x00 0x00 0x00 0x2b 0x02 0x01 0x00 0x00
+[17:30:39:8533] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:30:39:8533] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0xf1 0x30
+[17:30:39:8533] [TCP_DATA]  0x35 0x30 0x31 0x36 0x30 0x30 0x30 0x30 0x30 0x30
+[17:30:39:8533] [TCP_DATA]  0x32 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:30:39:8534] [TCP_DATA]  =============TCP PACKET DATA [SEND]============== 
+[17:30:39:8535] [OCS_C] [QUERY] [SMSS#1->OCS Test] MsgType(3) SourceSystemID(3000) DestSystemID(9000) MsgLen(43) Code(0x02) Type(0x01) ServiceType(0xf1:241) ReqNum(050160000002)
+[17:30:39:8538] [TCP_DATA]  =============TCP PACKET DATA [RECV]============== 
+[17:30:39:8539] [TCP_DATA]  0x00 0x00 0x00 0x03 0x00 0x00 0x23 0x28 0x00 0x00
+[17:30:39:8539] [TCP_DATA]  0x0b 0xb8 0x00 0x00 0x00 0x58 0x02 0x02 0x00 0x00
+[17:30:39:8539] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:30:39:8539] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0xf1 0x30 0x35 0x30
+[17:30:39:8539] [TCP_DATA]  0x31 0x36 0x30 0x30 0x30 0x30 0x30 0x30 0x32 0x00
+[17:30:39:8539] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x30 0x31 0x30
+[17:30:39:8539] [TCP_DATA]  0x33 0x31 0x35 0x30 0x31 0x32 0x33 0x34 0x00 0x00
+[17:30:39:8539] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:30:39:8540] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:30:39:8540] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:30:39:8540] [TCP_DATA]  0x00 0x00 0x00 0x00
+[17:30:39:8540] [TCP_DATA]  =============TCP PACKET DATA [RECV]============== 
+[17:30:39:8540] [OCS_C] [QUERY_RES] [OCS Test->SMSS#1] MsgType(3) SourceSystemID(9000) DestSystemID(3000) MsgLen(88) Code(0x02) Type(0x02) Result(0x00:OK) Cause(0x00:NO_ERROR) VirtualNum(050160000002) -> RealNum(01031501234)
+[17:30:39:8540] [DEBUG] InsertOCSCallInfo() : ServerType(V) MsgId(34F1A6C7) RecvQueue(11038) SrcCID(1571707589) SrcCallNo(0) DestCID(05016) DestCallNo(0000002) RealNum(01031501234)
+[17:30:39:8551] [DEBUG] Relay protocol set : [1:10008]
+[17:30:39:8554] [NORMAL] Success to insert OCS QUERY RESPONSE to NPDB_c [90500]
+
+<NPDB>
+[17:30:40:1779] [DEBUG] [QUEUE] SERVERTYPE(V) SRCCID(1571707589) SRCCALLNO(0) DESTCID(010) DESTCALLNO(31501234) ucSource(11038) DcsType(14) MsgLen(57) ucMsgId(34F1A6C7) EsmClass(8) VirtualNum(050160000002)
+[17:30:40:1780] [NPDB_C] [QUERY] [VSMSS#1->NPDB TEST] DSTADDR(01031501234)
+[17:30:40:1786] [NPDB_C] [QUERY_ACK] [NPDB TEST->VSMSS#1] RESULT(5:E_NO_DESTIN) RN()
+[17:30:40:1787] [DEBUG] CheckTelecom() TelePrefix[010] DestCID[010] LINE[3248] MMCSFlag[0]
+[17:30:40:1796] [DEBUG] CheckTelecom() SELECT TELE PREFIX[010] SUCCESS!! 
+[17:30:40:1796] [DEBUG] GetTelecom_New() TelePrefix(010) Prefix(3150)
+[17:30:40:1801] [DEBUG] SendW2P() : RelayFlag On => KT[1] LGU[0] RELAYQ[10008]
+[17:30:40:1801] [DEBUG] SendW2P() : KT RelayFlag On, Relay Queue[10008] Routing
+[17:30:40:1802] [NORMAL] SendW2P() Insert into QNo (10008)
+[17:30:40:1802] [DEBUG] v_submitTime[1769416240], QItem->nVldPrd[60], ExpiredTime[1769416300]
+[17:30:40:1807] [DEBUG] DBInsertW2PCALLINFO() : SERVERTYPE[V] MSGIDCENTER[34F1A6C7] MSGIDSERVER[34F1A6C7] MTSUBMISSIONTIME[1769416240] SRCCID[1571707589] SRCCALLNO[0] DESTCID[010] DESTCALLNO[31501234] RECV_QNO[11038] EXPIRETIME[1769416300] RD[16] CB[456123789] FWD_SRC[(null)] TRACE_ID[01226012617303843805] ORG_MVNO_INFO[] DEST_MVNO_INFO[] BILL_TYPE[2] MSGLEN[57] DCS_TYPE[14] ORG_MSGLEN[0] ORIGCID[111111111] RELAYCID[1111] VIRTUAL_NUM[050160000002]
+[17:30:40:1807] [NORMAL] Success of inserting MO message into GIPEVENT Process Queue[10008
+
+<smstrc>
+---------------------------------------------------------------------------------------------------------
+ 번호     분초      발신CID      발신번호      착신CID      착신번호                   TID
+---------------------------------------------------------------------------------------------------------
+    5 30393187   1571707589             0        05016       0000002  01226012617303843805
+=========================================================================================================
+처리시간          프로세스      처리상태                    부가정보                                
+=========================================================================================================
+[17:30:39.3187]   GIPALL_C        성공(MT)            Node(SMSS1_2)GMId(34F1A6C7)QNo(90017)TId(4098)LN(0)DCS(CP949)
+[17:30:39.8553]   OCS             성공(OCS->NPDB)     Node(SMSS1_2)QNo(90500)VirNum(050160000002)RealNum(01031501234)LN(799)
+[17:30:40.1808]   NPDB            성공(PMT,KT)        Node(SMSS1_2)QNo(10008)LN(1355)DCS(CP949)
+[17:30:41.1436]   GIPEVENT_C      성공(MO)            Node(SMSS1_2)DestCid(010)LN(1769)DCS(CP949)
+=========================================================================================================
+=========================================================================================================
+
+<DB>
+[
+  {
+    "CID": "1571707589",
+    "RELAY_FLAG_KT": 0,
+    "RELAY_FLAG_LGU": 1,
+    "RELAY_QUEUE": 11040,
+    "MO_BILLCID": "1234",
+    "NP_PREFIX": 60,
+    "REGI_DATE": "2025-12-17 17:44:25",
+    "DESCRIPTION": "KDY Test"
+  }
+]
+
+<GIPHTTP_RECV>, LG 050160000003
+[17:34:32:0078] [GIPALL_C_0604] [DEBUG] Check 050 AI Survey Service! DestCID[05016] DestCallNo[0000003] ==> VirtualNum[050160000003]
+[17:34:32:0083] [GIPALL_C_0604] [DEBUG] CheckRelayOnCID() : Relay Routing On [SrcCID:1571707589] KT_FLAG[0] LGU_FLAG[1] RELAY_QUEUE[11040]
+[17:34:32:0083] [GIPALL_C_0604] [DEBUG] Relay Routing Applied (ACQ Mode): nRsv4Protocol[0]=2 nRsv4Protocol[1]=11040 ucMsgLen=76
+[17:34:32:0083] [GIPALL_C_0604] [INFO] Processed via Ported Logic: gACQFlag[1] gRelayOn[true] SubType[10]
+[17:34:32:0083] [GIPALL_C_0604] [MsgBodyToQItem] GipHttpAccessEntity에서 REPLY_FLAG 가져옴: Y
+[17:34:32:0084] [GIPALL_C_0604] [MsgBodyToQItem] REPLY_FLAG='Y' or null: rgtDlvFlg=2 (unchanged)
+[17:34:32:0084] [GIPALL_C_0604] [DEBUG] KSC5601_CP949 인코딩 타입으로 처리합니다.
+[17:34:32:0084] [GIPALL_C_0604] [DEBUG] Base64 Decoded Bytes (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4c 0x47 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x33 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:34:32:0084] [GIPALL_C_0604] [DEBUG] Decoded Message: [OCS TID 4098 TEST LG 0000003 가나다라마바사아자차카타파하]
+[17:34:32:0084] [GIPALL_C_0604] [DEBUG] Msg Length: 57 bytes.
+[17:34:32:0085] [GIPALL_C_0604] [DEBUG] msgToByteArray (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4c 0x47 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x33 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:34:32:0085] [GIPALL_C_0604] [DEBUG] Message Encoding and Length check completed successfully.
+[17:34:32:0085] [GIPALL_C_0604] [MsgBodyToQItem] After checkMessageEncodingAndLength: rgtDlvFlg restored from 2 to 2
+[17:34:32:0089] [GIPALL_C_0604] [NORMAL] CID-IP Check Start
+[17:34:32:0092] [GIPALL_C_0604] [NORMAL] IP PORT AND CID MATCH IP: {175.125.130.76}, CID: {1571707589}
+[17:34:32:0098] [GIPALL_C_0604] [DEBUG] VldPrd(50:60) Default(GIP_VLDPRD)=60
+[17:34:32:0098] [GIPALL_C_0604] [DEBUG] VldPrdSeconds(60) CurrentTime(1769416472) ExpireTimeUnix(1769416532)
+[17:34:32:0099] [GIPALL_C_0604] [AI Survey] 일반 모드 처리: VirtualNum[050160000003] n050Flag[1] queueNo[1] usSource[90017] DestCID[90017] DestCallNo[05016]
+[17:34:32:0099] [GIPALL_C_0604] [NORMAL] AI Survey 메시지: CheckTelecom 로직 스킵
+[17:34:32:0451] [GIPALL_C_0604] [INGRESS->DEQUEUE_LATENCY] TraceID[01226012617343207707] | Ingress[1769416472075] Enqueue[1769416472099] Dequeue[1769416472451] | IngressToDequeue[376ms] QueueWait[352ms]
+[17:34:32:0453] [GIPALL_C_0604] [NORMAL] msgToByteArray before copy (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4c 0x47 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x33 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:34:32:0454] [GIPALL_C_0604] [NORMAL] szMsg after copy (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4c 0x47 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x33 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:34:32:0454] [GIPALL_C_0604] [NORMAL] copySize: 57, ucMsgLen: 57, ucDataEncoding: 14
+[17:34:32:0455] [GIPALL_C_0604] [NORMAL] AI Survey 메시지: OCS_QUEUE(90017)로 삽입 (CFG_PREFIX 라우팅 스킵)
+[17:34:32:0455] [GIPALL_C_0604] [NORMAL] AI Survey: usSource에 GIPHTTP_ACCESS QUEUE_NO(11038) 할당
+[17:34:32:0455] [GIPALL_C_0604] [NORMAL] AI Survey: szFWD_NO 및 szVirtualNum에 virtualNum(050160000003) 할당
+[17:34:32:0458] [GIPALL_C_0604] [NORMAL] qItem.szMsg after write/read (HEX): 0x4f 0x43 0x53 0x20 0x54 0x49 0x44 0x20 0x34 0x30 0x39 0x38 0x20 0x54 0x45 0x53 0x54 0x20 0x4c 0x47 0x20 0x30 0x30 0x30 0x30 0x30 0x30 0x33 0x20 0xb0 0xa1 0xb3 0xaa 0xb4 0xd9 0xb6 0xf3 0xb8 0xb6 0xb9 0xd9 0xbb 0xe7 0xbe 0xc6 0xc0 0xda 0xc2 0xf7 0xc4 ... (total: 57 bytes)
+[17:34:32:0458] [GIPALL_C_0604] [NORMAL] qItem.ucMsgLen: 57, qItem.ucDataEncoding: 14
+[17:34:32:0459] [GIPALL_C_0604] [W2P] 최종 큐 삽입: 자사 처리 (W2P 로직 미경유) - targetQueueNo=90017
+[17:34:32:0459] [GIPALL_C_0604] [NORMAL] InsertIntoSmsQWithQNo 직전 AuthFlag 확인: request.cAuthFlag=0, qItem.usAuthFlag=0
+[17:34:32:0461] [GIPALL_C_0604] [REQ_SIMPLE] [JWS_TESTHTTP->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(05016) DestCallNo(0000003) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(57) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(50:60) RgtDlvFlg(2) CallBack(456123789) OrigCID(111111111) RelayCID(1111) MsgLen(57) OrgMsgTotalLen(0)
+[17:34:32:0461] [GIPALL_C_0604] [DEBUG] GIP MT BODY => VldPrd(60) RgtDlvFlag(2) CallBack(456123789) OrigCID(111111111) RelayCID(1111) MsgLen(57) OrgMsgTotalLen(0)
+[17:34:32:0461] [GIPALL_C_0604] [RES_SIMPLE] [VSMSS#1->JWS_TESTHTTP] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(05016) DestCallNo(0000003) MsgCode(12) MsgSubCode(10) TId(10000000) BodyDataLen(57) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(50:60) RgtDlvFlg(2) CallBack(456123789) OrigCID(111111111) RelayCID(1111) MsgLen(57) OrgMsgTotalLen(0) Result(0:GI_RES_NO_ERR) MsgId(34F1A6C8)
+[17:34:32:0461] [GIPALL_C_0604] [NORMAL] ================== HTTP MT MESSAGE QITEM Print QITEM  ==================
+Server Type                              : V
+Message VersionID                        : 510
+Trace Id                                 : 01226012617343207707
+Msg Id                                  : 34F1A6C8
+========= Source Address =========
+SourceCID                                : 1571707589
+SourceCallNo                             : 0
+Source Return QNO                        : 11
+========= Destination Address =========
+DestCID                                  : 05016
+DestCallNo                               : 0000003
+ModuleNo                                 : 0
+========= Message Code =========
+Message Code                             : 11
+Message SubCode                          : 10
+TeleService ID                           : 4098
+Msg Length                               : 57
+MsgSerialNo                              : 10000000
+TermType                                 : 49
+DataEnconding                            : 14:CP949
+ucRsv                                    : 
+========= Sending Flags =========
+SourceAddr ton                           : 0
+SourceAddr npi                           : 0
+DestAddr ton                             : 0
+DestAddr npi                             : 0
+ProtocolID                               : 0
+VldPrd                                   : 60
+Priority                                 : 0
+RepFlag                                  : 0
+RgtDlvFlg TR/Receipt flag                : 2
+SmDefaultMsgID / callforward count       : 0
+========= IONDINFO =========
+uQC                                      : 0
+nRsv4Protocol[0]                         : 2
+nRsv4Protocol[1]                         : 11040
+nRsv4Protocol[2]                         : 0
+nRsv4Protocol[3]                         : 0
+nRsv4Protocol[4]                         : 0
+nRsv4Protocol[5]                         : 0
+nRsv4Protocol[6]                         : 0
+nRsv4Protocol[7]                         : 0
+nRsv4Protocol[8]                         : 0
+nRsv4Protocol[9]                         : 50
+nRsv4Protocol[10]                        : 11
+nRsv4Protocol[11]                        : 8
+Message : ******
+[MSG_DEBUG] Message                              : OCS TID 4098 TEST LG 0000003 가나다라마바사아자차카타파하
+CallBack                                 : 456123789
+ucLocation                               : 
+ucRsvLocation                            :  
+Foward No                                : 
+Foward No2                               : 
+ReturnQ_No                               : 0
+ConcatenateFlag                          : 0
+ConcatenateInfo                          : 0
+OSFI[1/2/3/4/5/6/7/8]                    : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+OrgCallingNumber                         : 
+OrigMvnoInformation                      : 
+DestMvnoInformation                      : 
+BillType                                 : 2
+FullRN                                   : 
+RcsTag                                   : 
+RcsResult                                : 0
+MsgAddNum                                : 0
+CallBack_Noti                            : 0
+010Plus                                  : 0
+Message Origin                           : 1
+CallBack_Check                           : 456123789
+TraceID                                  : 01226012617343207707
+OrgMsgLen                                : 0
+ChildNumOrd                              : 0
+Auth_Flag                                : 0
+SMS_OSFI[1/2/3/4/5]              : 0x00/0x00/0x00/0x00/0x00
+MoRecvTime                               : 
+szOrigCID                                : 111111111
+szRealyCID                               : 1111
+================== Print QITEM  END ==================
+
+<OCS>
+[17:34:33:1212] [NORMAL] [QUEUE] ServerType(V) SourceCId(1571707589) SourceCallNo(0) DestCId(05016) DestCallNo(0000003) MessageID(34F1A6C8) VirtualNumber(050160000003) DcsType(14) MsgLen(57)
+[17:34:33:1213] [DEBUG] ### Print QITEM  #################################################### 
+[17:34:33:1213] [DEBUG] ### ServerType<V> MsgVerID<510>
+[17:34:33:1213] [DEBUG] ### Source Address : SrcCID<1571707589> SrcCallNo<0> Source ReturnQNo<11038>
+[17:34:33:1213] [DEBUG] ### Destination Address : DestCID<05016> DestCallNo<0000003> ModuleNo<0>
+[17:34:33:1213] [DEBUG] ### Message Code : MessageCode<11> MessageSubCode<10> MsgCodeReserved[0](TID)<4098> EsmClass<8>
+[17:34:33:1213] [DEBUG] ### MsgLen<57> MsgSerialNo<10000000> TermType<49> DataEncoding<CP949>
+[17:34:33:1214] [DEBUG] ### Sending Flags : VldPrd<60> Priority<0> RepFlag<0> RgtDlvFlg<2>
+[17:34:33:1214] [DEBUG] ### ConcatenateFlag<0> ConcatenateInfo<0> SmDefaultMsgID/CALLFW count<0>
+[17:34:33:1214] [DEBUG] ### Message : <*********************************************************>
+[17:34:33:1214] [MSG_DEBUG] Message<OCS TID 4098 TEST LG 0000003 가나다라마바사아자차카타파하>
+[17:34:33:1214] [DEBUG] ### CallBack<456123789> CallBack_Noti<0> CallBack_Check<1> Location<>
+[17:34:33:1214] [DEBUG] ### OrigCID<111111111> RelayCID<1111> FowardNo<> ForwardNo2<> ReturnQ_No<0> OrgMsgLen<0> AuthFlag<0>
+[17:34:33:1214] [DEBUG] ### Print QITEM END #################################################
+[17:34:33:1214] [TCP_DATA]  =============TCP PACKET DATA [SEND]============== 
+[17:34:33:1214] [TCP_DATA]  0x00 0x00 0x00 0x03 0x00 0x00 0x0b 0xb8 0x00 0x00
+[17:34:33:1214] [TCP_DATA]  0x23 0x28 0x00 0x00 0x00 0x2b 0x02 0x01 0x00 0x00
+[17:34:33:1215] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:34:33:1215] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0xf1 0x30
+[17:34:33:1215] [TCP_DATA]  0x35 0x30 0x31 0x36 0x30 0x30 0x30 0x30 0x30 0x30
+[17:34:33:1215] [TCP_DATA]  0x33 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:34:33:1215] [TCP_DATA]  =============TCP PACKET DATA [SEND]============== 
+[17:34:33:1216] [OCS_C] [QUERY] [SMSS#1->OCS Test] MsgType(3) SourceSystemID(3000) DestSystemID(9000) MsgLen(43) Code(0x02) Type(0x01) ServiceType(0xf1:241) ReqNum(050160000003)
+[17:34:33:1220] [TCP_DATA]  =============TCP PACKET DATA [RECV]============== 
+[17:34:33:1221] [TCP_DATA]  0x00 0x00 0x00 0x03 0x00 0x00 0x23 0x28 0x00 0x00
+[17:34:33:1221] [TCP_DATA]  0x0b 0xb8 0x00 0x00 0x00 0x58 0x02 0x02 0x00 0x00
+[17:34:33:1221] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:34:33:1221] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0xf1 0x30 0x35 0x30
+[17:34:33:1221] [TCP_DATA]  0x31 0x36 0x30 0x30 0x30 0x30 0x30 0x30 0x33 0x00
+[17:34:33:1221] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x30 0x31 0x30
+[17:34:33:1222] [TCP_DATA]  0x37 0x39 0x30 0x30 0x31 0x32 0x33 0x34 0x00 0x00
+[17:34:33:1222] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:34:33:1222] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:34:33:1222] [TCP_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[17:34:33:1222] [TCP_DATA]  0x00 0x00 0x00 0x00
+[17:34:33:1222] [TCP_DATA]  =============TCP PACKET DATA [RECV]============== 
+[17:34:33:1222] [OCS_C] [QUERY_RES] [OCS Test->SMSS#1] MsgType(3) SourceSystemID(9000) DestSystemID(3000) MsgLen(88) Code(0x02) Type(0x02) Result(0x00:OK) Cause(0x00:NO_ERROR) VirtualNum(050160000003) -> RealNum(01079001234)
+[17:34:33:1223] [DEBUG] InsertOCSCallInfo() : ServerType(V) MsgId(34F1A6C8) RecvQueue(11038) SrcCID(1571707589) SrcCallNo(0) DestCID(05016) DestCallNo(0000003) RealNum(01079001234)
+[17:34:33:1233] [DEBUG] Relay protocol set : [1:10008]
+[17:34:33:1235] [NORMAL] Success to insert OCS QUERY RESPONSE to NPDB_c [90500]
+
+<NPDB>
+[17:34:33:4304] [DEBUG] [QUEUE] SERVERTYPE(V) SRCCID(1571707589) SRCCALLNO(0) DESTCID(010) DESTCALLNO(79001234) ucSource(11038) DcsType(14) MsgLen(57) ucMsgId(34F1A6C8) EsmClass(8) VirtualNum(050160000003)
+[17:34:33:4306] [NPDB_C] [QUERY] [VSMSS#1->NPDB TEST] DSTADDR(01079001234)
+[17:34:33:4315] [NPDB_C] [QUERY_ACK] [NPDB TEST->VSMSS#1] RESULT(5:E_NO_DESTIN) RN()
+[17:34:33:4316] [DEBUG] CheckTelecom() TelePrefix[010] DestCID[010] LINE[3248] MMCSFlag[0]
+[17:34:33:4325] [DEBUG] CheckTelecom() SELECT TELE PREFIX[010] SUCCESS!! 
+[17:34:33:4326] [DEBUG] GetTelecom_New() TelePrefix(010) Prefix(7900)
+[17:34:33:4331] [DEBUG] SendW2P() : RelayFlag On => KT[1] LGU[0] RELAYQ[10008]
+[17:34:33:4331] [DEBUG] szTempCID = 010
+[17:34:33:4331] [DEBUG] stMrmRoute.stAccessListEntry[i].szDestCId = 010
+[17:34:33:4332] [DEBUG] OK! Change CID to VirtualMin.
+[17:34:33:4332] [DEBUG] CheckTelecom() TelePrefix[010] DestCID[010] LINE[3248] MMCSFlag[0]
+[17:34:33:4335] [DEBUG] CheckTelecom() SELECT TELE PREFIX[010] SUCCESS!! 
+[17:34:33:4335] [DEBUG] GetTelecom_New() TelePrefix(010) Prefix(7900)
+[17:34:33:4338] [NORMAL] LGT 01x [CP_CID : 1571707589 DestAddr : 01079001234]
+[17:34:33:4338] [DEBUG] GetTelecom_New() TelePrefix(010) Prefix(7900)
+[17:34:33:4340] [DEBUG] szMinNo=52000022
+[17:34:33:4340] [DEBUG] after GetQNoFromMrmRoute (nQNo:20019)
+[17:34:33:4342] [NORMAL] Insert Queue<20019> MsgId<00000022> CID = 1571707589 VIRTUALMIN = 010 52000022 => 010 79001234
+[17:34:33:4342] [NORMAL] SendW2P() Insert into QNo (20019)
+[17:34:33:4342] [DEBUG] v_submitTime[1769416473], QItem->nVldPrd[60], ExpiredTime[1769416533]
+[17:34:33:4348] [DEBUG] DBInsertW2PCALLINFO() : SERVERTYPE[V] MSGIDCENTER[34F1A6C8] MSGIDSERVER[34F1A6C8] MTSUBMISSIONTIME[1769416473] SRCCID[1571707589] SRCCALLNO[0] DESTCID[010] DESTCALLNO[79001234] RECV_QNO[11038] EXPIRETIME[1769416533] RD[19] CB[456123789] FWD_SRC[(null)] TRACE_ID[01226012617343207707] ORG_MVNO_INFO[] DEST_MVNO_INFO[] BILL_TYPE[2] MSGLEN[57] DCS_TYPE[14] ORG_MSGLEN[0] ORIGCID[111111111] RELAYCID[1111] VIRTUAL_NUM[050160000003]
+[17:34:33:4348] [NORMAL] Success of inserting MO message into PCSSEND Process Queue[20019] 
+
+<smstrc>
+---------------------------------------------------------------------------------------------------------
+ 번호     분초      발신CID      발신번호      착신CID      착신번호                   TID
+---------------------------------------------------------------------------------------------------------
+    6 34324606   1571707589             0        05016       0000003  01226012617343207707
+=========================================================================================================
+처리시간          프로세스      처리상태                    부가정보                                
+=========================================================================================================
+[17:34:32.4606]   GIPALL_C        성공(MT)            Node(SMSS1_2)GMId(34F1A6C8)QNo(90017)TId(4098)LN(0)DCS(CP949)
+[17:34:33.1234]   OCS             성공(OCS->NPDB)     Node(SMSS1_2)QNo(90500)VirNum(050160000003)RealNum(01079001234)LN(799)
+[17:34:33.4349]   NPDB            성공(PMT,LGT)       Node(SMSS1_2)QNo(20019)LN(1381)DCS(CP949)
+=========================================================================================================
+=========================================================================================================
+
+

@@ -1,0 +1,82 @@
+1.1.2
+1.1.2.8 VldPrd 보정
+======================================================================================================================================================
+[
+  {
+    "LOG_NO": "988",
+    "CID": "1571707589",
+    "IP_ADDR": "175.125.130.76",
+    "PORT_NO": 8544,
+    "QUEUE_NO": 11038,
+    "FX": 500,
+    "FY": 10,
+    "FLAG": "0",
+    "RC": 3,
+    "TC": 3,
+    "DESCRIPTION": "JWS_TESTHTTP",
+    "UPDATE_FLAG": "R",
+    "CP_NAME": "JWS_TEST",
+    "CP_PHONE": "02-2149-7762",
+    "SKT_NAME": "SKT",
+    "SKT_PHONE": "02-2149-7762",
+    "CP_TEAM": "WITCOM_INFRA",
+    "CP_PERSONNEL": "JWS",
+    "CP_SKT_TEAM": "SKT_TEST",
+    "MSG_TYPE": "2",
+    "BILL_TYPE": "4",
+    "PORTED_AUTCON": "1",
+    "REPLY_FLAG": "Y",
+    "LOG_FLAG": 3,
+    "LIMIT_CHECK_FLAG": "Y",
+    "DETECT_CID_FLAG": "N",
+    "CB_CHECK_FLAG": "Y",
+    "GIPVERID": 510,
+    "AUTH_FLAG": "N",
+    "DESIRE_NODE": null,
+    "CURRENT_NODE": null,
+    "RM_FLAG": 0,
+    "PCS_FLAG": 0,
+    "AES_KEY_BASE64": "+ujTciN2AoT+iWAR/Wtw8lIjtzTHVj3NT2OBAoBEHY8=",
+    "IV_BASE64": "E3fVT9zZoke5lcF8s8upSw==",
+    "CP_URL": "http://175.125.130.76:8500/sms/send/result"
+  }
+]
+
+vldprd = 0
+vldprd = 50
+vldprd = 999
+vldprd = 86500
+======================================================================================================================================================
+<GIPHTTP_RECV>
+[smss1_2:/home3/sms/log] cat GIPHTTPRECV_C_0988_40_0121_15 | grep VldPrd
+[15:46:29:0680] [DEBUG] VldPrd(50:60) Default(GIP_VLDPRD)=60
+[15:46:29:0681] [DEBUG] VldPrdSeconds(60) CurrentTime(1768977989) ExpireTimeUnix(1768978049)
+[15:46:29:0915] [INFO ] [REQ_SIMPLE] [VSMSS#1->JWS_TESTHTTP] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(50:60) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:46:29:0918] [DEBUG] [DEBUG] GIP MT BODY => VldPrd(60) RgtDlvFlag(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:46:29:0922] [INFO ] [RES_SIMPLE] [JWS_TESTHTTP->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(12) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(50:60) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0) Result(0:GI_RES_NO_ERR) MsgId(3AEE0AF5)
+[DEBUG] ### Sending Flags : VldPrd<60> Priority<0> RepFlag<0> RgtDlvFlg<2>
+[15:47:32:0738] [DEBUG] VldPrd(999:999) Default(GIP_VLDPRD)=60
+[15:47:32:0738] [DEBUG] VldPrdSeconds(999) CurrentTime(1768978052) ExpireTimeUnix(1768979051)
+[15:47:33:0012] [INFO ] [REQ_SIMPLE] [VSMSS#1->JWS_TESTHTTP] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(999:999) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:47:33:0012] [DEBUG] [DEBUG] GIP MT BODY => VldPrd(999) RgtDlvFlag(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:47:33:0015] [INFO ] [RES_SIMPLE] [JWS_TESTHTTP->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(12) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(999:999) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0) Result(0:GI_RES_NO_ERR) MsgId(3AEE0AF6)
+[DEBUG] ### Sending Flags : VldPrd<999> Priority<0> RepFlag<0> RgtDlvFlg<2>
+[15:48:07:0663] [DEBUG] VldPrd(86500:86400) Default(GIP_VLDPRD)=60
+[15:48:07:0663] [DEBUG] VldPrdSeconds(86400) CurrentTime(1768978087) ExpireTimeUnix(1769064487)
+[15:48:08:0068] [INFO ] [REQ_SIMPLE] [VSMSS#1->JWS_TESTHTTP] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(86500:86400) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:48:08:0068] [DEBUG] [DEBUG] GIP MT BODY => VldPrd(86400) RgtDlvFlag(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:48:08:0072] [INFO ] [RES_SIMPLE] [JWS_TESTHTTP->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(12) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(86500:86400) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0) Result(0:GI_RES_NO_ERR) MsgId(3AEE0AF7)
+[DEBUG] ### Sending Flags : VldPrd<86400> Priority<0> RepFlag<0> RgtDlvFlg<2>
+[15:48:33:0344] [DEBUG] VldPrd(0:86400) Default(GIP_VLDPRD)=60
+[15:48:33:0344] [DEBUG] VldPrdSeconds(86400) CurrentTime(1768978113) ExpireTimeUnix(1769064513)
+[15:48:34:0114] [INFO ] [REQ_SIMPLE] [VSMSS#1->JWS_TESTHTTP] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(0:86400) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:48:34:0114] [DEBUG] [DEBUG] GIP MT BODY => VldPrd(86400) RgtDlvFlag(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0)
+[15:48:34:0117] [INFO ] [RES_SIMPLE] [JWS_TESTHTTP->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) MsgCode(12) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) ConcatenateInfo(0) VldPrd(0:86400) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgTotalLen(0) Result(0:GI_RES_NO_ERR) MsgId(3AEE0AF8)
+[DEBUG] ### Sending Flags : VldPrd<86400> Priority<0> RepFlag<0> RgtDlvFlg<2>
+
+<SMSMOT>
+[smss1_2:/home3/sms/log] grep "VldPrd" SMSMOT_4101_0121_15      
+[15:46:29:9214] [DEBUG] VldPrd                                   : 60
+[15:47:33:0147] [DEBUG] VldPrd                                   : 999
+[15:48:08:0710] [DEBUG] VldPrd                                   : 86400
+[15:48:34:1171] [DEBUG] VldPrd                                   : 86400

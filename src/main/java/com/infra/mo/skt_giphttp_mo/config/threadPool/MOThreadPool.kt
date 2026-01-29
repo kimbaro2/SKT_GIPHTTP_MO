@@ -485,6 +485,15 @@ open class MOThreadPool(
                                 workerThreadId
                             )
 
+                            // QITEM dequeue 직후 전문 전체 출력 (스레드 풀 컨텍스트에서)
+                            // - qItemToMsgHdr 호출 전에 원본 QITEM 상태를 그대로 남기기 위함
+                            QItemServiceUtil.printQItem3(
+                                gstQItem,
+                                witcomLog,
+                                loggerName,
+                                workerThreadId
+                            )
+
                             gstQItem = QItemServiceUtil.qItemToMsgHdr(gstQItem)
 
                             // qItemToMsgHdr 호출 후 백업한 값 복원
@@ -1611,53 +1620,63 @@ open class MOThreadPool(
                                                 "[TRC 전송 성공] BILLTYPE='1' 비과금: ST_GIPEVENT_MOACK_BILL_OK TRC 호출 스킵 - 과금성공(MOACK) TRC 미출력"
                                             )
                                         } else {
-                                            // CID 2580, 6381, 1584로 시작하는 경우 ST_GIPEVENT_MOACK_BILL_OK 호출 스킵
-                                            // - CID 2580, 6381: 특별한 처리 필요 없음 (VSTAT 15 기록 안 함)
-                                            // - CID 1584: processSMReqSimple에서 이미 VSTAT 15 기록했으므로 중복 방지
-                                            // gstQItemTrans.destCid 사용 (DB 조회 없이 내부 코드에서 직접 체크)
+                                            // 문자메신저서비스(2580) 또는 문자매니저서비스(6381), 또는 CID 1584 + CDMA_ROAMING 조합인 경우 ST_GIPEVENT_MOACK_BILL_OK 호출 스킵
+                                            // - 문자메신저서비스/문자매니저서비스: ESMClass 기준으로 판단 (CID prefix 기반 구분 제거)
+                                            // - CID 1584 + CDMA_ROAMING: processSMReqSimple에서 이미 VSTAT 15 기록했으므로 중복 방지
                                             val destCIDForMOACK = gstQItemTrans.destCid ?: ""
                                             val serviceDomainForMoack = esmClassDomainResolver.resolve(gESMCLASS)
+                                            val esmClassHandler = EsmClassHandler()
+                                            val isSmsMessengerService = esmClassHandler.isSmsMessengerService(gESMCLASS)
+                                            val isSmsManagerService = esmClassHandler.isSmsManagerService(gESMCLASS)
+                                            val isCdmaRoamingWithCid1584 = esmClassHandler.isCdmaRoamingWithCid1584(gESMCLASS, destCIDForMOACK)
 
-                                            // 도메인 + CID 조합 검증 (서비스 판단은 ESMCLASS 기반)
+                                            // ESMClass 기준으로 서비스 판단 (CID prefix 기반 구분 제거)
                                             val shouldSkipMoackInsqStat = when (serviceDomainForMoack) {
                                                 EsmClassDomainResolver.ServiceDomain.NORMAL -> {
-                                                    destCIDForMOACK.startsWith("2580") || destCIDForMOACK.startsWith("6381")
+                                                    // 문자메신저서비스 또는 문자매니저서비스 (ESMClass 기준)
+                                                    isSmsMessengerService || isSmsManagerService
                                                 }
 
                                                 EsmClassDomainResolver.ServiceDomain.ROAMING -> {
-                                                    gESMCLASS == CDMA_ROAMING && destCIDForMOACK.startsWith("1584")
+                                                    // CID 1584 + CDMA_ROAMING 조합
+                                                    isCdmaRoamingWithCid1584
                                                 }
 
                                                 else -> false
                                             }
 
-                                            // 디버깅: CID + ESMCLASS 조합 확인
+                                            // 디버깅: ESMCLASS 기준 서비스 판단 확인
                                             witcomLog.c_write(
                                                 loggerName,
                                                 Level.DEBUG,
                                                 String.format(
-                                                    "[TRC 전송 성공] ST_GIPEVENT_MOACK_BILL_OK 호출 전 CID+ESMCLASS 체크: destCID(%s), ESMCLASS(%d), shouldSkip(%b)",
+                                                    "[TRC 전송 성공] ST_GIPEVENT_MOACK_BILL_OK 호출 전 ESMCLASS 체크: destCID(%s), ESMCLASS(%d), isSmsMessengerService(%b), isSmsManagerService(%b), isCdmaRoamingWithCid1584(%b), shouldSkip(%b)",
                                                     destCIDForMOACK,
                                                     gESMCLASS,
+                                                    isSmsMessengerService,
+                                                    isSmsManagerService,
+                                                    isCdmaRoamingWithCid1584,
                                                     shouldSkipMoackInsqStat
                                                 ),
                                                 workerThreadId
                                             )
 
                                             if (shouldSkipMoackInsqStat) {
-                                                // CID + ESMCLASS 조합 일치: ST_GIPEVENT_MOACK_BILL_OK 호출 스킵
+                                                // ESMCLASS 기준 서비스 판단: ST_GIPEVENT_MOACK_BILL_OK 호출 스킵
                                                 witcomLog.c_write(
                                                     loggerName,
                                                     Level.INFO,
                                                     String.format(
-                                                        "[TRC 전송 성공] CID+ESMCLASS 조합 일치: ST_GIPEVENT_MOACK_BILL_OK 스킵 - DestCID(%s), ESMCLASS(%d)",
+                                                        "[TRC 전송 성공] ESMCLASS 기준 서비스 판단: ST_GIPEVENT_MOACK_BILL_OK 스킵 - DestCID(%s), ESMCLASS(%d), isSmsMessengerService(%b), isSmsManagerService(%b)",
                                                         destCIDForMOACK,
-                                                        gESMCLASS
+                                                        gESMCLASS,
+                                                        isSmsMessengerService,
+                                                        isSmsManagerService
                                                     ),
                                                     workerThreadId
                                                 )
                                             } else {
-                                                // CID+ESMCLASS 조합이 일치하지 않는 경우: ST_GIPEVENT_MOACK_BILL_OK 호출
+                                                // ESMCLASS 기준 서비스 판단 결과 스킵하지 않는 경우: ST_GIPEVENT_MOACK_BILL_OK 호출
                                                 // C 코드 LINE 2110-2244: !gMOTRBILL 블록의 InsqStat 호출
                                                 gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
 

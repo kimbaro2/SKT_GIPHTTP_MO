@@ -1,0 +1,953 @@
+1.1.3
+1.1.3.8 <AUTH_FLAG>,Y
+======================================================================================================================================================
+======================================================================================================================================================
+HTTP_MTRECV_ACCESS
+[
+  {
+    "LOG_NO": "998",
+    "CID": "1571707589",
+    "IP_ADDR": "175.125.130.76",
+    "PORT_NO": 8500,
+    "QUEUE_NO": 11038,
+    "FX": 500,
+    "FY": 10,Q
+    "FLAG": "0",
+    "RC": 3,
+    "TC": 3,
+    "DESCRIPTION": "JWS_TESTHTTP",
+    "UPDATE_FLAG": "R",
+    "CP_NAME": "JWS_TEST",
+    "CP_PHONE": "02-2149-7762",
+    "SKT_NAME": "SKT",
+    "SKT_PHONE": "02-2149-7762",
+    "CP_TEAM": "WITCOM_INFRA",
+    "CP_PERSONNEL": "JWS",
+    "CP_SKT_TEAM": "SKT_TEST",
+    "MSG_TYPE": "2",
+    "BILL_TYPE": "4",
+    "PORTED_AUTCON": "1",
+    "REPLY_FLAG": "Y",
+    "LOG_FLAG": 3,
+    "LIMIT_CHECK_FLAG": "Y",
+    "DETECT_CID_FLAG": "N",
+    "CB_CHECK_FLAG": "Y",
+    "GIPVERID": 510,
+    "AUTH_FLAG": "Y",
+    "DESIRE_NODE": null,
+    "CURRENT_NODE": null,
+    "RM_FLAG": 0,
+    "PCS_FLAG": 0,
+    "AES_KEY_BASE64": "+ujTciN2AoT+iWAR/Wtw8lIjtzTHVj3NT2OBAoBEHY8=",
+    "IV_BASE64": "E3fVT9zZoke5lcF8s8upSw==",
+    "CP_URL": "http://175.125.130.76:8500/sms/send/result"
+  }
+]
+
+CFG_AUTH_CALLBACKLIST
+[
+  {
+    "CID": "1571707589",
+    "MODULE_NAME": "GIPHTTP",
+    "CALLBACK": "01000000077",
+    "REGI_DATE": "2018-03-09 13:48:20",
+    "DESCRIPTION": "GIPHTTP KDY TEST"
+  }
+]
+
+======================================================================================================================================================
+======================================================================================================================================================
+
+1. SKT 010
+<GIPHTTP_RECV>
+[13:21:15:0055] [DEBUG] KSC5601_CP949 인코딩 타입으로 처리합니다.
+[13:21:15:0056] [DEBUG] Base64 Decoded Bytes (HEX): 0x31 0x2e 0x47 0x49 0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x31 0x31
+0x2f 0x31 0x30 0x29 0x2d 0x20 0x53 0x4b 0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30 0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae 0x20 0x
+b8 0xde 0xbd 0xc3 0xc1 0xf6 0x20 0xc0 ... (total: 56 bytes)
+[13:21:15:0057] [DEBUG] Decoded Message: [1.GIPHTTP MT (11/10)- SKT 자사 010 테스트 메시지 입니다.]
+[13:21:15:0057] [DEBUG] Msg Length: 56 bytes.
+[13:21:15:0058] [DEBUG] msgToByteArray (HEX): 0x31 0x2e 0x47 0x49 0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x31 0x31 0x2f 0
+x31 0x30 0x29 0x2d 0x20 0x53 0x4b 0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30 0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae 0x20 0xb8 0xd
+e 0xbd 0xc3 0xc1 0xf6 0x20 0xc0 ... (total: 56 bytes)
+[13:21:15:0058] [DEBUG] Message Encoding and Length check completed successfully.
+[13:21:15:0067] [INFO ] CID-IP Check Start
+[13:21:15:0071] [INFO ] IP PORT AND CID MATCH IP: {175.125.130.76}, CID: {1571707589}
+[13:21:15:0087] [DEBUG] Default Valid Period: 60, Request Valid Period: 50
+[13:21:15:0088] [DEBUG] Default Valid Period: {60}, Current Time: {1768969275}, Expired Time: {1768969215}
+[13:21:15:0097] [DEBUG] 중간번호 4자리: 4190
+[13:21:15:0097] [DEBUG] TELEPrefixEntity 조회 시작: szDestPrefix=010, destMiddleCallNo=4190
+[13:21:15:0113] [INFO ] pcsFlag=0, code=11, subCode=10, PORTED_AUTCON=1: TELE_PREFIX 조회 후 처리
+[13:21:15:0113] [INFO ] SK번호(자사) 확인: enqueue 없이 기존 자사 처리 로직으로 위임
+[13:21:15:0113] [INFO ] SRC TelePrefix는 1571707589로 시작합니다: 0
+[13:21:15:0113] [INFO ] DEST TelePrefix는 010로 시작합니다: 41904444
+[13:21:15:0114] [INFO ] SKT 고객 입니다.
+[13:21:15:0114] [INFO ] [W2P] SKT 자사 처리: W2P 로직을 타지 않고 자사 처리 로직으로 진행합니다.
+[13:21:15:0114] [DEBUG] TelePrefix: 010, DestCallNo: 41904444, TelecomCode: 11
+[13:21:15:0114] [DEBUG] 0 MMCS 검증 시작
+[13:21:15:0115] [DEBUG] 1571707589 발신자 CID
+[13:21:15:0115] [DEBUG] 0 발신자 번호
+[13:21:15:0115] [DEBUG] 010 착신자 CID
+[13:21:15:0115] [DEBUG] 41904444 착신자 번호
+[13:21:15:0115] [DEBUG] 중간번호 4자리: {4190}
+[13:21:15:0159] [DEBUG] cfgPrefixRepository.findFirstByValueBetweenNative(firstFourDigits); 조회 결과 데이터: {%s} CFGPrefixEntity(t
+elePre=010, stPre=4190, endPre=4199, fsmsc=41, bsmsc=21, regDate=2008-01-25 03:30:55.0, description=JWS_TEST, descriptionSubData=nul
+l)
+[13:21:15:0159] [DEBUG] search Key -> 41
+[13:21:15:0159] [DEBUG] search Telecom -> 11
+[13:21:15:0159] [DEBUG] search QType -> 11038
+[13:21:15:0159] [DEBUG] 발신자 CID가 MMCS 번호로 간주됨: {1571707589}, CallNo: {0}, gMMCSFlag: {false}
+"GIPHTTPRECV_C_0988_41_0121_13" 124L, 13460C                                                                      1,1        꼭대기
+[13:32:36:0627] [DEBUG] copySize: 56, ucMsgLen: 56, ucDataEncoding: 14
+[13:32:36:0638] [DEBUG] qItem.szMsg after write/read (HEX): 0x31 0x2e 0x47 0x49 0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x
+31 0x31 0x2f 0x31 0x30 0x29 0x2d 0x20 0x53 0x4b 0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30 0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae
+ 0x20 0xb8 0xde 0xbd 0xc3 0xc1 0xf6 0x20 0xc0 ... (total: 56 bytes)
+[13:32:36:0638] [DEBUG] qItem.ucMsgLen: 56, qItem.ucDataEncoding: 14
+[13:32:36:0638] [INFO ] [REQ_SIMPLE] [GIPURL_TEST->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41
+904444) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateF
+lag(0) ConcatenateInfo(0) VldPrd(1768970016:1768970016) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(
+56) OrgMsgTotalLen(0)
+[13:32:36:0639] [DEBUG] [DEBUG] GIP MT BODY => VldPrd(1768970016) RgtDlvFlag(2) CallBack(01000000077) OrigCID(111111111) RelayCID(11
+11) MsgLen(56) OrgMsgTotalLen(0)
+[13:32:36:0639] [INFO ] [W2P] 최종 큐 삽입: 자사 처리 (W2P 로직 미경유) - targetQueueNo=4111
+[13:32:36:0639] [INFO ] InsertIntoSmsQWithQNo 직전 AuthFlag 확인: request.cAuthFlag=1, qItem.usAuthFlag=1
+[13:32:36:0722] [INFO ] [RES_SIMPLE] [VSMSS#1->] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) Msg
+Code(12) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) Conc
+atenateInfo(0) VldPrd(1768970016:1768970016) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgT
+otalLen(0) Result(0:GI_RES_NO_ERR) MsgId(3AF0014E)
+[13:32:36:0723] [DEBUG] [DEBUG] ### Print QITEM  ####################################################
+[DEBUG] ### ServerType<V> MsgVerID<510>
+[DEBUG] ### Source Address : SrcCID<1571707589> SrcCallNo<0> Source ReturnQNo<11038>
+[DEBUG] ### Destination Address : DestCID<010> DestCallNo<41904444> ModuleNo<0>
+[DEBUG] ### Message Code : MessageCode<11> MessageSubCode<10> MsgCodeReserved[0](TID)<4098>
+[DEBUG] ### MsgLen<56> MsgSerialNo<10000000> TermType<49> DataEncoding<CP949>
+[DEBUG] ### Sending Flags : VldPrd<1768970016> Priority<0> RepFlag<0> RgtDlvFlg<2>
+[DEBUG] ### ConcatenateFlag<0> ConcatenateInfo<0> SmDefaultMsgID/CALLFW count<0>
+[DEBUG] ### Message : <********************************************************>
+[MSG_DEBUG] Message
+[HTTP_DATA]  ==================HTTP PACKET DATA [MSG]===================
+[TCP_DATA]  31 2e 47 49 50 48 54 54 50 20 4d 54 20 28 31 31 2f 31 30 29
+[TCP_DATA]  2d 20 53 4b 54 20 c0 da bb e7 20 30 31 30 20 c5 d7 bd ba c6
+[TCP_DATA]  ae 20 b8 de bd c3 c1 f6 20 c0 d4 b4 cf b4 d9 2e
+[HTTP_DATA]  ==================HTTP PACKET DATA END======================
+[DEBUG] ### CallBack<01000000077> CallBack_Noti<0> CallBack_Check<1> Location<>
+[DEBUG] ### OrigCID<111111111> RelayCID<1111> FowardNo<> ForwardNo2<> ReturnQ_No<0> OrgMsgLen<0> AuthFlag<1> VirtualNum<>
+[DEBUG] ### Print QITEM END ################################################
+
+<SMSMOT>
+[13:32:36:6405] [DEBUG] ================== SMSMOT_4101 MT MESSAGE QITEM Print QITEM  ==================
+[13:32:36:6406] [DEBUG] Server Type                              : V
+[13:32:36:6406] [DEBUG] Message VersionID                        : 510
+[13:32:36:6406] [DEBUG] ========= Source Address =========
+[13:32:36:6406] [DEBUG] SourceCID                                : 1571707589
+[13:32:36:6406] [DEBUG] SourceCallNo                             : 0
+[13:32:36:6406] [DEBUG] Source Return QNO                        : 11038
+[13:32:36:6406] [DEBUG] ========= Destination Address =========
+[13:32:36:6406] [DEBUG] DestCID                                  : 010
+[13:32:36:6406] [DEBUG] DestCallNo                               : 41904444
+[13:32:36:6406] [DEBUG] ModuleNo                                 : 0
+[13:32:36:6407] [DEBUG] ========= Message Code =========
+[13:32:36:6407] [DEBUG] Message Code                             : 11
+[13:32:36:6407] [DEBUG] Message SubCode                          : 10
+[13:32:36:6407] [DEBUG] TeleService ID                           : 4098
+[13:32:36:6407] [DEBUG] Msg Length                               : 56
+[13:32:36:6407] [DEBUG] MsgSerialNo                              : 10000000
+[13:32:36:6407] [DEBUG] TermType                                 : 49
+[13:32:36:6407] [DEBUG] DataEnconding                            : 14:CP949
+[13:32:36:6407] [DEBUG] ucRsv                                    : 
+[13:32:36:6407] [DEBUG] ucMsgId                                  : 3AF0014E
+[13:32:36:6408] [DEBUG] ========= Sending Flags =========
+[13:32:36:6408] [DEBUG] SourceAddr ton                           : 0
+[13:32:36:6408] [DEBUG] SourceAddr npi                           : 0
+[13:32:36:6408] [DEBUG] DestAddr ton                             : 0
+[13:32:36:6408] [DEBUG] DestAddr npi                             : 0
+[13:32:36:6408] [DEBUG] ProtocolID                               : 0
+[13:32:36:6408] [DEBUG] VldPrd                                   : 1768970016
+[13:32:36:6408] [DEBUG] Priority                                 : 0
+[13:32:36:6408] [DEBUG] RepFlag                                  : 0
+[13:32:36:6408] [DEBUG] RgtDlvFlg TR/Receipt flag                : 2
+[13:32:36:6409] [DEBUG] SmDefaultMsgID / callforward count       : 0
+[13:32:36:6409] [DEBUG] ========= IONDINFO =========
+[13:32:36:6409] [DEBUG] uQC                                      : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[0]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[1]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[2]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[3]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[4]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[5]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[6]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[7]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[8]                         : 0
+[13:32:36:6409] [DEBUG] nRsv4Protocol[9]                         : 0
+[13:32:36:6410] [DEBUG] nRsv4Protocol[10]                        : 11
+[13:32:36:6410] [DEBUG] nRsv4Protocol[11]                        : 0
+[13:32:36:6410] [DEBUG] Message : ********************************************************
+[13:32:36:6410] [MSG_DEBUG] Message                              : 1.GIPHTTP MT (11/10)- SKT 자사 010 테스트 메시지 입니다.
+[13:32:36:6410] [DEBUG] CallBack                                 : 01000000077
+[13:32:36:6410] [DEBUG] ucLocation                               : 
+[13:32:36:6410] [DEBUG] ucRsvLocation                            :  
+[13:32:36:6410] [DEBUG] Foward No                                : 
+[13:32:36:6410] [DEBUG] Foward No2                               : 
+[13:32:36:6410] [DEBUG] ReturnQ_No                               : 0
+[13:32:36:6410] [DEBUG] ConcatenateFlag                          : 0
+[13:32:36:6410] [DEBUG] ConcatenateInfo                          : 0
+[13:32:36:6411] [DEBUG] OSFI[1/2/3/4/5/6/7/8]                    : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+[13:32:36:6411] [DEBUG] OrgCallingNumber                         : 
+[13:32:36:6411] [DEBUG] OrigMvnoInformation                      : 
+[13:32:36:6411] [DEBUG] DestMvnoInformation                      : 
+[13:32:36:6411] [DEBUG] BillType                                 : 4
+[13:32:36:6411] [DEBUG] FullRN                                   : 
+[13:32:36:6411] [DEBUG] RcsTag                                   : 
+[13:32:36:6411] [DEBUG] RcsResult                                : 0
+[13:32:36:6411] [DEBUG] MsgAddNum                                : 0
+[13:32:36:6411] [DEBUG] CallBack_Noti                            : 0
+[13:32:36:6411] [DEBUG] 010Plus                                  : 0
+[13:32:36:6411] [DEBUG] Message Origin                           : 1
+[13:32:36:6412] [DEBUG] CallBack_Check                           : 1
+[13:32:36:6412] [DEBUG] TraceID                                  : 01226012113323562203
+[13:32:36:6412] [DEBUG] OrgMsgLen                                : 0
+[13:32:36:6412] [DEBUG] ChildNumOrd                              : 0
+[13:32:36:6412] [DEBUG] Auth_Flag                                : 1
+[13:32:36:6412] [DEBUG] SMS_OSFI[1/2/3/4/5]              : 0x00/0x00/0x00/0x00/0x00
+[13:32:36:6412] [DEBUG] MoRecvTime                               : 
+[13:32:36:6412] [DEBUG] szOrigCID                                : 111111111
+[13:32:36:6412] [DEBUG] szRelayCID                               : 1111
+[13:32:36:6413] [DEBUG] VirtualNum                               : 
+[13:32:36:6413] [DEBUG] ================== Print QITEM  END ==================
+
+[13:32:36:6413] [DEBUG]    ProcessDataSMPP3A
+[13:32:36:6413] [DEBUG] Now = 1768969956, Expired Time = 1768970016
+[13:32:36:6413] [DEBUG] CallBack(01000000077) Do Not Foward(00)
+[13:32:36:6413] [DEBUG] Message Reference Number(0) Total SegMent(0) SEGMENT NUMBER(0)
+[13:32:36:6413] [DEBUG] OSFI[0/1/2/3/4/5/6/7](0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00)
+[13:32:36:6413] [DEBUG] OrigMvnoInformation()
+[13:32:36:6413] [DEBUG] DestMvnoInformation()
+[13:32:36:6414] [DEBUG] FullRN()
+[13:32:36:6414] [DEBUG] RcsTag() RcsResult(0)
+[13:32:36:6414] [DEBUG] Message AddNum (0)
+[13:32:36:6414] [DEBUG] Auth_Flag (1)
+[13:32:36:6414] [SMSMOT] [SUBMIT_SM] [SMSS#1->SMSC#41] src_addr(1571707589) dest_addr(1041904444) esm_cls(0x00:UNKNOWN_ESM_CLASS) msg_len(56) DCS(0x0E:CP949) callback(01000000077) tid(CMT) src_addr_ton(0) src_addr_npi(9) dest_addr_ton(1) dest_addr_npi(1) prot_id(0) prio_flag(0) schedule_deli_time() valid_period(260121133336036+) regi_deli_flag(1:Receipt required) replace_if_present_flag(0) data_coding(0xFE) sm_default_msg_id(0) sar_msg_ret_num(0) sar_tot_seg(0) sar_seg_seq(0) orig_msg_tot_len(0) do_not_fwd(0:NO) FTN() OSFI(0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00) orig_calling_num() sar_msg_addnum(0) callback_noti(0:OFF) NW-Callback-Chg(0) msg_orig(1:FromWeb) callback_chk(1) Orig_mvno_info() Dest_mvno_info() auth_flag(1) SMS_OSFI(0x00/0x00/0x00/0x00/0x00)
+[13:32:36:6415] [LOG_DATA]  0x00 0x00 0x00 0xbc 0x00 0x00 0x00 0x04 0x00 0x00
+[13:32:36:6415] [LOG_DATA]  0x00 0x00 0x00 0x00 0x00 0x4f
+[13:32:36:6415] [LOG_DATA]  0x43 0x4d 0x54 0x00 0x00 0x09 0x31 0x35 0x37 0x31
+[13:32:36:6415] [LOG_DATA]  0x37 0x30 0x37 0x35 0x38 0x39 0x00 0x01 0x01 0x31
+[13:32:36:6415] [LOG_DATA]  0x30 0x34 0x31 0x39 0x30 0x34 0x34 0x34 0x34 0x00
+[13:32:36:6416] [LOG_DATA]  0x00 0x00 0x00 0x00 0x32 0x36 0x30 0x31 0x32 0x31
+[13:32:36:6416] [LOG_DATA]  0x31 0x33 0x33 0x33 0x33 0x36 0x30 0x33 0x36 0x2b
+[13:32:36:6416] [LOG_DATA]  0x00 0x01 0x00 0xfe 0x00 0x38 0x31 0x2e 0x47 0x49
+[13:32:36:6416] [LOG_DATA]  0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28
+[13:32:36:6416] [LOG_DATA]  0x31 0x31 0x2f 0x31 0x30 0x29 0x2d 0x20 0x53 0x4b
+[13:32:36:6416] [LOG_DATA]  0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30
+[13:32:36:6416] [LOG_DATA]  0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae 0x20 0xb8 0xde
+[13:32:36:6416] [LOG_DATA]  0xbd 0xc3 0xc1 0xf6 0x20 0xc0 0xd4 0xb4 0xcf 0xb4
+[13:32:36:6416] [LOG_DATA]  0xd9 0x2e 0x27 0x41 0x00 0x02 0x00 0x01 0x27 0x07
+[13:32:36:6417] [LOG_DATA]  0x00 0x01 0x0e 0x27 0x02 0x00 0x0b 0x30 0x31 0x30
+[13:32:36:6417] [LOG_DATA]  0x30 0x30 0x30 0x30 0x30 0x30 0x37 0x37 0x27 0x31
+[13:32:36:6417] [LOG_DATA]  0x00 0x01 0x00 0x27 0x32 0x00 0x01 0x00 0x27 0x12
+[13:32:36:6417] [LOG_DATA]  0x00 0x02 0x00 0x00 0x27 0x13 0x00 0x02 0x00 0x00
+[13:32:36:6417] [LOG_DATA]  0x27 0x14 0x00 0x02 0x00 0x01 0x27 0x15 0x00 0x02
+[13:32:36:6417] [LOG_DATA]  0x00 0x01
+[13:32:36:6542] [SMSMOT] [SUBMIT_SM_RESP] [SMSC#41->SMSS#1] msg_id(00000002)
+
+<SMSMOR>
+[13:32:27:1059] [DEBUG] ReadFromSMSC() : Recv LinkQry_Resp
+[13:32:36:6943] [LOG_DATA]  0x00 0x00 0x01 0x47 0x00 0x00 0x00 0x05 0x00 0x00
+[13:32:36:6944] [LOG_DATA]  0x00 0x00 0x00 0x00 0x00 0x02
+[13:32:36:6944] [LOG_DATA]  0x43 0x4d 0x54 0x00 0x01 0x01 0x31 0x30 0x34 0x31
+[13:32:36:6944] [LOG_DATA]  0x39 0x30 0x34 0x34 0x34 0x34 0x00 0x00 0x09 0x31
+[13:32:36:6944] [LOG_DATA]  0x35 0x37 0x31 0x37 0x30 0x37 0x35 0x38 0x39 0x00
+[13:32:36:6944] [LOG_DATA]  0x04 0x00 0x00 0x32 0x36 0x30 0x31 0x32 0x31 0x31
+[13:32:36:6945] [LOG_DATA]  0x33 0x33 0x32 0x00 0x32 0x36 0x30 0x31 0x32 0x31
+[13:32:36:6945] [LOG_DATA]  0x31 0x33 0x33 0x33 0x33 0x36 0x30 0x33 0x36 0x2b
+[13:32:36:6945] [LOG_DATA]  0x00 0x01 0x00 0xfe 0x00 0x76 0x69 0x64 0x3a 0x32
+[13:32:36:6945] [LOG_DATA]  0x20 0x73 0x75 0x62 0x3a 0x30 0x30 0x30 0x20 0x64
+[13:32:36:6945] [LOG_DATA]  0x6c 0x76 0x72 0x64 0x3a 0x30 0x30 0x30 0x20 0x73
+[13:32:36:6945] [LOG_DATA]  0x75 0x62 0x6d 0x69 0x74 0x20 0x64 0x61 0x74 0x65
+[13:32:36:6945] [LOG_DATA]  0x3a 0x32 0x36 0x30 0x31 0x32 0x31 0x31 0x33 0x33
+[13:32:36:6945] [LOG_DATA]  0x32 0x20 0x64 0x6f 0x6e 0x65 0x20 0x64 0x61 0x74
+[13:32:36:6945] [LOG_DATA]  0x65 0x3a 0x32 0x36 0x30 0x31 0x32 0x31 0x31 0x33
+[13:32:36:6946] [LOG_DATA]  0x33 0x32 0x20 0x73 0x74 0x61 0x74 0x3a 0x44 0x45
+[13:32:36:6946] [LOG_DATA]  0x4c 0x49 0x56 0x52 0x44 0x20 0x65 0x72 0x72 0x3a
+[13:32:36:6946] [LOG_DATA]  0x4e 0x6f 0x20 0x45 0x72 0x72 0x6f 0x72 0x20 0x54
+[13:32:36:6946] [LOG_DATA]  0x65 0x78 0x74 0x3a 0x31 0x2e 0x47 0x49 0x50 0x48
+[13:32:36:6946] [LOG_DATA]  0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x31 0x31
+[13:32:36:6946] [LOG_DATA]  0x2f 0x31 0x30 0x29 0x02 0x0c 0x00 0x02 0x00 0x00
+[13:32:36:6946] [LOG_DATA]  0x02 0x0e 0x00 0x01 0x00 0x02 0x0f 0x00 0x01 0x00
+[13:32:36:6946] [LOG_DATA]  0x27 0x3e 0x00 0x02 0x00 0x00 0x27 0x41 0x00 0x02
+[13:32:36:6947] [LOG_DATA]  0x00 0x01 0x27 0x02 0x00 0x0b 0x30 0x31 0x30 0x30
+[13:32:36:6947] [LOG_DATA]  0x30 0x30 0x30 0x30 0x30 0x37 0x37 0x27 0x03 0x00
+[13:32:36:6947] [LOG_DATA]  0x0b 0x30 0x31 0x30 0x31 0x31 0x31 0x31 0x33 0x33
+[13:32:36:6947] [LOG_DATA]  0x33 0x33 0x27 0x07 0x00 0x01 0x0e 0x27 0x12 0x00
+[13:32:36:6947] [LOG_DATA]  0x02 0x00 0x00 0x27 0x13 0x00 0x02 0x00 0x00 0x27
+[13:32:36:6947] [LOG_DATA]  0x14 0x00 0x02 0x00 0x01 0x27 0x15 0x00 0x02 0x00
+[13:32:36:6947] [LOG_DATA]  0x01 0x27 0x11 0x00 0x04 0x00 0x00 0x00 0x00 0x27
+[13:32:36:6947] [LOG_DATA]  0x25 0x00 0x00 0x27 0x31 0x00 0x01 0x00 0x27 0x32
+[13:32:36:6948] [LOG_DATA]  0x00 0x01 0x00 0x27 0x34 0x00 0x00 0x00 0x00 0x00
+[13:32:36:6948] [LOG_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[13:32:36:6948] [LOG_DATA]  0x00
+[13:32:36:6948] [SMSMOR] [DELIVERY_RECEIPT] [SMSC#41->SMSS#1] src_addr(1041904444) dest_addr(1571707589) esm_cls(0x04:NORMAL_TR) FTN() callback(01000000077) short_msg(id:2 sub:000 dlvrd:000 submit date:2601211332 done date:2601211332 stat:DELIVRD err:No Error Text:**********) Index(0:Nothing) msg_len(118) sar_msg_ret_num(0) sar_tot_seg(0) sar_seg_seq(0) orig_msg_tot_len(0) do_not_fwd(0:NO) tid(CMT) src_addr_ton(1) src_addr_npi(1) dest_addr_ton(0) dest_addr_npi(9) prot_id(0) prio_flag(0) schedule_deli_time(2601211332) valid_period(260121133336036+) regi_deli_flag(1:Receipt required) replace_if_present_flag(0) data_coding(0xFE:Empty) sm_default_msg_id(0) OSFI(0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00) orig_calling_num() sar_msg_addnum(0) callback_noti(0:OFF) NW-Callback-Chg(0) msg_orig(1:FromWeb) callback_chk(1) Orig_mvno_info() Dest_mvno_info() auth_flag(1) SMS_OSFI(0x00/0x00/0x00/0x00/0x00)
+[13:32:36:6949] [DEBUG] ============== [Print SM_ACK] ============== 
+[13:32:36:6949] [DEBUG] ================== Header ================== 
+[13:32:36:6949] [DEBUG]         command_length  : [17]
+[13:32:36:6949] [DEBUG]         command_id      : [0x80000005]
+[13:32:36:6949] [DEBUG]         command_status  : [0]
+[13:32:36:6949] [DEBUG]         sequence_number : [2]
+[13:32:36:6950] [DEBUG] ================== Header ================== 
+[13:32:36:6950] [DEBUG] =================== Body =================== 
+[13:32:36:6950] [DEBUG]         message_id      : []
+[13:32:36:6950] [DEBUG] =================== Body =================== 
+[13:32:36:6950] [DEBUG] ============== [Print SM_ACK] ============== 
+[13:32:36:6950] [SMSMOR] [DELIVERY_RECEIPT_RESP] [SMSS#1->SMSC#41] Send Ack Success. Convert MessageID[00000002]
+[13:32:36:6950] [DEBUG] ACK 성공 CmdID(5)(ret:1)
+[13:32:36:6961] [DEBUG] DBGetServerTypeCallinfo() : ServerType(V) MsgIdCenter(00000002) DestCallNo(41904444) matched in CallInfo.
+[13:32:36:6962] [DEBUG] DBGetServerTypeCallinfo() : GetServerType [V]
+[13:32:36:6970] [DEBUG] Reference Number : 0 Total_Segment & Segment_SeqNum = 0
+[13:32:36:6970] [DEBUG] CheckNpa() Tele_Pre[104] Tele_Pre2[10] Npa[104] LINE[3396] 
+[13:32:36:6975] [DEBUG] CheckNpa() SELECT TELE_PRE[104][10] SUCCESS!! 
+[13:32:36:6981] [DEBUG] ================== SMSMOR_4151 RECEIVE ITEM FROM SMSC Print QITEM  ==================
+[13:32:36:6981] [DEBUG] Message VersionID                        : 0
+[13:32:36:6981] [DEBUG] ========= Source Address =========
+[13:32:36:6981] [DEBUG] SourceCID                                : 010
+[13:32:36:6981] [DEBUG] SourceCallNo                             : 41904444
+[13:32:36:6981] [DEBUG] Source Return QNO                        : 1100
+[13:32:36:6981] [DEBUG] ========= Destination Address =========
+[13:32:36:6981] [DEBUG] DestCID                          : 1571707589
+[13:32:36:6981] [DEBUG] DestCallNo                               : 0
+[13:32:36:6982] [DEBUG] ModuleNo                                 : 0
+[13:32:36:6982] [DEBUG] ========= Message Code =========
+[13:32:36:6982] [DEBUG] Message Code                             : 13
+[13:32:36:6982] [DEBUG] Message SubCode                  : 9
+[13:32:36:6982] [DEBUG] TELESERVICE ID                   : 0
+[13:32:36:6982] [DEBUG] MsgSerialNo                              : 0
+[13:32:36:6982] [DEBUG] TermType                                 : 0
+[13:32:36:6982] [DEBUG] DataEncoding                             : CP949
+[13:32:36:6982] [DEBUG] ========= Sending Flags =========
+[13:32:36:6982] [DEBUG] SourceAddr ton                           : 0
+[13:32:36:6983] [DEBUG] SourceAddr npi                           : 0
+[13:32:36:6983] [DEBUG] DestAddr ton                             : 0
+[13:32:36:6983] [DEBUG] DestAddr npi                             : 0
+[13:32:36:6983] [DEBUG] Protocol ID                              : 0
+[13:32:36:6983] [DEBUG] VldPrd                                   : 0
+[13:32:36:6983] [DEBUG] Priority                                 : 0
+[13:32:36:6983] [DEBUG] RepFlag                          : 0
+[13:32:36:6983] [DEBUG] RgtDlvFlg TR/Receipt flag                : 0
+[13:32:36:6983] [DEBUG] SmDefaultMsgID / callforward count       : 0
+[13:32:36:6983] [DEBUG] ========= IONDINFO =========
+[13:32:36:6983] [DEBUG] uQC                                      : 0
+[13:32:36:6984] [DEBUG] Message Length                   : 0
+[13:32:36:6984] [DEBUG] MessagID                         : 00000002
+[13:32:36:6984] [DEBUG] Message : 
+[13:32:36:6984] [MSG_DEBUG] Message                              : 
+[13:32:36:6984] [DEBUG] CallBack                                 : 01000000077
+[13:32:36:6984] [DEBUG] ucLocation                               : FFFFFFFFFF
+[13:32:36:6984] [DEBUG] Foward No                                : 
+[13:32:36:6984] [DEBUG] Foward No2                               : 
+[13:32:36:6984] [DEBUG] ReturnQ_No                               : 0
+[13:32:36:6984] [DEBUG] ConcatenateFlag                  : 0
+[13:32:36:6984] [DEBUG] ConcatenateInfo                  : 0
+[13:32:36:6984] [DEBUG] OSFI[1/2/3/4/5/6/7/8]                    : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+[13:32:36:6985] [DEBUG] OrigMvnoInformation                      : 
+[13:32:36:6985] [DEBUG] DestMvnoInformation                      : 
+[13:32:36:6985] [DEBUG] FullRN                   : 
+[13:32:36:6985] [DEBUG] RcsTag                   : 
+[13:32:36:6985] [DEBUG] MsgAddNum                                : 0
+[13:32:36:6985] [DEBUG] CallBack_Noti                    : 0
+[13:32:36:6985] [DEBUG] 010Plus                          : 0
+[13:32:36:6985] [DEBUG] Message Origin                   : 1
+[13:32:36:6985] [DEBUG] CallBack_Check                   : 1
+[13:32:36:6985] [DEBUG] OrgMsgLen                        : 0
+[13:32:36:6985] [DEBUG] Auth_Flag                        : 1
+[13:32:36:6986] [DEBUG] SMS_OSFI[1/2/3/4/5]                      : 0x00/0x00/0x00/0x00/0x00
+[13:32:36:6986] [DEBUG] Nchange                          : 0
+[13:32:36:6986] [DEBUG] szVirtualNum                             : 
+[13:32:36:6986] [DEBUG] ================== Print QITEM  END ==================
+
+<VBILL>
+[13:32:36:6994] [DEBUG] ================== Get VBILL Queue Print QITEM  ==================
+[13:32:36:6995] [DEBUG] Server Type             : V
+[13:32:36:6995] [DEBUG] Message VersionID       : 0
+[13:32:36:6995] [DEBUG] =========== Source Address ============
+[13:32:36:6995] [DEBUG] SourceCID               : 010
+[13:32:36:6995] [DEBUG] SourceCallNo            : 41904444
+[13:32:36:6995] [DEBUG] Source Return QNO       : 1100
+[13:32:36:6995] [DEBUG] ========= Destination Address =========
+[13:32:36:6995] [DEBUG] DestCID                 : 1571707589
+[13:32:36:6996] [DEBUG] DestCallNo              : 0
+[13:32:36:6996] [DEBUG] ModuleNo                : 0
+[13:32:36:6996] [DEBUG] ============= Message Code ============
+[13:32:36:6996] [DEBUG] Message Code            : 13
+[13:32:36:6996] [DEBUG] Message SubCode         : 9
+[13:32:36:6996] [DEBUG] TeleService ID          : 0
+[13:32:36:6996] [DEBUG] usMsgCodeReserved[1]    : 0
+[13:32:36:6996] [DEBUG] Msg Length              : 0
+[13:32:36:6996] [DEBUG] MsgSerialNo             : 0
+[13:32:36:6996] [DEBUG] TermType                : 0
+[13:32:36:6997] [DEBUG] SplitSeq                : 0
+[13:32:36:6997] [DEBUG] DataEnconding           : 14:CP949
+[13:32:36:6997] [DEBUG] nRsv4Protocol[0]        : 0
+[13:32:36:6997] [DEBUG] nRsv4Protocol[1]        : 0
+[13:32:36:6997] [DEBUG] nRsv4Protocol[2]        : 825243186
+[13:32:36:6997] [DEBUG] nRsv4Protocol[3]        : 858861874
+[13:32:36:6997] [DEBUG] nRsv4Protocol[4]        : 12851
+[13:32:36:6997] [DEBUG] nRsv4Protocol[5]        : 2
+[13:32:36:6997] [DEBUG] nRsv4Protocol[6]        : 0
+[13:32:36:6997] [DEBUG] nRsv4Protocol[7]        : 0
+[13:32:36:6997] [DEBUG] nRsv4Protocol[8]        : 0
+[13:32:36:6997] [DEBUG] nRsv4Protocol[9]        : 0
+[13:32:36:6998] [DEBUG] nRsv4Protocol[10] / RD / Roaming PMN   : 11
+[13:32:36:6998] [DEBUG] nRsv4Protocol[11] / EsmClass           : 4
+[13:32:36:6998] [DEBUG] =========== Sending Flags ============
+[13:32:36:6998] [DEBUG] VldPrd                  : 0
+[13:32:36:6998] [DEBUG] Priority                : 0
+[13:32:36:6998] [DEBUG] RepFlag                 : 0
+[13:32:36:6998] [DEBUG] RgtDlvFlg TR/Receipt flag   : 0
+[13:32:36:6998] [DEBUG] SmDefaultMsgID / callforward count   : 0
+[13:32:36:6998] [DEBUG] =========== Receive Flags ============
+[13:32:36:6998] [DEBUG] Message Status          : 2
+[13:32:36:6998] [DEBUG] GSMErrCode              : 0
+[13:32:36:6998] [DEBUG] FlagReserved[0] / Center Number(VSMSS)   : 0
+[13:32:36:6998] [DEBUG] FlagReserved[1]         : 0
+[13:32:36:6999] [DEBUG] FlagReserved[2]         : 0
+[13:32:36:6999] [DEBUG] SRC_TYPE(1:Phone, 2:Web): 0
+[13:32:36:6999] [DEBUG] DoNotForward            : 00
+[13:32:36:6999] [DEBUG] MessageID               : 00000002
+[13:32:36:6999] [DEBUG] Rsv4Dlv[1] / W-Zone Flag: 48
+[13:32:36:6999] [DEBUG] Rsv4Dlv[2] / NCHANGE    : 0
+[13:32:36:6999] [DEBUG] Message                 : 
+[13:32:36:6999] [MSG_DEBUG] Message     : 
+[13:32:36:6999] [DEBUG] CreateTime              : 
+[13:32:36:6999] [DEBUG] CallBack                : 01000000077
+[13:32:36:6999] [DEBUG] szFree2[0] / MRM SM_STATE_MRMSPAM(1)   : 0
+[13:32:36:6999] [DEBUG] szFree2[1]              : 0
+[13:32:36:7000] [DEBUG] szFree2[2]              : 0
+[13:32:36:7000] [DEBUG] szFree2[3]              : 0
+[13:32:36:7000] [DEBUG] szFree2[4]              : 0
+[13:32:36:7000] [DEBUG] szFree2[5]              : 0
+[13:32:36:7000] [DEBUG] szFree2[6]              : 0
+[13:32:36:7000] [DEBUG] szFree2[7]              : 0
+[13:32:36:7000] [DEBUG] szFree2[8]              : 0
+[13:32:36:7000] [DEBUG] szFree2[9]              : 0
+[13:32:36:7000] [DEBUG] szFree2[10]             : 0
+[13:32:36:7000] [DEBUG] ucLocation              : FFFFFFFFFF
+[13:32:36:7000] [DEBUG] ucRsvLocation           : 0
+[13:32:36:7000] [DEBUG] Foward No               : 
+[13:32:36:7001] [DEBUG] Foward No2              : 
+[13:32:36:7001] [DEBUG] ReturnQ_No              : 0
+[13:32:36:7001] [DEBUG] ConcatenateFlag         : 0
+[13:32:36:7001] [DEBUG] ConcatenateInfo         : 0
+[13:32:36:7001] [DEBUG] OSFI[1/2/3/4/5/6/7/8]   : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+[13:32:36:7001] [DEBUG] OrgCallingNumber        : 
+[13:32:36:7001] [DEBUG] OrigMvnoInformation     : 
+[13:32:36:7001] [DEBUG] DestMvnoInformation     : 
+[13:32:36:7001] [DEBUG] BillType                :  
+[13:32:36:7001] [DEBUG] FullRN                  : 
+[13:32:36:7001] [DEBUG] RcsTag                  : 
+[13:32:36:7001] [DEBUG] RcsResult               : 0
+[13:32:36:7002] [DEBUG] MsgAddNum               : 0
+[13:32:36:7002] [DEBUG] sar_msg_ref_num         : 0
+[13:32:36:7002] [DEBUG] sar_total_segment       : 0
+[13:32:36:7002] [DEBUG] sar_segment_seqnum      : 0
+[13:32:36:7002] [DEBUG] CallBack_Noti           : 0
+[13:32:36:7002] [DEBUG] 010Plus                 : 0
+[13:32:36:7002] [DEBUG] Message Origin          : 1
+[13:32:36:7002] [DEBUG] CallBack_Check          : 1
+[13:32:36:7003] [DEBUG] TraceID                 : 01226012113323562203
+[13:32:36:7003] [DEBUG] OrgMsgLen               : 0
+[13:32:36:7003] [DEBUG] ChildNumOrd(Multinumber Service)  : 0
+[13:32:36:7003] [DEBUG] Auth_Flag               : 1
+[13:32:36:7003] [DEBUG] SMS_OSFI[1/2/3/4/5]     : 0x00/0x00/0x00/0x00/0x00
+[13:32:36:7003] [DEBUG] MoRecvTime              : 
+[13:32:36:7003] [DEBUG] VirtualNum              : 
+[13:32:36:7003] [DEBUG] ================== Print QITEM  END ==================
+
+[13:32:36:7003] [DEBUG] MsgIdCenter(00000002), DestCallNo(41904444)
+[13:32:36:7018] [DEBUG] OrigCID[111111111] RelayCID[1111]
+[13:32:36:7225] [DEBUG] DELETE CALLINFO =============    
+[13:32:36:7227] [NORMAL] <<TRANS_RESULT>> Message Status = E_SENT, SMSC MessageID(00000002)|BILL OK!|SourceCID(010) SourceCallNo(41904444) DestCID(1571707589) DestCallNo(0) CP MessageID(3AF0014E)
+
+<GIPHTTP_SEND>
+X
+
+<VSTAT>
+3236 010 41904444 1571707589 0 3 00 012718 18 11 04
+3236 010 41904444 1571707589 0 3 41 011341 38 11 04
+3236 1571707589 0 010 41904444 2 00 012743 12 11 00
+3236 1571707589 0 010 41904444 2 41 011441 32 11 00
+
+<CDR>
+X
+
+<smstrc.sh>
+[13:32:36.6407]   GIPALL_C        성공(MT)            Node(SMSS1_2)GMId(3AF0014E)QNo(4111)TId(4098)LN(0)DCS(CP949)
+[13:32:36.6557]   SMSMOT          성공(MT)            Node(SMSS1_2)CMId(00000002)DestNo(01041904444)Tid(4098)SMSC No(41)LN(930)DCS(CP949)
+[13:32:36.6975]   SMSMOR          전송성공(TR)        Node(SMSS1_2)CMId(00000002)EsmCls(4)Status(2:DELIVERED)SMSC No(41)LN(1794)DCS(CP949)
+[13:32:36.6993]   SMSMOR          성공(MOQ전송)       Node(SMSS1_2)QNo(90000)SMSC No(41)LN(1432)DCS(CP949)
+[13:32:36.7019]   VBILL           과금성공            Node(SMSS1_2)LN(496)DCS(CP949)          
+[13:32:36.7227]   VBILL           성공                Node(SMSS1_2)QNo(11038)LN(689)DCS(CP949)
+[13:32:36.8178]   GIPALL_C        전송(MTTR)          Node(SMSS1_2)Status(2:DELIVERED)LN(0)DCS(CP949)
+
+1.1.3.8 <AUTH_FLAG>,N
+======================================================================================================================================================
+======================================================================================================================================================
+HTTP_MTRECV_ACCESS
+[
+  {
+    "LOG_NO": "988",
+    "CID": "1571707589",
+    "IP_ADDR": "175.125.130.76",
+    "PORT_NO": 8544,
+    "QUEUE_NO": 11038,
+    "FX": 500,
+    "FY": 10,
+    "FLAG": "0",
+    "RC": 3,
+    "TC": 3,
+    "DESCRIPTION": "JWS_TESTHTTP",
+    "UPDATE_FLAG": "R",
+    "CP_NAME": "JWS_TEST",
+    "CP_PHONE": "02-2149-7762",
+    "SKT_NAME": "SKT",
+    "SKT_PHONE": "02-2149-7762",
+    "CP_TEAM": "WITCOM_INFRA",
+    "CP_PERSONNEL": "JWS",
+    "CP_SKT_TEAM": "SKT_TEST",
+    "MSG_TYPE": "2",
+    "BILL_TYPE": "4",
+    "PORTED_AUTCON": "1",
+    "REPLY_FLAG": "Y",
+    "LOG_FLAG": 3,
+    "LIMIT_CHECK_FLAG": "Y",
+    "DETECT_CID_FLAG": "N",
+    "CB_CHECK_FLAG": "Y",
+    "GIPVERID": 510,
+    "AUTH_FLAG": "N",
+    "DESIRE_NODE": null,
+    "CURRENT_NODE": null,
+    "RM_FLAG": 0,
+    "PCS_FLAG": 0,
+    "AES_KEY_BASE64": "+ujTciN2AoT+iWAR/Wtw8lIjtzTHVj3NT2OBAoBEHY8=",
+    "IV_BASE64": "E3fVT9zZoke5lcF8s8upSw==",
+    "CP_URL": "http://175.125.130.76:8500/sms/send/result"
+  }
+]
+
+CFG_AUTH_CALLBACKLIST
+[
+  {
+    "CID": "1571707589",
+    "MODULE_NAME": "GIPHTTP",
+    "CALLBACK": "01000000077",
+    "REGI_DATE": "2018-03-09 13:48:20",
+    "DESCRIPTION": "GIPHTTP KDY TEST"
+  }
+]
+
+======================================================================================================================================================
+======================================================================================================================================================
+
+1. SKT 010
+<GIPHTTP_RECV>
+[13:42:23:0860] [DEBUG] KSC5601_CP949 인코딩 타입으로 처리합니다.
+[13:42:23:0860] [DEBUG] Base64 Decoded Bytes (HEX): 0x31 0x2e 0x47 0x49 0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x31 0x31
+0x2f 0x31 0x30 0x29 0x2d 0x20 0x53 0x4b 0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30 0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae 0x20 0x
+b8 0xde 0xbd 0xc3 0xc1 0xf6 0x20 0xc0 ... (total: 56 bytes)
+[13:42:23:0861] [DEBUG] Decoded Message: [1.GIPHTTP MT (11/10)- SKT 자사 010 테스트 메시지 입니다.]
+[13:42:23:0861] [DEBUG] Msg Length: 56 bytes.
+[13:42:23:0861] [DEBUG] msgToByteArray (HEX): 0x31 0x2e 0x47 0x49 0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x31 0x31 0x2f 0
+x31 0x30 0x29 0x2d 0x20 0x53 0x4b 0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30 0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae 0x20 0xb8 0xd
+e 0xbd 0xc3 0xc1 0xf6 0x20 0xc0 ... (total: 56 bytes)
+[13:42:23:0861] [DEBUG] Message Encoding and Length check completed successfully.
+[13:42:23:0866] [INFO ] CID-IP Check Start 
+[13:42:23:0870] [INFO ] IP PORT AND CID MATCH IP: {175.125.130.76}, CID: {1571707589}
+[13:42:23:0878] [DEBUG] Default Valid Period: 60, Request Valid Period: 50
+[13:42:23:0878] [DEBUG] Default Valid Period: {60}, Current Time: {1768970543}, Expired Time: {1768970483}
+[13:42:23:0881] [DEBUG] 중간번호 4자리: 4190
+[13:42:23:0881] [DEBUG] TELEPrefixEntity 조회 시작: szDestPrefix=010, destMiddleCallNo=4190
+[13:42:23:0884] [INFO ] pcsFlag=0, code=11, subCode=10, PORTED_AUTCON=1: TELE_PREFIX 조회 후 처리
+[13:42:23:0884] [INFO ] SK번호(자사) 확인: enqueue 없이 기존 자사 처리 로직으로 위임
+                                                                                                                  124,0-1       49%
+[13:45:51:0163] [DEBUG] copySize: 56, ucMsgLen: 56, ucDataEncoding: 14
+[13:45:51:0173] [DEBUG] qItem.szMsg after write/read (HEX): 0x31 0x2e 0x47 0x49 0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x
+31 0x31 0x2f 0x31 0x30 0x29 0x2d 0x20 0x53 0x4b 0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30 0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae
+ 0x20 0xb8 0xde 0xbd 0xc3 0xc1 0xf6 0x20 0xc0 ... (total: 56 bytes)
+[13:45:51:0173] [DEBUG] qItem.ucMsgLen: 56, qItem.ucDataEncoding: 14
+[13:45:51:0174] [INFO ] [REQ_SIMPLE] [GIPURL_TEST->VSMSS#1] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41
+904444) MsgCode(11) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateF
+lag(0) ConcatenateInfo(0) VldPrd(1768970811:1768970811) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(
+56) OrgMsgTotalLen(0)
+[13:45:51:0174] [DEBUG] [DEBUG] GIP MT BODY => VldPrd(1768970811) RgtDlvFlag(2) CallBack(01000000077) OrigCID(111111111) RelayCID(11
+11) MsgLen(56) OrgMsgTotalLen(0)
+[13:45:51:0174] [INFO ] [W2P] 최종 큐 삽입: 자사 처리 (W2P 로직 미경유) - targetQueueNo=4111
+[13:45:51:0174] [INFO ] InsertIntoSmsQWithQNo 직전 AuthFlag 확인: request.cAuthFlag=0, qItem.usAuthFlag=0
+[13:45:51:0176] [INFO ] [RES_SIMPLE] [VSMSS#1->] MsgVerId(510) SrcCId(1571707589) SrcCallNo(0) DestCId(010) DestCallNo(41904444) Msg
+Code(12) MsgSubCode(10) TId(10000000) BodyDataLen(56) MsgSeqNo(10000000) DataEncoding(14:CP949) TermType(49) ConcatenateFlag(0) Conc
+atenateInfo(0) VldPrd(1768970811:1768970811) RgtDlvFlg(2) CallBack(01000000077) OrigCID(111111111) RelayCID(1111) MsgLen(56) OrgMsgT
+otalLen(0) Result(0:GI_RES_NO_ERR) MsgId(3AF00150)
+[13:45:51:0177] [DEBUG] [DEBUG] ### Print QITEM  ####################################################
+[DEBUG] ### ServerType<V> MsgVerID<510>
+[DEBUG] ### Source Address : SrcCID<1571707589> SrcCallNo<0> Source ReturnQNo<11038>
+[DEBUG] ### Destination Address : DestCID<010> DestCallNo<41904444> ModuleNo<0>
+[DEBUG] ### Message Code : MessageCode<11> MessageSubCode<10> MsgCodeReserved[0](TID)<4098>
+[DEBUG] ### MsgLen<56> MsgSerialNo<10000000> TermType<49> DataEncoding<CP949>
+[DEBUG] ### Sending Flags : VldPrd<1768970811> Priority<0> RepFlag<0> RgtDlvFlg<2>
+[DEBUG] ### ConcatenateFlag<0> ConcatenateInfo<0> SmDefaultMsgID/CALLFW count<0>
+[DEBUG] ### Message : <********************************************************>
+[MSG_DEBUG] Message
+[HTTP_DATA]  ==================HTTP PACKET DATA [MSG]===================
+[TCP_DATA]  31 2e 47 49 50 48 54 54 50 20 4d 54 20 28 31 31 2f 31 30 29
+[TCP_DATA]  2d 20 53 4b 54 20 c0 da bb e7 20 30 31 30 20 c5 d7 bd ba c6
+[TCP_DATA]  ae 20 b8 de bd c3 c1 f6 20 c0 d4 b4 cf b4 d9 2e
+[HTTP_DATA]  ==================HTTP PACKET DATA END======================
+[DEBUG] ### CallBack<01000000077> CallBack_Noti<0> CallBack_Check<1> Location<>
+[DEBUG] ### OrigCID<111111111> RelayCID<1111> FowardNo<> ForwardNo2<> ReturnQ_No<0> OrgMsgLen<0> AuthFlag<0> VirtualNum<>
+[DEBUG] ### Print QITEM END #################################################
+
+<SMSMOT>
+[13:45:48:1787] [DEBUG] SelectHandler() : Recv LinkQry_Resp
+[13:45:51:1756] [DEBUG] ================== SMSMOT_4101 MT MESSAGE QITEM Print QITEM  ==================
+[13:45:51:1757] [DEBUG] Server Type                              : V
+[13:45:51:1757] [DEBUG] Message VersionID                        : 510
+[13:45:51:1757] [DEBUG] ========= Source Address =========
+[13:45:51:1757] [DEBUG] SourceCID                                : 1571707589
+[13:45:51:1757] [DEBUG] SourceCallNo                             : 0
+[13:45:51:1757] [DEBUG] Source Return QNO                        : 11038
+[13:45:51:1757] [DEBUG] ========= Destination Address =========
+[13:45:51:1757] [DEBUG] DestCID                                  : 010
+[13:45:51:1757] [DEBUG] DestCallNo                               : 41904444
+[13:45:51:1757] [DEBUG] ModuleNo                                 : 0
+[13:45:51:1757] [DEBUG] ========= Message Code =========
+[13:45:51:1758] [DEBUG] Message Code                             : 11
+[13:45:51:1758] [DEBUG] Message SubCode                          : 10
+[13:45:51:1758] [DEBUG] TeleService ID                           : 4098
+[13:45:51:1758] [DEBUG] Msg Length                               : 56
+[13:45:51:1758] [DEBUG] MsgSerialNo                              : 10000000
+[13:45:51:1758] [DEBUG] TermType                                 : 49
+[13:45:51:1758] [DEBUG] DataEnconding                            : 14:CP949
+[13:45:51:1758] [DEBUG] ucRsv                                    : 
+[13:45:51:1758] [DEBUG] ucMsgId                                  : 3AF00150
+[13:45:51:1758] [DEBUG] ========= Sending Flags =========
+[13:45:51:1758] [DEBUG] SourceAddr ton                           : 0
+[13:45:51:1758] [DEBUG] SourceAddr npi                           : 0
+[13:45:51:1758] [DEBUG] DestAddr ton                             : 0
+[13:45:51:1758] [DEBUG] DestAddr npi                             : 0
+[13:45:51:1759] [DEBUG] ProtocolID                               : 0
+[13:45:51:1759] [DEBUG] VldPrd                                   : 1768970811
+[13:45:51:1759] [DEBUG] Priority                                 : 0
+[13:45:51:1759] [DEBUG] RepFlag                                  : 0
+[13:45:51:1759] [DEBUG] RgtDlvFlg TR/Receipt flag                : 2
+[13:45:51:1759] [DEBUG] SmDefaultMsgID / callforward count       : 0
+[13:45:51:1759] [DEBUG] ========= IONDINFO =========
+[13:45:51:1759] [DEBUG] uQC                                      : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[0]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[1]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[2]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[3]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[4]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[5]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[6]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[7]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[8]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[9]                         : 0
+[13:45:51:1759] [DEBUG] nRsv4Protocol[10]                        : 11
+[13:45:51:1759] [DEBUG] nRsv4Protocol[11]                        : 0
+[13:45:51:1760] [DEBUG] Message : ********************************************************
+[13:45:51:1760] [MSG_DEBUG] Message                              : 1.GIPHTTP MT (11/10)- SKT 자사 010 테스트 메시지 입니다.
+[13:45:51:1760] [DEBUG] CallBack                                 : 01000000077
+[13:45:51:1760] [DEBUG] ucLocation                               : 
+[13:45:51:1760] [DEBUG] ucRsvLocation                            :  
+[13:45:51:1760] [DEBUG] Foward No                                : 
+[13:45:51:1760] [DEBUG] Foward No2                               : 
+[13:45:51:1760] [DEBUG] ReturnQ_No                               : 0
+[13:45:51:1760] [DEBUG] ConcatenateFlag                          : 0
+[13:45:51:1760] [DEBUG] ConcatenateInfo                          : 0
+[13:45:51:1760] [DEBUG] OSFI[1/2/3/4/5/6/7/8]                    : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+[13:45:51:1760] [DEBUG] OrgCallingNumber                         : 
+[13:45:51:1760] [DEBUG] OrigMvnoInformation                      : 
+[13:45:51:1760] [DEBUG] DestMvnoInformation                      : 
+[13:45:51:1760] [DEBUG] BillType                                 : 4
+[13:45:51:1760] [DEBUG] FullRN                                   : 
+[13:45:51:1760] [DEBUG] RcsTag                                   : 
+[13:45:51:1760] [DEBUG] RcsResult                                : 0
+[13:45:51:1760] [DEBUG] MsgAddNum                                : 0
+[13:45:51:1761] [DEBUG] CallBack_Noti                            : 0
+[13:45:51:1761] [DEBUG] 010Plus                                  : 0
+[13:45:51:1761] [DEBUG] Message Origin                           : 1
+[13:45:51:1761] [DEBUG] CallBack_Check                           : 1
+[13:45:51:1761] [DEBUG] TraceID                                  : 01226012113455073507
+[13:45:51:1761] [DEBUG] OrgMsgLen                                : 0
+[13:45:51:1761] [DEBUG] ChildNumOrd                              : 0
+[13:45:51:1761] [DEBUG] Auth_Flag                                : 0
+[13:45:51:1761] [DEBUG] SMS_OSFI[1/2/3/4/5]              : 0x00/0x00/0x00/0x00/0x00
+[13:45:51:1761] [DEBUG] MoRecvTime                               : 
+[13:45:51:1761] [DEBUG] szOrigCID                                : 111111111
+[13:45:51:1761] [DEBUG] szRelayCID                               : 1111
+[13:45:51:1761] [DEBUG] VirtualNum                               : 
+[13:45:51:1761] [DEBUG] ================== Print QITEM  END ==================
+
+[13:45:51:1761] [DEBUG]    ProcessDataSMPP3A
+[13:45:51:1761] [DEBUG] Now = 1768970751, Expired Time = 1768970811
+[13:45:51:1761] [DEBUG] CallBack(01000000077) Do Not Foward(00)
+[13:45:51:1762] [DEBUG] Message Reference Number(0) Total SegMent(0) SEGMENT NUMBER(0)
+[13:45:51:1762] [DEBUG] OSFI[0/1/2/3/4/5/6/7](0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00)
+[13:45:51:1762] [DEBUG] OrigMvnoInformation()
+[13:45:51:1762] [DEBUG] DestMvnoInformation()
+[13:45:51:1762] [DEBUG] FullRN()
+[13:45:51:1762] [DEBUG] RcsTag() RcsResult(0)
+[13:45:51:1762] [DEBUG] Message AddNum (0)
+[13:45:51:1762] [DEBUG] Auth_Flag (0)
+[13:45:51:1764] [SMSMOT] [SUBMIT_SM] [SMSS#1->SMSC#41] src_addr(1571707589) dest_addr(1041904444) esm_cls(0x00:UNKNOWN_ESM_CLASS) msg_len(56) DCS(0x0E:CP949) callback(01000000077) tid(CMT) src_addr_ton(0) src_addr_npi(9) dest_addr_ton(1) dest_addr_npi(1) prot_id(0) prio_flag(0) schedule_deli_time() valid_period(260121134651036+) regi_deli_flag(1:Receipt required) replace_if_present_flag(0) data_coding(0xFE) sm_default_msg_id(0) sar_msg_ret_num(0) sar_tot_seg(0) sar_seg_seq(0) orig_msg_tot_len(0) do_not_fwd(0:NO) FTN() OSFI(0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00) orig_calling_num() sar_msg_addnum(0) callback_noti(0:OFF) NW-Callback-Chg(0) msg_orig(1:FromWeb) callback_chk(1) Orig_mvno_info() Dest_mvno_info() auth_flag(0) SMS_OSFI(0x00/0x00/0x00/0x00/0x00)
+[13:45:51:1765] [LOG_DATA]  0x00 0x00 0x00 0xb6 0x00 0x00 0x00 0x04 0x00 0x00
+[13:45:51:1765] [LOG_DATA]  0x00 0x00 0x00 0x00 0x00 0x96
+[13:45:51:1765] [LOG_DATA]  0x43 0x4d 0x54 0x00 0x00 0x09 0x31 0x35 0x37 0x31
+[13:45:51:1765] [LOG_DATA]  0x37 0x30 0x37 0x35 0x38 0x39 0x00 0x01 0x01 0x31
+[13:45:51:1765] [LOG_DATA]  0x30 0x34 0x31 0x39 0x30 0x34 0x34 0x34 0x34 0x00
+[13:45:51:1766] [LOG_DATA]  0x00 0x00 0x00 0x00 0x32 0x36 0x30 0x31 0x32 0x31
+[13:45:51:1766] [LOG_DATA]  0x31 0x33 0x34 0x36 0x35 0x31 0x30 0x33 0x36 0x2b
+[13:45:51:1766] [LOG_DATA]  0x00 0x01 0x00 0xfe 0x00 0x38 0x31 0x2e 0x47 0x49
+[13:45:51:1766] [LOG_DATA]  0x50 0x48 0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28
+[13:45:51:1766] [LOG_DATA]  0x31 0x31 0x2f 0x31 0x30 0x29 0x2d 0x20 0x53 0x4b
+[13:45:51:1766] [LOG_DATA]  0x54 0x20 0xc0 0xda 0xbb 0xe7 0x20 0x30 0x31 0x30
+[13:45:51:1766] [LOG_DATA]  0x20 0xc5 0xd7 0xbd 0xba 0xc6 0xae 0x20 0xb8 0xde
+[13:45:51:1767] [LOG_DATA]  0xbd 0xc3 0xc1 0xf6 0x20 0xc0 0xd4 0xb4 0xcf 0xb4
+[13:45:51:1767] [LOG_DATA]  0xd9 0x2e 0x27 0x07 0x00 0x01 0x0e 0x27 0x02 0x00
+[13:45:51:1767] [LOG_DATA]  0x0b 0x30 0x31 0x30 0x30 0x30 0x30 0x30 0x30 0x30
+[13:45:51:1767] [LOG_DATA]  0x37 0x37 0x27 0x31 0x00 0x01 0x00 0x27 0x32 0x00
+[13:45:51:1767] [LOG_DATA]  0x01 0x00 0x27 0x12 0x00 0x02 0x00 0x00 0x27 0x13
+[13:45:51:1767] [LOG_DATA]  0x00 0x02 0x00 0x00 0x27 0x14 0x00 0x02 0x00 0x01
+[13:45:51:1768] [LOG_DATA]  0x27 0x15 0x00 0x02 0x00 0x01
+[13:45:51:2106] [SMSMOT] [SUBMIT_SM_RESP] [SMSC#41->SMSS#1] msg_id(00000004)
+
+<SMSMOR>
+[13:45:44:3769] [DEBUG] ReadFromSMSC() : Recv LinkQry_Resp
+[13:45:51:2217] [LOG_DATA]  0x00 0x00 0x01 0x41 0x00 0x00 0x00 0x05 0x00 0x00
+[13:45:51:2217] [LOG_DATA]  0x00 0x00 0x00 0x00 0x00 0x04
+[13:45:51:2218] [LOG_DATA]  0x43 0x4d 0x54 0x00 0x01 0x01 0x31 0x30 0x34 0x31
+[13:45:51:2218] [LOG_DATA]  0x39 0x30 0x34 0x34 0x34 0x34 0x00 0x00 0x09 0x31
+[13:45:51:2218] [LOG_DATA]  0x35 0x37 0x31 0x37 0x30 0x37 0x35 0x38 0x39 0x00
+[13:45:51:2218] [LOG_DATA]  0x04 0x00 0x00 0x32 0x36 0x30 0x31 0x32 0x31 0x31
+[13:45:51:2218] [LOG_DATA]  0x33 0x34 0x35 0x00 0x32 0x36 0x30 0x31 0x32 0x31
+[13:45:51:2218] [LOG_DATA]  0x31 0x33 0x34 0x36 0x35 0x31 0x30 0x33 0x36 0x2b
+[13:45:51:2218] [LOG_DATA]  0x00 0x01 0x00 0xfe 0x00 0x76 0x69 0x64 0x3a 0x34
+[13:45:51:2218] [LOG_DATA]  0x20 0x73 0x75 0x62 0x3a 0x30 0x30 0x30 0x20 0x64
+[13:45:51:2219] [LOG_DATA]  0x6c 0x76 0x72 0x64 0x3a 0x30 0x30 0x30 0x20 0x73
+[13:45:51:2219] [LOG_DATA]  0x75 0x62 0x6d 0x69 0x74 0x20 0x64 0x61 0x74 0x65
+[13:45:51:2219] [LOG_DATA]  0x3a 0x32 0x36 0x30 0x31 0x32 0x31 0x31 0x33 0x34
+[13:45:51:2219] [LOG_DATA]  0x35 0x20 0x64 0x6f 0x6e 0x65 0x20 0x64 0x61 0x74
+[13:45:51:2219] [LOG_DATA]  0x65 0x3a 0x32 0x36 0x30 0x31 0x32 0x31 0x31 0x33
+[13:45:51:2219] [LOG_DATA]  0x34 0x35 0x20 0x73 0x74 0x61 0x74 0x3a 0x44 0x45
+[13:45:51:2219] [LOG_DATA]  0x4c 0x49 0x56 0x52 0x44 0x20 0x65 0x72 0x72 0x3a
+[13:45:51:2219] [LOG_DATA]  0x4e 0x6f 0x20 0x45 0x72 0x72 0x6f 0x72 0x20 0x54
+[13:45:51:2220] [LOG_DATA]  0x65 0x78 0x74 0x3a 0x31 0x2e 0x47 0x49 0x50 0x48
+[13:45:51:2220] [LOG_DATA]  0x54 0x54 0x50 0x20 0x4d 0x54 0x20 0x28 0x31 0x31
+[13:45:51:2220] [LOG_DATA]  0x2f 0x31 0x30 0x29 0x02 0x0c 0x00 0x02 0x00 0x00
+[13:45:51:2220] [LOG_DATA]  0x02 0x0e 0x00 0x01 0x00 0x02 0x0f 0x00 0x01 0x00
+[13:45:51:2220] [LOG_DATA]  0x27 0x3e 0x00 0x02 0x00 0x00 0x27 0x02 0x00 0x0b
+[13:45:51:2220] [LOG_DATA]  0x30 0x31 0x30 0x30 0x30 0x30 0x30 0x30 0x30 0x37
+[13:45:51:2220] [LOG_DATA]  0x37 0x27 0x03 0x00 0x0b 0x30 0x31 0x30 0x31 0x31
+[13:45:51:2221] [LOG_DATA]  0x31 0x31 0x33 0x33 0x33 0x33 0x27 0x07 0x00 0x01
+[13:45:51:2221] [LOG_DATA]  0x0e 0x27 0x12 0x00 0x02 0x00 0x00 0x27 0x13 0x00
+[13:45:51:2221] [LOG_DATA]  0x02 0x00 0x00 0x27 0x14 0x00 0x02 0x00 0x01 0x27
+[13:45:51:2221] [LOG_DATA]  0x15 0x00 0x02 0x00 0x01 0x27 0x11 0x00 0x04 0x00
+[13:45:51:2221] [LOG_DATA]  0x00 0x00 0x00 0x27 0x25 0x00 0x00 0x27 0x31 0x00
+[13:45:51:2221] [LOG_DATA]  0x01 0x00 0x27 0x32 0x00 0x01 0x00 0x27 0x34 0x00
+[13:45:51:2221] [LOG_DATA]  0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+[13:45:51:2221] [LOG_DATA]  0x00 0x00 0x00 0x00 0x00
+[13:45:51:2222] [SMSMOR] [DELIVERY_RECEIPT] [SMSC#41->SMSS#1] src_addr(1041904444) dest_addr(1571707589) esm_cls(0x04:NORMAL_TR) FTN() callback(01000000077) short_msg(id:4 sub:000 dlvrd:000 submit date:2601211345 done date:2601211345 stat:DELIVRD err:No Error Text:**********) Index(0:Nothing) msg_len(118) sar_msg_ret_num(0) sar_tot_seg(0) sar_seg_seq(0) orig_msg_tot_len(0) do_not_fwd(0:NO) tid(CMT) src_addr_ton(1) src_addr_npi(1) dest_addr_ton(0) dest_addr_npi(9) prot_id(0) prio_flag(0) schedule_deli_time(2601211345) valid_period(260121134651036+) regi_deli_flag(1:Receipt required) replace_if_present_flag(0) data_coding(0xFE:Empty) sm_default_msg_id(0) OSFI(0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00) orig_calling_num() sar_msg_addnum(0) callback_noti(0:OFF) NW-Callback-Chg(0) msg_orig(1:FromWeb) callback_chk(1) Orig_mvno_info() Dest_mvno_info() auth_flag(0) SMS_OSFI(0x00/0x00/0x00/0x00/0x00)
+[13:45:51:2223] [DEBUG] ============== [Print SM_ACK] ============== 
+[13:45:51:2223] [DEBUG] ================== Header ================== 
+[13:45:51:2223] [DEBUG]         command_length  : [17]
+[13:45:51:2223] [DEBUG]         command_id      : [0x80000005]
+[13:45:51:2223] [DEBUG]         command_status  : [0]
+[13:45:51:2223] [DEBUG]         sequence_number : [4]
+[13:45:51:2223] [DEBUG] ================== Header ================== 
+[13:45:51:2223] [DEBUG] =================== Body =================== 
+[13:45:51:2223] [DEBUG]         message_id      : []
+[13:45:51:2224] [DEBUG] =================== Body =================== 
+[13:45:51:2224] [DEBUG] ============== [Print SM_ACK] ============== 
+[13:45:51:2224] [SMSMOR] [DELIVERY_RECEIPT_RESP] [SMSS#1->SMSC#41] Send Ack Success. Convert MessageID[00000004]
+[13:45:51:2224] [DEBUG] ACK 성공 CmdID(5)(ret:1)
+[13:45:51:2231] [DEBUG] DBGetServerTypeCallinfo() : ServerType(V) MsgIdCenter(00000004) DestCallNo(41904444) matched in CallInfo.
+[13:45:51:2231] [DEBUG] DBGetServerTypeCallinfo() : GetServerType [V]
+[13:45:51:2239] [DEBUG] Reference Number : 0 Total_Segment & Segment_SeqNum = 0
+[13:45:51:2239] [DEBUG] CheckNpa() Tele_Pre[104] Tele_Pre2[10] Npa[104] LINE[3396] 
+[13:45:51:2243] [DEBUG] CheckNpa() SELECT TELE_PRE[104][10] SUCCESS!! 
+[13:45:51:2248] [DEBUG] ================== SMSMOR_4151 RECEIVE ITEM FROM SMSC Print QITEM  ==================
+[13:45:51:2248] [DEBUG] Message VersionID                        : 0
+[13:45:51:2248] [DEBUG] ========= Source Address =========
+[13:45:51:2248] [DEBUG] SourceCID                                : 010
+[13:45:51:2249] [DEBUG] SourceCallNo                             : 41904444
+[13:45:51:2249] [DEBUG] Source Return QNO                        : 1100
+[13:45:51:2249] [DEBUG] ========= Destination Address =========
+[13:45:51:2249] [DEBUG] DestCID                          : 1571707589
+[13:45:51:2249] [DEBUG] DestCallNo                               : 0
+[13:45:51:2249] [DEBUG] ModuleNo                                 : 0
+[13:45:51:2249] [DEBUG] ========= Message Code =========
+[13:45:51:2249] [DEBUG] Message Code                             : 13
+[13:45:51:2249] [DEBUG] Message SubCode                  : 9
+[13:45:51:2249] [DEBUG] TELESERVICE ID                   : 0
+[13:45:51:2249] [DEBUG] MsgSerialNo                              : 0
+[13:45:51:2250] [DEBUG] TermType                                 : 0
+[13:45:51:2250] [DEBUG] DataEncoding                             : CP949
+[13:45:51:2250] [DEBUG] ========= Sending Flags =========
+[13:45:51:2250] [DEBUG] SourceAddr ton                           : 0
+[13:45:51:2250] [DEBUG] SourceAddr npi                           : 0
+[13:45:51:2250] [DEBUG] DestAddr ton                             : 0
+[13:45:51:2250] [DEBUG] DestAddr npi                             : 0
+[13:45:51:2250] [DEBUG] Protocol ID                              : 0
+[13:45:51:2250] [DEBUG] VldPrd                                   : 0
+[13:45:51:2250] [DEBUG] Priority                                 : 0
+[13:45:51:2250] [DEBUG] RepFlag                          : 0
+[13:45:51:2250] [DEBUG] RgtDlvFlg TR/Receipt flag                : 0
+[13:45:51:2251] [DEBUG] SmDefaultMsgID / callforward count       : 0
+[13:45:51:2251] [DEBUG] ========= IONDINFO =========
+[13:45:51:2251] [DEBUG] uQC                                      : 0
+[13:45:51:2251] [DEBUG] Message Length                   : 0
+[13:45:51:2251] [DEBUG] MessagID                         : 00000004
+[13:45:51:2251] [DEBUG] Message : 
+[13:45:51:2251] [MSG_DEBUG] Message                              : 
+[13:45:51:2252] [DEBUG] CallBack                                 : 01000000077
+[13:45:51:2252] [DEBUG] ucLocation                               : FFFFFFFFFF
+[13:45:51:2252] [DEBUG] Foward No                                : 
+[13:45:51:2252] [DEBUG] Foward No2                               : 
+[13:45:51:2252] [DEBUG] ReturnQ_No                               : 0
+[13:45:51:2252] [DEBUG] ConcatenateFlag                  : 0
+[13:45:51:2252] [DEBUG] ConcatenateInfo                  : 0
+[13:45:51:2252] [DEBUG] OSFI[1/2/3/4/5/6/7/8]                    : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+[13:45:51:2253] [DEBUG] OrigMvnoInformation                      : 
+[13:45:51:2253] [DEBUG] DestMvnoInformation                      : 
+[13:45:51:2253] [DEBUG] FullRN                   : 
+[13:45:51:2253] [DEBUG] RcsTag                   : 
+[13:45:51:2253] [DEBUG] MsgAddNum                                : 0
+[13:45:51:2253] [DEBUG] CallBack_Noti                    : 0
+[13:45:51:2253] [DEBUG] 010Plus                          : 0
+[13:45:51:2253] [DEBUG] Message Origin                   : 1
+[13:45:51:2253] [DEBUG] CallBack_Check                   : 1
+[13:45:51:2253] [DEBUG] OrgMsgLen                        : 0
+[13:45:51:2253] [DEBUG] Auth_Flag                        : 0
+[13:45:51:2253] [DEBUG] SMS_OSFI[1/2/3/4/5]                      : 0x00/0x00/0x00/0x00/0x00
+[13:45:51:2254] [DEBUG] Nchange                          : 0
+[13:45:51:2254] [DEBUG] szVirtualNum                             : 
+[13:45:51:2254] [DEBUG] ================== Print QITEM  END ==================
+
+<VBILL>
+[13:45:51:2277] [DEBUG] ================== Get VBILL Queue Print QITEM  ==================
+[13:45:51:2278] [DEBUG] Server Type             : V
+[13:45:51:2278] [DEBUG] Message VersionID       : 0
+[13:45:51:2279] [DEBUG] =========== Source Address ============
+[13:45:51:2279] [DEBUG] SourceCID               : 010
+[13:45:51:2279] [DEBUG] SourceCallNo            : 41904444
+[13:45:51:2279] [DEBUG] Source Return QNO       : 1100
+[13:45:51:2279] [DEBUG] ========= Destination Address =========
+[13:45:51:2279] [DEBUG] DestCID                 : 1571707589
+[13:45:51:2279] [DEBUG] DestCallNo              : 0
+[13:45:51:2279] [DEBUG] ModuleNo                : 0
+[13:45:51:2279] [DEBUG] ============= Message Code ============
+[13:45:51:2279] [DEBUG] Message Code            : 13
+[13:45:51:2279] [DEBUG] Message SubCode         : 9
+[13:45:51:2280] [DEBUG] TeleService ID          : 0
+[13:45:51:2280] [DEBUG] usMsgCodeReserved[1]    : 0
+[13:45:51:2280] [DEBUG] Msg Length              : 0
+[13:45:51:2280] [DEBUG] MsgSerialNo             : 0
+[13:45:51:2280] [DEBUG] TermType                : 0
+[13:45:51:2280] [DEBUG] SplitSeq                : 0
+[13:45:51:2280] [DEBUG] DataEnconding           : 14:CP949
+[13:45:51:2280] [DEBUG] nRsv4Protocol[0]        : 0
+[13:45:51:2281] [DEBUG] nRsv4Protocol[1]        : 0
+[13:45:51:2281] [DEBUG] nRsv4Protocol[2]        : 825243186
+[13:45:51:2281] [DEBUG] nRsv4Protocol[3]        : 858861874
+[13:45:51:2281] [DEBUG] nRsv4Protocol[4]        : 13620
+[13:45:51:2281] [DEBUG] nRsv4Protocol[5]        : 2
+[13:45:51:2281] [DEBUG] nRsv4Protocol[6]        : 0
+[13:45:51:2281] [DEBUG] nRsv4Protocol[7]        : 0
+[13:45:51:2281] [DEBUG] nRsv4Protocol[8]        : 0
+[13:45:51:2281] [DEBUG] nRsv4Protocol[9]        : 0
+[13:45:51:2281] [DEBUG] nRsv4Protocol[10] / RD / Roaming PMN   : 11
+[13:45:51:2281] [DEBUG] nRsv4Protocol[11] / EsmClass           : 4
+[13:45:51:2281] [DEBUG] =========== Sending Flags ============
+[13:45:51:2282] [DEBUG] VldPrd                  : 0
+[13:45:51:2282] [DEBUG] Priority                : 0
+[13:45:51:2282] [DEBUG] RepFlag                 : 0
+[13:45:51:2282] [DEBUG] RgtDlvFlg TR/Receipt flag   : 0
+[13:45:51:2282] [DEBUG] SmDefaultMsgID / callforward count   : 0
+[13:45:51:2282] [DEBUG] =========== Receive Flags ============
+[13:45:51:2282] [DEBUG] Message Status          : 2
+[13:45:51:2282] [DEBUG] GSMErrCode              : 0
+[13:45:51:2282] [DEBUG] FlagReserved[0] / Center Number(VSMSS)   : 0
+[13:45:51:2283] [DEBUG] FlagReserved[1]         : 0
+[13:45:51:2283] [DEBUG] FlagReserved[2]         : 0
+[13:45:51:2283] [DEBUG] SRC_TYPE(1:Phone, 2:Web): 0
+[13:45:51:2283] [DEBUG] DoNotForward            : 00
+[13:45:51:2283] [DEBUG] MessageID               : 00000004
+[13:45:51:2283] [DEBUG] Rsv4Dlv[1] / W-Zone Flag: 48
+[13:45:51:2283] [DEBUG] Rsv4Dlv[2] / NCHANGE    : 0
+[13:45:51:2283] [DEBUG] Message                 : 
+[13:45:51:2283] [MSG_DEBUG] Message     : 
+[13:45:51:2283] [DEBUG] CreateTime              : 
+[13:45:51:2284] [DEBUG] CallBack                : 01000000077
+[13:45:51:2284] [DEBUG] szFree2[0] / MRM SM_STATE_MRMSPAM(1)   : 0
+[13:45:51:2284] [DEBUG] szFree2[1]              : 0
+[13:45:51:2284] [DEBUG] szFree2[2]              : 0
+[13:45:51:2284] [DEBUG] szFree2[3]              : 0
+[13:45:51:2284] [DEBUG] szFree2[4]              : 0
+[13:45:51:2284] [DEBUG] szFree2[5]              : 0
+[13:45:51:2284] [DEBUG] szFree2[6]              : 0
+[13:45:51:2284] [DEBUG] szFree2[7]              : 0
+[13:45:51:2284] [DEBUG] szFree2[8]              : 0
+[13:45:51:2285] [DEBUG] szFree2[9]              : 0
+[13:45:51:2285] [DEBUG] szFree2[10]             : 0
+[13:45:51:2285] [DEBUG] ucLocation              : FFFFFFFFFF
+[13:45:51:2285] [DEBUG] ucRsvLocation           : 0
+[13:45:51:2285] [DEBUG] Foward No               : 
+[13:45:51:2285] [DEBUG] Foward No2              : 
+[13:45:51:2285] [DEBUG] ReturnQ_No              : 0
+[13:45:51:2285] [DEBUG] ConcatenateFlag         : 0
+[13:45:51:2285] [DEBUG] ConcatenateInfo         : 0
+[13:45:51:2285] [DEBUG] OSFI[1/2/3/4/5/6/7/8]   : 0x00/0x00/0x00/0x00/0x00/0x00/0x00/0x00
+[13:45:51:2285] [DEBUG] OrgCallingNumber        : 
+[13:45:51:2285] [DEBUG] OrigMvnoInformation     : 
+[13:45:51:2286] [DEBUG] DestMvnoInformation     : 
+[13:45:51:2286] [DEBUG] BillType                :  
+[13:45:51:2286] [DEBUG] FullRN                  : 
+[13:45:51:2286] [DEBUG] RcsTag                  : 
+[13:45:51:2286] [DEBUG] RcsResult               : 0
+[13:45:51:2286] [DEBUG] MsgAddNum               : 0
+[13:45:51:2286] [DEBUG] sar_msg_ref_num         : 0
+[13:45:51:2286] [DEBUG] sar_total_segment       : 0
+[13:45:51:2286] [DEBUG] sar_segment_seqnum      : 0
+[13:45:51:2286] [DEBUG] CallBack_Noti           : 0
+[13:45:51:2286] [DEBUG] 010Plus                 : 0
+[13:45:51:2286] [DEBUG] Message Origin          : 1
+[13:45:51:2287] [DEBUG] CallBack_Check          : 1
+[13:45:51:2287] [DEBUG] TraceID                 : 01226012113455073507
+[13:45:51:2287] [DEBUG] OrgMsgLen               : 0
+[13:45:51:2287] [DEBUG] ChildNumOrd(Multinumber Service)  : 0
+[13:45:51:2287] [DEBUG] Auth_Flag               : 0
+[13:45:51:2287] [DEBUG] SMS_OSFI[1/2/3/4/5]     : 0x00/0x00/0x00/0x00/0x00
+[13:45:51:2287] [DEBUG] MoRecvTime              : 
+[13:45:51:2288] [DEBUG] VirtualNum              : 
+[13:45:51:2288] [DEBUG] ================== Print QITEM  END ==================
+
+[13:45:51:2288] [DEBUG] MsgIdCenter(00000004), DestCallNo(41904444)
+[13:45:51:2295] [DEBUG] OrigCID[111111111] RelayCID[1111]
+[13:45:51:2301] [DEBUG] DELETE CALLINFO =============    
+[13:45:51:2301] [NORMAL] <<TRANS_RESULT>> Message Status = E_SENT, SMSC MessageID(00000004)|BILL OK!|SourceCID(010) SourceCallNo(41904444) DestCID(1571707589) DestCallNo(0) CP MessageID(3AF00150)
+
+<GIPHTTP_SEND>
+X
+
+<VSTAT>
+4551 010 41904444 1571707589 0 3 00 012718 18 11 04
+4551 010 41904444 1571707589 0 3 41 011341 38 11 04
+4551 1571707589 0 010 41904444 2 00 012743 12 11 00
+4551 1571707589 0 010 41904444 2 41 011441 32 11 00
+
+<CDR>
+X
+
+<smstrc.sh>
+[13:45:51.1754]   GIPALL_C        성공(MT)            Node(SMSS1_2)GMId(3AF00150)QNo(4111)TId(4098)LN(0)DCS(CP949)
+[13:45:51.2120]   SMSMOT          성공(MT)            Node(SMSS1_2)CMId(00000004)DestNo(01041904444)Tid(4098)SMSC No(41)LN(930)DCS(CP949)
+[13:45:51.2244]   SMSMOR          전송성공(TR)        Node(SMSS1_2)CMId(00000004)EsmCls(4)Status(2:DELIVERED)SMSC No(41)LN(1794)DCS(CP949)
+[13:45:51.2260]   SMSMOR          성공(MOQ전송)       Node(SMSS1_2)QNo(90000)SMSC No(41)LN(1432)DCS(CP949)
+[13:45:51.2297]   VBILL           과금성공            Node(SMSS1_2)LN(496)DCS(CP949)          
+[13:45:51.2302]   VBILL           성공                Node(SMSS1_2)QNo(11038)LN(689)DCS(CP949)
+[13:45:51.3604]   GIPALL_C        전송(MTTR)          Node(SMSS1_2)Status(2:DELIVERED)LN(0)DCS(CP949)
