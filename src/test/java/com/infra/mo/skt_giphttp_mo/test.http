@@ -5,9 +5,9 @@ Content-Type: application/json
   "msgVerId": 510,
   "encFlag": 0,
   "data": {
-    "cid": "1584",
-    "msgId": "DB0C8C84",
-    "traceId": "01126011418500720607",
+    "cid": "1571700212",
+    "msgId": "DB1BCEC9",
+    "traceId": "01126012917024938470",
     "status": 2
   }
 }

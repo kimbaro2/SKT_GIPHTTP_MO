@@ -1,0 +1,106 @@
+---
+description: 발생 가능한 ESMClass 규칙 (CDMA/GSM/안심문자/착신전환/일반) 참조
+globs: "**/MoServiceTypeResolver.kt,**/EsmClassHandler.kt,**/SmsDef.kt"
+alwaysApply: false
+---
+
+# 발생 가능한 ESMClass 규칙
+
+## 1. CDMA 관련 (로밍 포함)
+
+| ESMClass (10진) | hex | 설명 |
+|-----------------|-----|------|
+| 36 | 0x24 | CDMA Roaming MO |
+| 37 | 0x25 | CDMA Roaming 번호이동 MO |
+| 38 | 0x26 | 착신전환 CDMA Roaming MO |
+| 16 | 0x10 | KTF 2G로 번호이동 + CDMA Roaming |
+| 12 | 0x0C | KTF 3G로 번호이동 + CDMA Roaming |
+| 17 | 0x11 | LGT 2G로 번호이동 + CDMA Roaming |
+| 14 | 0x0E | LGT 3G로 번호이동 + CDMA Roaming |
+| 69 | 0x45 | NUMBER_PLUS_CDMA_ROAMING_MO |
+| 72 | 0x48 | BIZ_NUMBER_CDMA_ROAMING_MO |
+
+## 2. GSM 관련 (로밍 포함)
+
+| ESMClass (10진) | hex | 설명 |
+|-----------------|-----|------|
+| 40 | 0x28 | GSM Roaming MO |
+| 41 | 0x29 | GSM Roaming 번호이동 MO |
+| 42 | 0x2A | 착신전환 GSM Roaming MO |
+| 18 | 0x12 | KTF 2G로 번호이동 + GSM Roaming |
+| 13 | 0x0D | KTF 3G로 번호이동 + GSM Roaming |
+| 19 | 0x13 | LGT 2G로 번호이동 + GSM Roaming |
+| 15 | 0x0F | LGT 3G로 번호이동 + GSM Roaming |
+| 70 | 0x46 | NUMBER_PLUS_GSM_ROAMING_MO |
+| 73 | 0x49 | BIZ_NUMBER_GSM_ROAMING_MO |
+
+## 3. 안심문자 관련
+
+| ESMClass (10진) | hex | 설명 |
+|-----------------|-----|------|
+| 20 | 0x14 | 안심문자 MO |
+| 21 | 0x15 | 안심문자 번호이동 MO |
+| 22 | 0x16 | 안심문자 번호이동 MT |
+| 23 | 0x17 | KTF 2G로 번호이동 + 안심발신 |
+| 25 | 0x19 | KTF 3G로 번호이동 + 안심발신 |
+| 24 | 0x18 | LGT 2G로 번호이동 + 안심발신 |
+| 26 | 0x1A | LGT 3G로 번호이동 + 안심발신 |
+
+## 4. 착신전환 관련
+
+(CDMA/GSM 로밍이 포함된 착신전환은 위 로밍 항목에 포함)
+
+| ESMClass (10진) | hex | 설명 |
+|-----------------|-----|------|
+| 48 | 0x30 | 착신전환 MO |
+| 49 | 0x31 | 착신전환 MT |
+| 50 | 0x32 | 착신전환 TR |
+| 52 | 0x34 | 번호이동 착신전환 MT |
+| 53 | 0x35 | DOUBLE 착신전환 TR |
+
+## 5. 일반 (나머지 통합)
+
+기본 메시지, 단순 번호이동, 부가서비스(투넘버/비즈), 내부용 등 특수 분류에 속하지 않는 모든 항목.
+
+| ESMClass (10진) | hex | 설명 |
+|-----------------|-----|------|
+| 1 | 0x01 | 일반 MO |
+| 4 | 0x04 | 일반 TR |
+| 57 | 0x39 | 번호이동 MO |
+| 56 | 0x38 | 번호이동 (MT) TR |
+| 6 | 0x06 | KTF 2G로 번호이동 |
+| 10 | 0x0A | KTF 3G로 번호이동 |
+| 9 | 0x09 | LGT 2G로 번호이동 |
+| 11 | 0x0B | LGT 3G로 번호이동 |
+| 64 | 0x40 | NUMBER_PLUS_MO |
+| 65 | 0x41 | NUMBER_PLUS_TR |
+| 71 | 0x47 | BIZ_NUMBER_MO |
+| 80 | 0x50 | BIZ_NUMBER_TR |
+| 81 | 0x51 | BIZ_NUMBER_MT |
+| 82 | 0x52 | BIZ_NUMBER_PORTED_MT |
+| 90 | 0x5A | NOTI_NORMAL_MO (witcom 내부용, 등기문자) |
+| 91 | 0x5B | NOTI_PORTED_MO (witcom 내부용, 등기문자) |
+| 92 | 0x5C | KTF 2G NOTI_PORTED_MO (등기문자) |
+| 93 | 0x5D | KTF 3G NOTI_PORTED_MO (등기문자) |
+| 94 | 0x5E | LGT 2G NOTI_PORTED_MO (등기문자) |
+| 95 | 0x5F | LGT 3G NOTI_PORTED_MO (등기문자) |
+| 0 | 0x00 | Unknown |
+
+### 5.1 번호규칙(특번) — 일반 MO(0x01) 진입 후 destCID 체크
+
+**1584 번호는 "일반 MO: 0x01 (1)"에 해당합니다.**  
+ESMClass가 NORMAL_MO(1)인 경우에만 번호형식(destCID)으로 특번을 구분하며, MoServiceTypeResolver는 다음 순서로 적용합니다.
+
+| destCID 조건 | 서비스 타입 | 핸들러 |
+|--------------|-------------|--------|
+| 1584로 시작 | CHARACTER_1584 | Character1584Handler |
+| 638로 시작 | SMS_MANAGER_638 | SmsManager638Handler |
+| 2580으로 시작 | SMS_MESSENGER_2580 | SmsMessenger2580Handler |
+| # 포함 (등기) | SPECIAL_SHARP | SpecialSharpHandler |
+| 그 외 | NORMAL_MO | NormalMoHandler |
+
+즉, 1584 캐릭터문자는 ESMClass가 **일반 MO(1)** 이고 착신 CID가 1584로 시작할 때만 CHARACTER_1584로 분기됩니다. 로밍(CDMA/GSM) ESMClass와는 별도입니다.
+
+---
+
+**참고:** 문서상 NOTI_NORMAL_MO/NOTI_PORTED_MO를 0x50(80)으로 적은 경우가 있으나, 실제 SmsDef 상수는 90, 91(0x5A, 0x5B)입니다. 코드/Resolver는 90, 91, 92~95를 등기문자로 사용합니다.

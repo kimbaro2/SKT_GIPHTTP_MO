@@ -1,0 +1,68 @@
+[2026-02-04 10:46:16.323] [DEBUG] [background-preinit] org.jboss.logging - Logging Provider: org.jboss.logging.Log4j2LoggerProvider
+[2026-02-04 10:46:16.326] [INFO ] [background-preinit] o.h.validator.internal.util.Version - HV000001: Hibernate Validator 6.2.5.Final
+[2026-02-04 10:46:16.334] [INFO ] [main] c.i.m.s.SktGiphttpMoApplication - Starting SktGiphttpMoApplication using Java 17.0.12 on DESKTOP-2GFDJ6I with PID 22160 (D:\dykim\project\SKT_GIPHTTP_MO\build\classes\java\main started by WITCOM in D:\dykim\project\SKT_GIPHTTP_MO)
+[2026-02-04 10:46:16.337] [DEBUG] [main] c.i.m.s.SktGiphttpMoApplication - Running with Spring Boot v2.7.15, Spring v5.3.29
+[2026-02-04 10:46:16.338] [INFO ] [main] c.i.m.s.SktGiphttpMoApplication - No active profile set, falling back to 1 default profile: "default"
+[2026-02-04 10:46:16.340] [DEBUG] [background-preinit] o.h.v.i.x.config.ValidationXmlParser - Trying to load META-INF/validation.xml for XML based Validator configuration.
+[2026-02-04 10:46:16.344] [DEBUG] [background-preinit] o.h.v.i.x.c.ResourceLoaderHelper - Trying to load META-INF/validation.xml via TCCL
+[2026-02-04 10:46:16.345] [DEBUG] [background-preinit] o.h.v.i.x.c.ResourceLoaderHelper - Trying to load META-INF/validation.xml via Hibernate Validator's class loader
+[2026-02-04 10:46:16.345] [DEBUG] [background-preinit] o.h.v.i.x.config.ValidationXmlParser - No META-INF/validation.xml found. Using annotation based configuration only.
+[2026-02-04 10:46:16.351] [DEBUG] [background-preinit] o.h.v.i.e.r.TraversableResolvers - Found javax.persistence.Persistence on classpath containing 'getPersistenceUtil'. Assuming JPA 2 environment. Trying to instantiate JPA aware TraversableResolver
+[2026-02-04 10:46:16.352] [DEBUG] [background-preinit] o.h.v.i.e.r.TraversableResolvers - Instantiated JPA aware TraversableResolver of type org.hibernate.validator.internal.engine.resolver.JPATraversableResolver.
+[2026-02-04 10:46:16.395] [DEBUG] [background-preinit] o.h.v.m.ResourceBundleMessageInterpolator - Loaded expression factory via original TCCL
+[2026-02-04 10:46:16.580] [DEBUG] [background-preinit] o.h.v.i.e.ValidatorFactoryConfigurationHelper - HV000252: Using org.hibernate.validator.internal.engine.DefaultPropertyNodeNameProvider as property node name provider.
+[2026-02-04 10:46:16.593] [DEBUG] [background-preinit] o.h.v.i.e.ValidatorFactoryConfigurationHelper - HV000234: Using org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator as ValidatorFactory-scoped message interpolator.
+[2026-02-04 10:46:16.593] [DEBUG] [background-preinit] o.h.v.i.e.ValidatorFactoryConfigurationHelper - HV000234: Using org.hibernate.validator.internal.engine.resolver.JPATraversableResolver as ValidatorFactory-scoped traversable resolver.
+[2026-02-04 10:46:16.594] [DEBUG] [background-preinit] o.h.v.i.e.ValidatorFactoryConfigurationHelper - HV000234: Using org.hibernate.validator.internal.util.ExecutableParameterNameProvider as ValidatorFactory-scoped parameter name provider.
+[2026-02-04 10:46:16.594] [DEBUG] [background-preinit] o.h.v.i.e.ValidatorFactoryConfigurationHelper - HV000234: Using org.hibernate.validator.internal.engine.DefaultClockProvider as ValidatorFactory-scoped clock provider.
+[2026-02-04 10:46:16.594] [DEBUG] [background-preinit] o.h.v.i.e.ValidatorFactoryConfigurationHelper - HV000234: Using org.hibernate.validator.internal.engine.scripting.DefaultScriptEvaluatorFactory as ValidatorFactory-scoped script evaluator factory.
+[2026-02-04 10:46:17.189] [INFO ] [main] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+[2026-02-04 10:46:17.463] [INFO ] [main] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 263 ms. Found 21 JPA repository interfaces.
+[2026-02-04 10:46:18.012] [WARN ] [main] o.s.b.w.r.c.AnnotationConfigReactiveWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Unable to start reactive web server; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dualPortConfig': Invocation of init method failed; nested exception is java.lang.IllegalStateException: server.port는 필수 파라미터이며 0보다 큰 값이어야 합니다. --server.port=<포트번호>를 입력해주세요.
+[2026-02-04 10:46:18.021] [INFO ] [main] o.s.b.a.l.ConditionEvaluationReportLoggingListener - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+[2026-02-04 10:46:18.047] [ERROR] [main] o.s.boot.SpringApplication - Application run failed
+org.springframework.context.ApplicationContextException: Unable to start reactive web server; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dualPortConfig': Invocation of init method failed; nested exception is java.lang.IllegalStateException: server.port는 필수 파라미터이며 0보다 큰 값이어야 합니다. --server.port=<포트번호>를 입력해주세요.
+	at org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext.onRefresh(ReactiveWebServerApplicationContext.java:84)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:577)
+	at org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext.refresh(ReactiveWebServerApplicationContext.java:66)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:731)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:408)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:307)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1303)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1292)
+	at com.infra.mo.skt_giphttp_mo.SktGiphttpMoApplication.main(SktGiphttpMoApplication.java:10)
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dualPortConfig': Invocation of init method failed; nested exception is java.lang.IllegalStateException: server.port는 필수 파라미터이며 0보다 큰 값이어야 합니다. --server.port=<포트번호>를 입력해주세요.
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor.postProcessBeforeInitialization(InitDestroyAnnotationBeanPostProcessor.java:160)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyBeanPostProcessorsBeforeInitialization(AbstractAutowireCapableBeanFactory.java:440)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1796)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:620)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:542)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:335)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:208)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:410)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1352)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1195)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:582)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:542)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:335)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:333)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:213)
+	at org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext.getWebServerFactory(ReactiveWebServerApplicationContext.java:121)
+	at org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext.createWebServer(ReactiveWebServerApplicationContext.java:93)
+	at org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext.onRefresh(ReactiveWebServerApplicationContext.java:81)
+	... 8 common frames omitted
+Caused by: java.lang.IllegalStateException: server.port는 필수 파라미터이며 0보다 큰 값이어야 합니다. --server.port=<포트번호>를 입력해주세요.
+	at com.infra.mo.skt_giphttp_mo.config.http.DualPortConfig.init(DualPortConfig.java:72)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor$LifecycleElement.invoke(InitDestroyAnnotationBeanPostProcessor.java:389)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor$LifecycleMetadata.invokeInitMethods(InitDestroyAnnotationBeanPostProcessor.java:333)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor.postProcessBeforeInitialization(InitDestroyAnnotationBeanPostProcessor.java:157)
+	... 28 common frames omitted

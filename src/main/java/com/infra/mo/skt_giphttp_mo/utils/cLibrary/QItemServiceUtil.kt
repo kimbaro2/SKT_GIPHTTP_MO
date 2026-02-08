@@ -190,7 +190,7 @@ object QItemServiceUtil {
                 }
 
                 SmsDef.SMS_Q_LOCK_FAIL_INVALID_SEMID -> {
-                    witcomLog.p_write(Level.ERROR, "LOCK_FAIL_INVALID_SEMID for queueNo=$queueNo")
+                    witcomLog.p_write(Level.INFO, "LOCK_FAIL_INVALID_SEMID for queueNo=$queueNo")
                     QueueResult(null, null)
                 }
 
@@ -199,7 +199,7 @@ object QItemServiceUtil {
                     qItem.read()
                     val smReqTransResult = QItemConverter.toSMReqTransResult(qItem)
                     witcomLog.p_write(
-                        Level.DEBUG,
+                        Level.INFO,
                         String.format(
                             "[GetAMsgFromSmsQ] Dequeue 성공: QueueNo(%d), MsgSeqNo(%d)",
                             queueNo,
@@ -213,7 +213,7 @@ object QItemServiceUtil {
                     // C 코드에서 QueueNo를 찾을 수 없을 때 반환하는 값 (SW ERROR)
                     // SmsQLib.c의 GetAMsgFromSmsQ에서 stQInfo에 해당 QueueNo가 없을 때 반환
                     witcomLog.p_write(
-                        Level.ERROR,
+                        Level.INFO,
                         String.format(
                             "[GetAMsgFromSmsQ] 큐 번호를 찾을 수 없음 (SW ERROR): QueueNo(%d), 반환값(%d). stQInfo에 해당 QueueNo가 등록되지 않았습니다.",
                             queueNo,
@@ -226,7 +226,7 @@ object QItemServiceUtil {
                 else -> {
                     // 기타 오류
                     witcomLog.p_write(
-                        Level.WARN,
+                        Level.INFO,
                         String.format(
                             "[GetAMsgFromSmsQ] 알 수 없는 반환값: QueueNo(%d), 반환값(%d)",
                             queueNo,
@@ -238,7 +238,7 @@ object QItemServiceUtil {
             }
         } catch (e: Exception) {
             witcomLog.p_write(
-                Level.ERROR,
+                Level.INFO,
                 String.format(
                     "[GetAMsgFromSmsQ] 예외 발생: QueueNo(%d), 예외타입(%s), 예외메시지(%s), 예외스택(%s)",
                     queueNo,
@@ -255,7 +255,7 @@ object QItemServiceUtil {
         val sb = StringBuilder()
 
         fun log(msg: String) = sb.appendLine("### $msg")
-        sb.appendLine("### Print QITEM  ####################################################")
+        sb.appendLine("\n### Print QITEM  ####################################################")
         log("ServerType<${qItem.ucServerType.toChar()}> MsgVerID<${qItem.nMsgVerId}>")
         log(
             "Source Address : SrcCID<${qItem.szSrcCId.decodeCP949()}> SrcCallNo<${
@@ -286,8 +286,10 @@ object QItemServiceUtil {
             SmsEncodingTypeAnalyzer.MessageType.BINARY_8BIT -> "8BIT"
             else -> "UNKNOWN($dataEncodingValue)"
         }
+        // ucMsgLen = 메시지 길이(szMsg 유효 바이트 수). MsgBodyLen = QITEM에 저장된 모든 변수 길이(크기)의 합(구조체 전체 크기)
+        val msgBodyLen = qItem.size()
         log(
-            "MsgLen<${qItem.ucMsgLen}> MsgSerialNo<${qItem.uMsgSerialNo}> TermType<${qItem.ucTermType}> DataEncoding<$dataEncodingStr>"
+            "MsgLen(ucMsgLen)<${qItem.ucMsgLen}> MsgBodyLen<${msgBodyLen}> OrgMsgLen<${qItem.uOrgMsgLen}> MsgSerialNo<${qItem.uMsgSerialNo}> TermType<${qItem.ucTermType}> DataEncoding<$dataEncodingStr>"
         )
         log(
             "Sending Flags : VldPrd<${qItem.nVldPrd}> Priority<${qItem.ucPriority}> RepFlag<${qItem.ucRepFlag}> RgtDlvFlg<${qItem.ucRgtDlvFlg}>"
@@ -296,9 +298,11 @@ object QItemServiceUtil {
             "ConcatenateFlag<${qItem.totalSeg}> ConcatenateInfo<${qItem.segSeq}> SmDefaultMsgID/CALLFW count<${qItem.ucMsgId.firstOrNull() ?: 0}>"
         )
 
-        // ✅ 실제 인코딩 타입에 맞게 메시지 디코딩
+        // ✅ 실제 인코딩 타입에 맞게 메시지 디코딩 (메시지 길이 = ucMsgLen)
         val szOSFI = qItem.szOSFI.decodeCP949()
         val szSmsOSFI = qItem.szSMS_OSFI.decodeCP949()
+        val origMvnoInformation = qItem.szOrigMvnoInformation.decodeCP949()
+        val destMvnoInformation = qItem.szDestMvnoInformation.decodeCP949()
 
 
 
@@ -306,11 +310,10 @@ object QItemServiceUtil {
         val msgBytes = qItem.szMsg.sliceArray(0 until qItem.ucMsgLen)
         val msg = msgBytes.decodeMessage(encodingType)
         log("Message : <${if (msg.isBlank()) "*".repeat(100) else msg}>")
-        sb.appendLine("[MSG_DEBUG] Message")
-
         log(
             "szOSFI<${szOSFI}> szSmsOSFI<${szSmsOSFI}> CallBack<${qItem.szCB.decodeCP949()}> CallBack_Noti<${qItem.callback_noti}> CallBack_Check<${qItem.callback_check}> Location<${qItem.ucLocation.decodeCP949()}>"
         )
+        log("MVNO : OrigMvnoInformation<${origMvnoInformation}> DestMvnoInformation<${destMvnoInformation}>")
         log(
             "OrigCID<${qItem.szSrcCId.decodeCP949()}> RelayCID<${qItem.szRelayCID.decodeCP949()}> FowardNo<${qItem.szFWD_NO.decodeCP949()}> ForwardNo2<${qItem.szFWD_NO2.decodeCP949()}> ReturnQ_No<${qItem.ReturnQ_No}> OrgMsgLen<${qItem.uOrgMsgLen}> AuthFlag<${qItem.usAuthFlag}> VirtualNum<${qItem.szRelayCID.decodeCP949()}>"
         )
@@ -326,9 +329,9 @@ object QItemServiceUtil {
         val logContent = sb.toString()
         if (loggerName != null) {
             val threadId = workerThreadId ?: Thread.currentThread().getId()
-            witcomLog.c_write(loggerName, Level.DEBUG, logContent, threadId)
+            witcomLog.c_write(loggerName, Level.INFO, logContent, threadId)
         } else {
-            witcomLog.p_write(Level.DEBUG, logContent)
+            witcomLog.p_write(Level.INFO, logContent)
         }
     }
 
@@ -642,6 +645,22 @@ object QItemServiceUtil {
             destQItem.ucMsgId,
             0,
             minOf(ptrQItem.ucMsgId.size, destQItem.ucMsgId.size)
+        )
+
+        // MVNO 정보 복사 (qItemToMsgHdr에서 누락되어 있던 필드 보존)
+        System.arraycopy(
+            ptrQItem.szOrigMvnoInformation,
+            0,
+            destQItem.szOrigMvnoInformation,
+            0,
+            minOf(ptrQItem.szOrigMvnoInformation.size, destQItem.szOrigMvnoInformation.size)
+        )
+        System.arraycopy(
+            ptrQItem.szDestMvnoInformation,
+            0,
+            destQItem.szDestMvnoInformation,
+            0,
+            minOf(ptrQItem.szDestMvnoInformation.size, destQItem.szDestMvnoInformation.size)
         )
 
         return destQItem
@@ -1104,7 +1123,7 @@ object QItemServiceUtil {
             } else {
                 // C 코드 LINE 3538-3543: 유효하지 않은 전화번호
                 witcomLog.p_write(
-                    Level.DEBUG,
+                    Level.INFO,
                     String.format(
                         "[DEBUG] InsertIntoASPQ() Invalid SourceCallNo (%s).  Not SKT phone number!",
                         minTmp
@@ -1132,7 +1151,7 @@ object QItemServiceUtil {
             }
         } else {
             witcomLog.p_write(
-                Level.DEBUG,
+                Level.INFO,
                 String.format(
                     "[DEBUG] InsertIntoASPQ() Invalid SourceCallNo (%s).  Not SKT phone number!",
                     minTmp
@@ -1156,7 +1175,7 @@ object QItemServiceUtil {
         if (ret != SmsDef.ALTI_SUCCESS) {
             // C 코드 LINE 3553-3555: SMS Manager 서비스 멤버가 아님
             witcomLog.p_write(
-                Level.WARN,
+                Level.INFO,
                 String.format(
                     "[WARNING] InsertIntoASPQ() OK! Not SMS Manager Service member SourceCID(%s) SourceCallNo(%s)",
                     srcCId,
@@ -1409,7 +1428,10 @@ object QItemServiceUtil {
             val finalMsgBytes = finalMsg.toByteArray(Charset.forName("CP949"))
             val copySize = minOf(finalMsgBytes.size, ptrQItem.szMsg.size)
             System.arraycopy(finalMsgBytes, 0, ptrQItem.szMsg, 0, copySize)
-            ptrQItem.ucMsgLen = copySize
+            // ucMsgLen = 이전과 동일한 메시지 길이(szMsg 유효 바이트 수)
+            val msgDataLength = copySize
+            ptrQItem.ucMsgLen = msgDataLength
+            // MsgBodyLen = QITEM에 저장된 모든 변수 길이(크기)의 합 → 로깅/전문 길이 계산 시 qItem.size() 사용
         }
 
         // C 코드 LINE 3715-3720: MO Message 설정
@@ -1425,7 +1447,7 @@ object QItemServiceUtil {
         // 큐 번호는 내부적으로 결정되므로 InsertIntoSmsQ 사용
         val nQueueNo = 0
         val formatted = String.format("[GIPHTTP_MESSAGE_MANAGER_TR] Get CP Qno(%s) ==", nQueueNo)
-        witcomLog.p_write(Level.DEBUG, formatted)
+        witcomLog.p_write(Level.INFO, formatted)
 
         fetchAndConvert3(ptrQItem, witcomLog) // -> 문자매니저 전문 출력
 
@@ -1433,7 +1455,7 @@ object QItemServiceUtil {
 
         // C 코드 LINE 3726-3757: 결과 처리
         if (insertResult == SmsDef.Q_INSERT_FAIL_Q_FULL) {
-            witcomLog.p_write(Level.ERROR, "[ERROR] InsertIntoASPQ ERROR : InsertIntoSmsQ [Q_FULL]")
+            witcomLog.p_write(Level.INFO, "[ERROR] InsertIntoASPQ ERROR : InsertIntoSmsQ [Q_FULL]")
             val szCIdInt = byteArrayToKString(ptrQItem.szCId).toIntOrNull() ?: 0
             //InsqStat 호출 필요 (C 코드 LINE 3737-3738)
             smsQLib.InsqStat(
@@ -1454,7 +1476,7 @@ object QItemServiceUtil {
             // atoi(gszSPCode));
         } else if (insertResult < 0) {
             witcomLog.p_write(
-                Level.ERROR,
+                Level.INFO,
                 String.format(
                     "[ERROR] InsertIntoASPQ ERROR : InsertIntoSmsQ %d[Q_FAIL]",
                     insertResult

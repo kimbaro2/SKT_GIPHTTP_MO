@@ -100,7 +100,7 @@ object QItemConverter {
             splitSeq = qitem.uSplitSeq,
             dataEncoding = qitem.ucDataEncoding,
             rsv4Protocol = qitem.nRsv4Protocol.toList(),
-            vldPrd = qitem.nVldPrd,
+            vldPrd = qitem.nVldPrd ,
             priority = qitem.ucPriority,
             repFlag = qitem.ucRepFlag,
             rgtDlvFlg = qitem.ucRgtDlvFlg,

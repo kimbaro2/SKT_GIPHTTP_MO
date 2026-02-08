@@ -9,7 +9,9 @@ object BillTypeValidator {
     private val log = LoggerFactory.getLogger(BillTypeValidator::class.java)
     
     // 유효한 BILL_TYPE 값 목록
-    private val VALID_BILL_TYPES = setOf('0', '1', '2', '3', '4', '5')
+    // MO 프로젝트는 BILLTYPE 1(비과금), 2(발신자 과금)만 대응한다.
+    // 그 외 값은 모두 2로 정규화한다.
+    private val VALID_BILL_TYPES = setOf('1', '2')
     
     // 기본값: SRC (발신자 과금)
     const val DEFAULT_BILL_TYPE = "2"
@@ -38,8 +40,9 @@ object BillTypeValidator {
         
         // 유효한 값인지 확인
         if (!VALID_BILL_TYPES.contains(firstChar)) {
-            log.error("유효하지 않은 BILL_TYPE 값: '{}'. 기본값({}) 사용", billType, defaultValue)
-            return defaultValue
+            // 요구사항: BILLTYPE != 1/2 인 경우 모두 2로 처리
+            log.warn("유효하지 않은 BILL_TYPE 값: '{}'. '2'로 정규화", billType)
+            return DEFAULT_BILL_TYPE
         }
         
         return firstChar.toString()

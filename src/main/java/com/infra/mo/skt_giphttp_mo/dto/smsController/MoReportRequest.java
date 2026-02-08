@@ -1,6 +1,7 @@
 package com.infra.mo.skt_giphttp_mo.dto.smsController;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.MOCallInfoEntity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -91,5 +92,88 @@ public class MoReportRequest {
          */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public Integer msgType;
+
+        /**
+         * mo-report 응답 전용: 조회된 MOCALLINFO 레코드 (요청 시에는 null)
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public MoCallInfoBody moCallInfo;
+    }
+
+    /**
+     * mo-report 응답용: MOCALLINFO 테이블 조회 결과
+     */
+    @Data
+    @ToString
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class MoCallInfoBody {
+        public String msgId;
+        public String srcCId;
+        public String destCId;
+        public String srcCallNo;
+        public String destCallNo;
+        public String moSubTime;
+        public Integer msgLen;
+        public Long roamingId;
+        public String cb;
+        public String roamPMN;
+        public String wZone;
+        public String traceId;
+        public String origMvnoInfo;
+        public String destMvnoInfo;
+        public String rcs;
+        public Integer dcsType;
+        public Integer orgMsgLen;
+        public String moRecvTime;
+        public String virtualNum;
+        public java.util.Date expireTime;
+        public Integer segment;
+        public String tid;
+        public Integer centerno;
+        public String msg;
+        public Integer returnQno;
+        public String w2pMsgId;
+        public String fwdSrc;
+        public Integer npdbQueryCnt;
+        public Integer esmClass;
+
+        /**
+         * MOCALLINFO Entity를 MoCallInfoBody로 변환 (mo-report 응답용)
+         */
+        public static MoCallInfoBody fromEntity(MOCallInfoEntity e) {
+            if (e == null) return null;
+            MoCallInfoBody b = new MoCallInfoBody();
+            b.msgId = e.msgId;
+            b.srcCId = e.srcCId;
+            b.destCId = e.destCId;
+            b.srcCallNo = e.srcCallNo;
+            b.destCallNo = e.destCallNo;
+            b.moSubTime = e.moSubTime;
+            b.msgLen = e.msgLen;
+            b.roamingId = e.roamingId;
+            b.cb = e.cb;
+            b.roamPMN = e.roamPMN;
+            b.wZone = e.wZone;
+            b.traceId = e.traceId;
+            b.origMvnoInfo = e.origMvnoInfo;
+            b.destMvnoInfo = e.destMvnoInfo;
+            b.rcs = e.rcs;
+            b.dcsType = e.dcsType;
+            b.orgMsgLen = e.orgMsgLen;
+            b.moRecvTime = e.moRecvTime;
+            b.virtualNum = e.virtualNum;
+            b.expireTime = e.expireTime;
+            b.segment = e.segment;
+            b.tid = e.tid;
+            b.centerno = e.centerno;
+            b.msg = e.msg;
+            b.returnQno = e.returnQno;
+            b.w2pMsgId = e.w2pMsgId;
+            b.fwdSrc = e.fwdSrc;
+            b.npdbQueryCnt = e.npdbQueryCnt;
+            b.esmClass = e.esmClass;
+            return b;
+        }
     }
 }

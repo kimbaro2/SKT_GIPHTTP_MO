@@ -1,0 +1,38 @@
+---
+description: QITEM 로깅 시 ucMsgLen(메시지 길이)과 MsgBodyLen(QITEM 전체 크기) 구분 규칙. 모든 로그에서 이 두 변수에 유의할 것.
+globs: 
+  - **/*.kt
+  - **/*.java
+  - **/QItemServiceUtil.kt
+  - **/SmsQLib.kt
+  - **/QITEM*
+---
+
+# QITEM 로그: ucMsgLen vs MsgBodyLen
+
+**이제부터 모든 로그는 아래 두 변수 의미를 구분하여 사용한다.**
+
+## 1. ucMsgLen (MsgLen)
+
+- **의미**: **이전과 동일한 메시지 길이** — szMsg에 저장된 유효 메시지 바이트 수
+- **용도**: szMsg 슬라이스, 디코딩, 메시지 본문 길이 로깅
+- **표기**: 로그에는 `MsgLen(ucMsgLen)<값>` 또는 `ucMsgLen=<값>` 형태로 명시
+
+## 2. MsgBodyLen
+
+- **의미**: **QITEM에 저장된 모든 메시지(변수) 전체 길이** — QITEM 구조체에 있는 모든 필드 크기의 합
+- **계산**: QITEM 저장된 모든 변수 길이(크기)를 더한 값. JNA에서는 `qItem.size()`로 구함.
+- **주입**: 로깅·전문 길이 계산 시 반드시 이 값을 계산하여 사용(주입)한다.
+- **표기**: 로그에는 `MsgBodyLen<값>` 형태로 명시
+
+## 로그 작성 시
+
+- QITEM/메시지 관련 로그를 남길 때 **MsgLen(ucMsgLen)** 과 **MsgBodyLen** 을 구분하여 출력한다.
+- 메시지 내용(szMsg) 길이를 말할 때는 **ucMsgLen** 을 사용한다.
+- QITEM 전체 데이터(구조체 직렬화) 길이를 말할 때는 **MsgBodyLen** (= `qItem.size()`)을 사용한다.
+
+## 참고 코드
+
+- `QItemServiceUtil.printQItem3`: `msgBodyLen = qItem.size()` 계산 후 `MsgLen(ucMsgLen)`, `MsgBodyLen`, `OrgMsgLen` 을 한 줄에 출력.
+- szMsg 슬라이스/디코딩 시에는 **ucMsgLen**(메시지 길이) 사용.
+- MsgBodyLen은 `Structure.size()` 또는 QITEM 모든 필드 크기 합으로 계산하여 로그에 주입.

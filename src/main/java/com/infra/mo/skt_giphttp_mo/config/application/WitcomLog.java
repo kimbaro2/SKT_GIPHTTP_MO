@@ -93,7 +93,7 @@ public class WitcomLog {
 
     private void handleEntityNotFound(String loggerName) {
         try {
-            p_write(Level.ERROR, String.format(
+            p_write(Level.INFO, String.format(
                 "c_write 실패: loggerName(%s)을 gipHttpAccessMap에서 찾을 수 없습니다. GIPHTTP_MO_ACCESS 테이블에 등록된 IP, 포트 조합을 확인하세요.",
                 loggerName
             ));

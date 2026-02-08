@@ -43,20 +43,14 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
      * UpdateGIPMOCallInfo 함수
      * 
      * C 코드: GIDBLib.c LINE 3452-3459
-     * INSERT INTO MOCALLINFO (SRCCID, SRCCALLNO, DESTCID, DESTCALLNO, MSGID, MOSUBTIME, MSGLEN, 
-     *                        ROAMINGID, ROAMPMN, CB, W_ZONE, TRACE_ID, ORIG_MVNO_INFO, DEST_MVNO_INFO, 
-     *                        RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME)
-     * SELECT SRCCID, SRCCALLNO, DESTCID, DESTCALLNO, :ackMsgId AS MSGID, MOSUBTIME, MSGLEN, 
-     *        ROAMINGID, ROAMPMN, CB, W_ZONE, TRACE_ID, ORIG_MVNO_INFO, DEST_MVNO_INFO, 
-     *        RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME
-     * FROM MOCALLINFO
-     * WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId
+     * INSERT 시 EXPIRETIME은 원본 행 값을 복사 (nVldPrd 기반 만료 시간 유지)
      */
     @Modifying
     @Query(value = "INSERT INTO SMS.MOCALLINFO " +
-            "(SRCCID, SRCCALLNO, DESTCID, DESTCALLNO, MSGID, MOSUBTIME, MSGLEN, ROAMINGID, ROAMPMN, CB, W_ZONE, TRACE_ID, ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME) " +
+            "(SRCCID, SRCCALLNO, DESTCID, DESTCALLNO, MSGID, MOSUBTIME, MSGLEN, ROAMINGID, ROAMPMN, CB, W_ZONE, TRACE_ID, ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME, EXPIRETIME) " +
             "SELECT SRCCID, SRCCALLNO, DESTCID, DESTCALLNO, :ackMsgId AS MSGID, MOSUBTIME, MSGLEN, ROAMINGID, ROAMPMN, CB, W_ZONE, TRACE_ID, " +
-            "ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME " +
+            "ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME, " +
+            "COALESCE(EXPIRETIME, SYSDATE + 1) AS EXPIRETIME " +
             "FROM SMS.MOCALLINFO " +
             "WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId",
             nativeQuery = true)
@@ -69,11 +63,11 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
     
     /**
      * SelectGIPMOCallInfo 함수 - msgId만으로 조회
-     * 
+     *
      * SELECT * FROM MOCALLINFO
      * WHERE MSGID = :msgId
      * ORDER BY MOSUBTIME DESC
-     * 
+     *
      * 주의: 동일한 msgId가 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
      */
     @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO WHERE MSGID = :msgId ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
@@ -81,7 +75,23 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
     MOCallInfoEntity findByMsgId(
             @Param("msgId") String msgId
     );
-    
+
+    /**
+     * mo-report API용: MSGID, TRACE_ID 2가지 값으로 조회
+     *
+     * SELECT * FROM MOCALLINFO
+     * WHERE MSGID = :msgId AND TRACE_ID = :traceId
+     * ORDER BY MOSUBTIME DESC
+     *
+     * 동일 조합이 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
+     */
+    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO WHERE MSGID = :msgId AND TRACE_ID = :traceId ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
+            nativeQuery = true)
+    MOCallInfoEntity findByMsgIdAndTraceId(
+            @Param("msgId") String msgId,
+            @Param("traceId") String traceId
+    );
+
     /**
      * UpdateGIPMOCallInfo 함수 - 원본 레코드 삭제
      * 

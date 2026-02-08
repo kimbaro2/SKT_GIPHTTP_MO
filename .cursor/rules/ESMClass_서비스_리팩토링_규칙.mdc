@@ -1,0 +1,110 @@
+---
+description: QITEM dequeue 후 ESMClass 분기·번호규칙·서비스별 로직 리팩토링 규칙 (객체지향 유지)
+globs: "**/MOThreadPool.kt,**/SmsResServiceImpl.kt,**/service/**/*.kt"
+alwaysApply: false
+---
+
+# ESMClass·서비스 리팩토링 규칙
+
+**규칙: MO는 subcode를 구분하지 않는다.** (usMsgSubCode / SM_REQ_SIMPLE / SM_REQ_TRANS_RESULT 등 subcode별 분기 없이 MO 처리. 관련 로직 수정은 별도 반영.)
+
+## 0. DDD 관점 용어 (참조)
+- **도메인 규칙**: ESMClass·번호규칙(1584, #, 638, 2580 등) 등 불변성 규칙. “무엇을 판단할지”를 정의. (코드는 `MoServiceTypeResolver`, 각 핸들러 내 검증 등에 분산.)
+- **Application Service(핸들러)**: `service/mo/impl` 하위 각 핸들러. 해당 서비스 타입의 MO 처리·분기·검증·통계·과금 호출을 담당. “누가·언제 호출할지”를 수행.
+- **인프라**: DB, JNA, HTTP, InsqStat, bprintf, 로깅 등. 공용 유틸·서비스 레이어에 두며, 비즈니스 판단은 하지 않음.
+
+## 1. 처리 흐름 (불변)
+
+1. **QITEM dequeue** 후
+2. **ESMClass별 switch-case**로 수행할 로직 구분
+3. **번호규칙확인(불변성규칙)** 수행 후 어떤 서비스인지 확인
+4. **서비스에 맞는 로직** 수행 (서비스별 클래스 호출)
+
+코드를 한 파일에 몰아넣지 말고, **ESMClass 분기부**와 **서비스별 클래스 호출** 형태로 객체지향을 유지한다.
+
+---
+
+## 2. 서비스 리스트 (참조용)
+
+| 번호 | 서비스명 | 비고 |
+|------|----------|------|
+| 1 | 일반 MO | NORMAL_MO 등 |
+| 2 | 1584 캐릭터문자 | **불변성**: 앞자리 1584인 경우. NormalMoHandler.kt 검증과정을 통해 식별 |
+| 3 | 638 문자매니저 | ESMClass/번호규칙으로 식별 |
+| 4 | 2580 문자매신저 | ESMClass/번호규칙으로 식별 |
+| 5 | CDMA 로밍 | CDMA_ROAMING 등 (36, 37, 38, 69, 72 등) |
+| 6 | GSM 로밍 | GSM_WCDMA_ROAMING 등 (40, 41, 42, 70, 73 등) |
+| 7 | 안심문자 | NOTI_PLUS (20, 21) |
+| 8 | 등기문자 | NOTI (90, 91). **번호 맨 뒤에 # 이 붙는 불변규칙** 있음 |
+
+---
+
+## 3. 코드 구조 원칙
+
+### 3.1 ESMClass 분기부
+
+- **위치**: dequeue 직후, 한 곳에서만 ESMClass 기준 분기 수행 (switch/when).
+- **역할**: ESMClass 값으로 “어떤 도메인/서비스 유형인지”만 결정하고, **구체 로직은 서비스별 클래스에 위임**.
+
+```kotlin
+// 예: ESMClass 분기만 담당 (로직은 서비스 클래스에 위임)
+val esmClass = esmClassHandler.getEsmClass(qItem)
+val serviceType = resolveServiceType(esmClass, destCID, ...)  // 번호규칙 포함
+val handler = moServiceHandlerRegistry.getHandler(serviceType)
+handler.handle(qItem, context)
+```
+
+### 3.2 번호규칙확인(불변성규칙)
+
+- **시점**: ESMClass 분기로 “수행할 로직” 후보를 정한 뒤, **어떤 서비스인지** 확정하기 전에 수행.
+- **내용**: CID/착신·발신 번호 등 불변 규칙으로 서비스 식별 (예: 1584, 638, 2580 등).
+- **1584**: **불변성**이다. **NormalMoHandler.kt**에서 검증과정을 통해 **앞자리가 1584인 경우**를 식별한다. (DDD 관점: **도메인 규칙(NumberRule)**에 해당.)
+- **등기문자 ESMClass 유형**: 번호 **맨 뒤에 # 이 붙는 불변규칙**이 있다. (번호+# 형태로 등기 구분)
+- **결과**: 서비스 타입(enum 또는 상수)으로 반환하여, 해당 서비스 전용 클래스만 호출하도록 한다.
+
+### 3.3 서비스별 클래스 호출
+
+- **한 서비스 = 한 책임**: 일반 MO, 1584 캐릭터문자, 638 문자매니저, 2580 문자매신저, CDMA 로밍, GSM 로밍, 안심문자, 등기문자 등 **서비스별로 전용 클래스(또는 전용 메서드)**를 두고, 분기부에서는 그 클래스만 호출.
+- **파일 분리**: 서비스별 로직을 하나의 큰 파일에 모으지 말고, `service/handler` 또는 `service/mo` 아래 서비스별 클래스로 나눈다.
+
+---
+
+## 4. 디렉터리/클래스 구조 예시
+
+```
+service/
+  handler/
+    EsmClassHandler.kt          # ESMClass 값 추출·판별
+    MoServiceTypeResolver.kt    # ESMClass + 번호규칙 → 서비스 타입
+  mo/
+    MoServiceHandler.kt         # 서비스별 핸들러 인터페이스
+    MoServiceHandlerRegistry.kt # 서비스 타입 → 핸들러 매핑
+    impl/
+      NormalMoHandler.kt       # 1. 일반 MO
+      Character1584Handler.kt  # 2. 1584 캐릭터문자
+      SmsManager638Handler.kt   # 3. 638 문자매니저
+      SmsMessenger2580Handler.kt # 4. 2580 문자매신저
+      CdmaRoamingHandler.kt    # 5. CDMA 로밍
+      GsmRoamingHandler.kt     # 6. GSM 로밍
+      NotiPlusHandler.kt       # 7. 안심문자
+      NotiRegisteredHandler.kt # 8. 등기문자 (번호+# 불변규칙)
+```
+
+- **EsmClass 분기부**: `MOThreadPool` 또는 전용 오케스트레이터에서 `EsmClass` → (번호규칙) → `ServiceType` → `MoServiceHandlerRegistry.getHandler(serviceType).handle(...)` 만 호출.
+- **서비스별 클래스**: 위 `impl` 패키지의 각 핸들러가 해당 서비스 로직만 담당.
+
+---
+
+## 5. 체크리스트
+
+- [ ] QITEM dequeue 직후, ESMClass 기준 switch-case(또는 when)로만 분기하는가?
+- [ ] 번호규칙확인(불변성규칙)이 “수행 로직 후보 결정 후, 서비스 확정 전”에 수행되는가?
+- [ ] 서비스 리스트(1~8)가 enum/상수로 정의되어 있고, 서비스별 클래스와 1:1로 매핑되는가?
+- [ ] 한 파일에 여러 서비스 로직을 몰아넣지 않고, 서비스별 클래스(또는 핸들러)로 분리되어 있는가?
+- [ ] ESMClass 분기부는 “분기 + 서비스 타입 결정 + 핸들러 호출”만 하고, 구체 비즈니스 로직은 서비스별 클래스에만 있는가?
+
+### 새 서비스 타입 추가 시 (DDD 반영)
+1. **MoServiceType** enum에 값 추가.
+2. **핸들러** 추가: `service/mo/impl` 하위에 해당 서비스 전용 핸들러 클래스 생성·등록.
+3. **MoServiceTypeResolver** 분기 추가: `resolve(esmClass, destCid)` 내 번호규칙·ESMClass 분기 추가.
+4. **MoServiceHandlerRegistry**에 새 핸들러 매핑 등록.
