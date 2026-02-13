@@ -125,6 +125,110 @@ open class QITEM : Structure() {
     @JvmField var szOrigCID = ByteArray(ORIGCID_SIZE)
     @JvmField var szRelayCID = ByteArray(RELAYCID_SIZE)
 
+    /**
+     * src/dest 번호를 스왑한 새로운 QITEM을 반환합니다.
+     * 기존 QITEM은 변경되지 않으며, InsqStat 호출 등 특정 상황에서 사용하기 위한 일시적인 복사본을 생성합니다.
+     * 
+     * 스왑되는 필드:
+     * - szSrcCId <-> szCId
+     * - szSrcMinNo <-> szMinNo
+     * 
+     * @return src/dest가 스왑된 새로운 QITEM 인스턴스
+     */
+    fun createSwappedSrcDest(): QITEM {
+        val swapped = QITEM()
+        
+        // 모든 필드 복사
+        swapped.ucServerType = this.ucServerType
+        swapped.nMsgVerId = this.nMsgVerId
+        
+        // src/dest 스왑: szSrcCId <-> szCId
+        System.arraycopy(this.szCId, 0, swapped.szSrcCId, 0, QITEM_SIZE_CID)
+        System.arraycopy(this.szSrcCId, 0, swapped.szCId, 0, QITEM_SIZE_CID)
+        
+        // src/dest 스왑: szSrcMinNo <-> szMinNo
+        System.arraycopy(this.szMinNo, 0, swapped.szSrcMinNo, 0, QITEM_SIZE_MINNO)
+        System.arraycopy(this.szSrcMinNo, 0, swapped.szMinNo, 0, QITEM_SIZE_MINNO)
+        
+        swapped.usSource = this.usSource
+        swapped.nModuleNo = this.nModuleNo
+        
+        swapped.usMsgCode = this.usMsgCode
+        swapped.usMsgSubCode = this.usMsgSubCode
+        System.arraycopy(this.usMsgCodeReserved, 0, swapped.usMsgCodeReserved, 0, this.usMsgCodeReserved.size)
+        
+        swapped.ucMsgLen = this.ucMsgLen
+        swapped.uMsgSerialNo = this.uMsgSerialNo
+        swapped.ucTermType = this.ucTermType
+        swapped.uSplitSeq = this.uSplitSeq
+        
+        swapped.ucDataEncoding = this.ucDataEncoding
+        System.arraycopy(this.ucRsv, 0, swapped.ucRsv, 0, this.ucRsv.size)
+        System.arraycopy(this.nRsv4Protocol, 0, swapped.nRsv4Protocol, 0, this.nRsv4Protocol.size)
+        
+        swapped.nVldPrd = this.nVldPrd
+        swapped.ucPriority = this.ucPriority
+        swapped.ucRepFlag = this.ucRepFlag
+        swapped.ucRgtDlvFlg = this.ucRgtDlvFlg
+        
+        swapped.ucMsgStatus = this.ucMsgStatus
+        swapped.ucGSMErrCode = this.ucGSMErrCode
+        System.arraycopy(this.ucFlagReserved, 0, swapped.ucFlagReserved, 0, this.ucFlagReserved.size)
+        swapped.ucAgingCnt = this.ucAgingCnt
+        swapped.ucDoNotFwd = this.ucDoNotFwd
+        
+        System.arraycopy(this.ucMsgId, 0, swapped.ucMsgId, 0, this.ucMsgId.size)
+        System.arraycopy(this.ucRsv4Dlv, 0, swapped.ucRsv4Dlv, 0, this.ucRsv4Dlv.size)
+        
+        System.arraycopy(this.szMsg, 0, swapped.szMsg, 0, this.szMsg.size)
+        swapped.tCreateTime = this.tCreateTime
+        System.arraycopy(this.szCB, 0, swapped.szCB, 0, this.szCB.size)
+        System.arraycopy(this.szFree2, 0, swapped.szFree2, 0, this.szFree2.size)
+        
+        System.arraycopy(this.ucLocation, 0, swapped.ucLocation, 0, this.ucLocation.size)
+        swapped.ucRsvLocation = this.ucRsvLocation
+        System.arraycopy(this.szFWD_NO, 0, swapped.szFWD_NO, 0, this.szFWD_NO.size)
+        System.arraycopy(this.szFWD_NO2, 0, swapped.szFWD_NO2, 0, this.szFWD_NO2.size)
+        swapped.ReturnQ_No = this.ReturnQ_No
+        
+        System.arraycopy(this.szOSFI, 0, swapped.szOSFI, 0, this.szOSFI.size)
+        System.arraycopy(this.szOrgCallingNumber, 0, swapped.szOrgCallingNumber, 0, this.szOrgCallingNumber.size)
+        swapped.unMsgAddNum = this.unMsgAddNum
+        
+        swapped.msgRefID = this.msgRefID
+        swapped.totalSeg = this.totalSeg
+        swapped.segSeq = this.segSeq
+        
+        swapped.callback_noti = this.callback_noti
+        swapped.n010_plus = this.n010_plus
+        swapped.msg_org = this.msg_org
+        swapped.callback_check = this.callback_check
+        System.arraycopy(this.szTraceId, 0, swapped.szTraceId, 0, this.szTraceId.size)
+        
+        System.arraycopy(this.szTraceTime, 0, swapped.szTraceTime, 0, this.szTraceTime.size)
+        System.arraycopy(this.szOrigMvnoInformation, 0, swapped.szOrigMvnoInformation, 0, this.szOrigMvnoInformation.size)
+        System.arraycopy(this.szDestMvnoInformation, 0, swapped.szDestMvnoInformation, 0, this.szDestMvnoInformation.size)
+        
+        swapped.cBillType = this.cBillType
+        System.arraycopy(this.szFullRN, 0, swapped.szFullRN, 0, this.szFullRN.size)
+        System.arraycopy(this.szVMBackupCID, 0, swapped.szVMBackupCID, 0, this.szVMBackupCID.size)
+        
+        System.arraycopy(this.RcsTag, 0, swapped.RcsTag, 0, this.RcsTag.size)
+        swapped.RcsResult = this.RcsResult
+        swapped.uOrgMsgLen = this.uOrgMsgLen
+        
+        swapped.ChildNumOrd = this.ChildNumOrd
+        swapped.usAuthFlag = this.usAuthFlag
+        System.arraycopy(this.szSMS_OSFI, 0, swapped.szSMS_OSFI, 0, this.szSMS_OSFI.size)
+        System.arraycopy(this.szMoRecvTime, 0, swapped.szMoRecvTime, 0, this.szMoRecvTime.size)
+        
+        swapped.nTransQNo = this.nTransQNo
+        System.arraycopy(this.szOrigCID, 0, swapped.szOrigCID, 0, this.szOrigCID.size)
+        System.arraycopy(this.szRelayCID, 0, swapped.szRelayCID, 0, this.szRelayCID.size)
+        
+        return swapped
+    }
+
     class ByReference : QITEM(), Structure.ByReference
     class ByValue : QITEM(), Structure.ByValue
 }

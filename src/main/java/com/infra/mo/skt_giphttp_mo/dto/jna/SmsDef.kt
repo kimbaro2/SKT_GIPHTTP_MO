@@ -10,7 +10,7 @@ interface LibC {
 }
 
 object SmsDef {
-    const val OCS_SMSC=900;
+    const val OCS_SMSC = 900;
     const val SKT_TP = 11;
     const val KTF_TP = 16;
     const val LGT_TP = 19;
@@ -1032,7 +1032,7 @@ object SmsDef {
     // MO-TR 관련 통계/에러 코드 (C inc/StatDef.h, inc/TraceDef.h 기준)
     const val ERRORID_CP_MO_TR_FAIL = 28            /* MO-TR 과금/처리 실패 */
     const val ERRORID_CP_MO_TR_SUCCESS = 27         /* MO-TR 과금 성공 */
-    
+
     // C 코드 기준: Center TR 관련 ErrorId (C 코드에서 사용하는 값)
     const val ERRORID_CENTER_TR_SUCCESS = 2         /* C 코드: msgStatus==2일 때 사용 */
     const val ERRORID_CENTER_TR_EXPIRED = 3         /* C 코드: msgStatus==3일 때 사용 */
@@ -1041,8 +1041,8 @@ object SmsDef {
     const val ST_Q_INSERT_FAIL_VBILLMO = -316       /* 큐 입력 오류(VBILLMO) */
 
 
-    const val GIPEVENT_BLOCK_NOTI_CID =	"3333333310"
-    const val GIPEVENT_BLOCK_NOTI_CALLBACK =	"114"
+    const val GIPEVENT_BLOCK_NOTI_CID = "3333333310"
+    const val GIPEVENT_BLOCK_NOTI_CALLBACK = "114"
 
     const val ST_GIPEVENT_INSQ_POLL = 87
 
@@ -1050,16 +1050,18 @@ object SmsDef {
 
     const val ST_Q_INSERT_FAIL_BLOCKNOTI = -248
 
-    const val ST_GIPEVENT_INSQ_BLOCKNOTI =88
+    const val ST_GIPEVENT_INSQ_BLOCKNOTI = 88
 
     const val MODULEID_GIPEVENT_C = 31
     const val MODULEID_VBILLMO = 39  // VBILL MO 모듈 ID
     const val MODULEID_SMSMOR = 13  // SMSMOR 모듈 ID
     const val SERVICEID_GIPEVENT = 45
     const val SERVICEID_GIPM = 41  // GIPM 서비스 ID
+    const val SERVICEID_NOTISENDING = 61
     const val ERRORID_CP_MO_FAIL = 16
     const val ERRORID_CENTER_MO_SUCCESS = 35  // Center MO 성공
     const val ST_Q_INSERT_FAIL_POLL = -299
+    const val MODULEID_NOTISEND = 34
 
     const val MODULEID_GIPALL_C = 27
 
@@ -1074,7 +1076,7 @@ object SmsDef {
     const val ERRORID_CP_TR_FAIL = 19
     const val ST_GIP_SOCK_SEND_FAIL = -160
     const val ST_GIPALL_MTTR_SEND_OK = 81            /*전송(MTTR)*//*MsgStatus*/
-    
+
     // ProcessSMRes 관련 상수
     // C 오리지널 기준(inc/TraceDef.h):
     // - ST_GIPEVENT_MO_OK = 56 (성공(MO))
@@ -1092,6 +1094,7 @@ object SmsDef {
     const val ST_DB_NO_DATA_GIPMOCALLINFO = -125     /* DB NO DATA(GIPMOCALLINFO) */
     const val ST_GIPEVENT_MOACK_BILL_OK = 80         /* 과금성공(MOACK) */
     const val ST_GIP_INVALID_CID = -144              /* Invalid CID */
+    const val ST_NOTISEND_OK = 182                   /* 성공 */
 
     const val SM_STATE_EXPIRED = 3                        /* validity period expired */
 
@@ -1450,8 +1453,8 @@ object SmsDef {
 
     const val IF_NULL = -1
 
-    const val TID_SAVE                = 0
-    const val TID_NO_SAVE             = 1
+    const val TID_SAVE = 0
+    const val TID_NO_SAVE = 1
 
     /** TRACE 파일만 생성 LT_BOTH 외 나머지 구간은 LT_TRACE*/
     const val LT_TRACE = 0

@@ -78,25 +78,16 @@ class MoServiceTypeResolver(
         BIZ_NUMBER_GSM_ROAMING_MO               // 73
     )
 
-    /** 안심문자 관련: 20,21,22,23,25,24,26 */
+    /** 안심문자 관련: 20,21 (도메인 기준 고정) */
     private val notiPlusEsmClasses = setOf(
         NOTI_PLUS_NORMAL_MO,                   // 20
-        NOTI_PLUS_PORTED_MO,                   // 21
-        NOTI_PLUS_PORTED_MT,                   // 22
-        KTF_2G_NOTI_PLUS_PORTED_MO,            // 23
-        KTF_3G_NOTI_PLUS_PORTED_MO,            // 25
-        LGT_2G_NOTI_PLUS_PORTED_MO,            // 24
-        LGT_3G_NOTI_PLUS_PORTED_MO             // 26
+        NOTI_PLUS_PORTED_MO                    // 21
     )
 
-    /** 등기문자(NOTI) 관련: 90,91,92,93,94,95 */
+    /** 등기문자(NOTI) 관련: 90,91 (도메인 기준 고정) */
     private val notiRegisteredEsmClasses = setOf(
         NOTI_NORMAL_MO,                       // 90
-        NOTI_PORTED_MO,                       // 91
-        KTF_2G_NOTI_PORTED_MO,                // 92
-        KTF_3G_NOTI_PORTED_MO,                // 93
-        LGT_2G_NOTI_PORTED_MO,                 // 94
-        LGT_3G_NOTI_PORTED_MO                  // 95
+        NOTI_PORTED_MO                        // 91
     )
 
     /** 착신전환 관련 (CDMA/GSM 로밍 포함 착신전환은 로밍 항목에 포함): 48,49,50,52,53 */
@@ -117,6 +108,11 @@ class MoServiceTypeResolver(
      * @return 서비스 타입
      */
     fun resolve(esmClass: Int, destCID: String?): MoServiceType {
+        // 0) ESMClass 우선 규칙: ESMClass 20(NOTI_PLUS_NORMAL_MO)은 착신번호 규칙과 무관하게 안심문자 도메인으로 고정
+        if (esmClass == NOTI_PLUS_NORMAL_MO) {
+            return MoServiceType.NOTI_PLUS
+        }
+
         // 1) 5.1 번호규칙(특번) — 모든 도메인에 기본 적용: destCID로 1584/638/2580/# 구분
         if (!destCID.isNullOrEmpty()) {
             when {

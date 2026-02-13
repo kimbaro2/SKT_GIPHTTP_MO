@@ -26,8 +26,34 @@ interface MoDbInsertService {
      * MO_NOTISEND 저장 (NOTI 타입).
      * @param segmentInfo Segment 정보 (MMS/PUSH 타입에만 유효), null 가능
      * @return 성공 시 0, 실패 시 -1
+     * @deprecated 도메인 분리: 안심문자용 insertMO_NOTISEND_NotiPlus, 등기문자용 insertMO_NOTISEND_NotiRegistered 사용
      */
+    @Deprecated("도메인별 메서드 사용", ReplaceWith("insertMO_NOTISEND_NotiPlus 또는 insertMO_NOTISEND_NotiRegistered"))
     fun insertMO_NOTISEND(
+        qItem: QITEM,
+        msgHdr: SMReqTransResult,
+        entity: GipHttpMoAccessEntity,
+        segmentInfo: SegmentInfo? = null,
+        workerThreadId: Long
+    ): Int
+
+    /**
+     * MO_NOTISEND 저장 — 안심문자(ESMClass 20, 21) 전용. 공통 서비스 없이 도메인별 배치.
+     * @return 성공 시 0, 실패 시 -1
+     */
+    fun insertMO_NOTISEND_NotiPlus(
+        qItem: QITEM,
+        msgHdr: SMReqTransResult,
+        entity: GipHttpMoAccessEntity,
+        segmentInfo: SegmentInfo? = null,
+        workerThreadId: Long
+    ): Int
+
+    /**
+     * MO_NOTISEND 저장 — 등기문자(ESMClass 90, 91) 전용. 공통 서비스 없이 도메인별 배치.
+     * @return 성공 시 0, 실패 시 -1
+     */
+    fun insertMO_NOTISEND_NotiRegistered(
         qItem: QITEM,
         msgHdr: SMReqTransResult,
         entity: GipHttpMoAccessEntity,

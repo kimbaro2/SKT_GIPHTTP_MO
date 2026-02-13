@@ -5,8 +5,21 @@ import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.dto.smsController.MoReportRequest
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.MOCallInfoEntity
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.MONotISendEntity
 import com.infra.mo.skt_giphttp_mo.dto.jna.SMReqTransResult
 import com.infra.mo.skt_giphttp_mo.utils.cLibrary.SmsQLib
+
+/**
+ * mo-report에서 MOCALLINFO 구성 후, 나중에 processTR_*에서 삭제할 MO_NOTISEND 엔티티를 함께 전달하기 위한 결과 타입.
+ * @param moCallInfo 비즈니스 로직에서 사용할 MOCALLINFO 형태 엔티티
+ * @param moNotiToDelete 등기/안심 TR 처리 시 delete(entity)로 삭제할 MO_NOTISEND 엔티티 (객체 재사용). 동일 MSGID로 생략한 경우 null
+ * @param skipMoNotiDelete true면 MO_NOTISEND 삭제 수행 안 함 (동일 MSGID로 DB 미변경 시 기존 행 보존)
+ */
+data class MoReportCallInfoResult(
+    val moCallInfo: MOCallInfoEntity,
+    val moNotiToDelete: MONotISendEntity? = null,
+    val skipMoNotiDelete: Boolean = false
+)
 
 /**
  * SMS 결과 처리 서비스 인터페이스
@@ -53,15 +66,25 @@ interface SmsResService {
     )
     
     /**
-     * mo-report API로 수신한 MO-TR 결과 처리
-     * 
-     * @param request MoReportRequest (LOG_NO, CID, MSG_ID, MSG_STATUS, TRACE_ID)
-     * @param moCallInfo MOCALLINFO 레코드
-     * @param gipHttpMoAccess HTTP_MOSEND_ACCESS 레코드
-     * @param clientIp 클라이언트 IP
-     * @param serverPort 서버 포트
+     * mo-report API: 안심/등기 전용 처리 (MOCALLINFO 없음 + MO_NOTISEND 있음).
+     * OCS 미관할. processESMClassBranch 호출, InsqStat 27 / MOCALLINFO 삭제 없음.
+     * @param moCallInfo buildMoCallInfoFromMoNotiForReport로 만든 엔티티 (QItem 생성용)
      */
-    suspend fun processMoReport(
+    suspend fun processMoReportForNoti(
+        request: MoReportRequest,
+        moCallInfo: MOCallInfoEntity,
+        gipHttpMoAccess: GipHttpMoAccessEntity,
+        clientIp: String,
+        serverPort: Int,
+        moNotiToDelete: MONotISendEntity,
+        skipMoNotiDelete: Boolean = false
+    )
+
+    /**
+     * mo-report API: 일반 MO 전용 처리 (MOCALLINFO 있음).
+     * OCS 삭제(해당 시), InsqStat 27, MOCALLINFO 삭제 수행.
+     */
+    suspend fun processMoReportForGeneralMo(
         request: MoReportRequest,
         moCallInfo: MOCallInfoEntity,
         gipHttpMoAccess: GipHttpMoAccessEntity,
@@ -87,4 +110,37 @@ interface SmsResService {
         entity: GipHttpMoAccessEntity,
         workerThreadId: Long
     ): Int
+
+    /**
+     * mo-report 전용: MO_NOTISEND를 갱신하지 않고, 조회된 엔티티로 MOCallInfo 형태만 구성한다.
+     * DB UPDATE(DELETE+INSERT) 없이 "조회 + 삭제만" 하려면 이 메서드를 사용한다.
+     *
+     * @param cpMsgId CP가 보낸 msgId (응답/로직에 사용할 최종 MSGID)
+     * @param moNoti 조회된 MO_NOTISEND 엔티티 (이후 processMoReport에서 delete(entity)로 삭제 대상)
+     * @return MoReportCallInfoResult (moCallInfo + moNotiToDelete=moNoti, skipMoNotiDelete=false)
+     */
+    fun buildMoCallInfoFromMoNotiForReport(cpMsgId: String, moNoti: MONotISendEntity): MoReportCallInfoResult
+
+    /**
+     * mo-report 흐름에서 MO_NOTISEND MSGID를 반영하고,
+     * 이후 비즈니스 로직/응답에 사용할 MOCallInfoEntity를 구성한다.
+     *
+     * CP 요청의 MSGID·srcCid·destCid가 DB 레코드와 모두 같으면 DELETE+INSERT 생략.
+     *
+     * @param cpMsgId CP가 보낸 msgId
+     * @param requestSrcCid CP가 보낸 srcCid (동일 여부 비교용)
+     * @param requestDestCid CP가 보낸 destCid (동일 여부 비교용)
+     * @param moNoti 조회된 MO_NOTISEND 엔티티
+     * @param loggerName 로거 이름
+     * @return MoReportCallInfoResult (moCallInfo + 나중에 삭제할 moNotiToDelete, 객체 재사용용)
+     */
+    fun updateMoNotiMsgIdAndBuildMoCallInfo(
+        cpMsgId: String,
+        requestSrcCid: String,
+        requestDestCid: String,
+        requestSrcCallNo: String,
+        requestDestCallNo: String,
+        moNoti: MONotISendEntity,
+        loggerName: String
+    ): MoReportCallInfoResult
 }

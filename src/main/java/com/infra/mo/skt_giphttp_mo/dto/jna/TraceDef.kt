@@ -249,8 +249,9 @@ object TraceDef{
     const val ST_TRECV_DATA_SIZE_WRONG =                   -343         /*DATA SIZE WRONG*/                             /*data size*/
     const val ST_TRECV_SEND_ACK_FAIL =                     -344         /*ACK 전송실패*/                                        /*메시지ID:stQItem.ucMsgId*/
     const val ST_TSEND_SEND_DATA_FAIL =                    -345         /*DATA 전송실패*/                                       /*errno*/
-    const val ST_VBILLMO_OK =                              141         /*과금성공*/                                      /*VBILL_MO 과금 성공*/
-    const val ST_VBILLMO_NOTISEND_OK =                     142         /*과금성공(MONOTISEND)*/                          /*VBILL_MO 과금 성공 (MO_NOTISEND)*/
+    const val ST_VBILLMO_SUCC_NOTISEND =                    137         /*성공안심문자*/                                      /*안심문자과금성공*/
+    const val ST_VBILLMO_OK =                               141         /*과금성공*/                                      /*VBILL_MO 과금 성공*/
+    const val ST_VBILLMO_NOTISEND_OK =                      142         /*성공(MONOTISEND)*/                          /*VBILL_MO 성공 (MO_NOTISEND)*/
     const val ST_VBILLMO_DONT_BILL_TRFAIL =                -346         /*과금실패(TRFAIL)*/                            /*TRStatus:ptrQitem->ucMsgStatus*/
     const val ST_VBILLMO_INVALID_CID =                     -347         /*잘못된 CID*/                                  /*발신CID*/
     const val ST_VRECV_DATA_SIZE_WRONG =                   -348         /*DATA SIZE WRONG*/                             /*data size*/

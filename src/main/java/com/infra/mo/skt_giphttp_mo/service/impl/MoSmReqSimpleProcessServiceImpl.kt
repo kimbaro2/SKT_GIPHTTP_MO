@@ -10,7 +10,9 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_LIMIT
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MESSAGE_MO
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MSG_CODE_SM_RES
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MODULEID_GIPEVENT_C
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MODULEID_VBILLMO
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SERVICEID_GIPEVENT
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_TR_SUCCESS
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_SIMPLE
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ST_GIP_MO_LIMIT
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.TID_NO_SAVE
@@ -19,6 +21,7 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.LT_TRACE
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.VSMSS_TYPE
 import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_DB_INS_FAIL_GIPMOCALLINFO
 import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_DB_NO_DATA_MONOTISEND
+import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_VBILLMO_NOTISEND_OK
 import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_GIP_MT_LIMIT_GIFT
 import com.infra.mo.skt_giphttp_mo.dto.smsController.Rsv4ProtocolItem
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
@@ -31,6 +34,7 @@ import com.infra.mo.skt_giphttp_mo.service.MoLimitCheckService
 import com.infra.mo.skt_giphttp_mo.service.MoQItemUtilService
 import com.infra.mo.skt_giphttp_mo.service.MoRequeueService
 import com.infra.mo.skt_giphttp_mo.service.MoRcsTrService
+import com.infra.mo.skt_giphttp_mo.service.MoSendInsqStatService
 import com.infra.mo.skt_giphttp_mo.service.MoSendToCpService
 import com.infra.mo.skt_giphttp_mo.service.SmsResService
 import com.infra.mo.skt_giphttp_mo.service.handler.MoServiceType
@@ -63,6 +67,7 @@ class MoSmReqSimpleProcessServiceImpl(
     private val moGipEventLogService: MoGipEventLogService,
     private val moSendToCpService: MoSendToCpService,
     private val moRequeueService: MoRequeueService,
+    private val moSendInsqStatService: MoSendInsqStatService,
     private val moDbInsertService: MoDbInsertService,
     private val smsResService: SmsResService
 ) : IMoProcessorOps {
@@ -335,8 +340,6 @@ class MoSmReqSimpleProcessServiceImpl(
             ),
             workerThreadId
         )
-        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
-        handlerForStat.recordMoSuccessInsqStat(gstQItem, context)
         val destCIDForSendCheck = QItemServiceUtil.byteArrayToKString(gstQItem.szCId)
         val isCid1584ForSendCheck = destCIDForSendCheck.startsWith("1584")
         witcomLog.c_write(
@@ -360,60 +363,156 @@ class MoSmReqSimpleProcessServiceImpl(
                 workerThreadId,
                 gstQItemTrans
             )
+            moSendInsqStatService.recordMoFailedInsqStat(gstQItem, context)
             return
         }
+        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
+        handlerForStat.recordMoSuccessInsqStat(gstQItem, context)
         var dbInsertOk = true
         val destCIDForDBInsert = QItemServiceUtil.byteArrayToKString(gstQItem.szCId)
         val isCid1584ForDBInsert = destCIDForDBInsert.startsWith("1584")
+        val gMOTRBILL = moBillTypeService.isMoTrBillEnabled(actualEntity.moTrBill)
         witcomLog.c_write(
             loggerName,
             Level.INFO,
             String.format(
-                "[DB Insert 분기 체크] destCID(%s), isCid1584(%b), gBILLTYPE(%c), isNotiPlusType(%b), isNotiType(%b), isRelayMo(%b), actualEntity.logNo(%s), actualEntity.moTrBill(%d)",
+                "[DB Insert 분기 체크] destCID(%s), isCid1584(%b), gBILLTYPE(%c), isNotiPlusType(%b), isNotiType(%b), isRelayMo(%b), gMOTRBILL(%b), actualEntity.logNo(%s), actualEntity.moTrBill(%d)",
                 destCIDForDBInsert,
                 isCid1584ForDBInsert,
                 gBILLTYPE,
                 isNotiPlusType,
                 isNotiType,
                 isRelayMo,
+                gMOTRBILL,
                 actualEntity.logNo,
                 actualEntity.moTrBill ?: 0
             ),
             workerThreadId
         )
-        if (!moBillTypeService.isFreeBill(gBILLTYPE) && (isNotiPlusType || isNotiType)) {
-            witcomLog.c_write(
-                loggerName,
-                Level.INFO,
-                String.format(
-                    "[DB Insert 분기] NOTI 타입 분기 진입: destCID(%s), isCid1584(%b), MO_NOTISEND 저장",
-                    destCIDForDBInsert,
-                    isCid1584ForDBInsert
-                ),
-                workerThreadId
-            )
-            val notiRes = moDbInsertService.insertMO_NOTISEND(
-                gstQItem,
-                gstQItemTrans,
-                actualEntity,
-                segmentInfo,
-                workerThreadId
-            )
-            if (notiRes < 0) {
-                dbInsertOk = false
-                smsQLib.InsqStat(
+        // 요구사항 기준: 안심/등기 도메인에서는 MOCALLINFO 저장을 하지 않음.
+        // MOTRBILL=Y인 경우에만 MO_NOTISEND 저장을 수행한다.
+        if (isNotiPlusType) {
+            if (gMOTRBILL) {
+                witcomLog.c_write(
+                    loggerName,
+                    Level.INFO,
+                    String.format(
+                        "[DB Insert 분기] 안심문자(NotiPlus) 도메인 진입: destCID(%s), MOTRBILL=Y, MO_NOTISEND 저장",
+                        destCIDForDBInsert
+                    ),
+                    workerThreadId
+                )
+                val notiRes = moDbInsertService.insertMO_NOTISEND_NotiPlus(
                     gstQItem,
-                    MESSAGE_MO,
-                    0,
-                    gServerID,
-                    MODULEID_GIPEVENT_C,
-                    SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_FAIL,
-                    ST_DB_NO_DATA_MONOTISEND,
-                    moQItemUtilService.getNInforNo(gstQItem),
-                    TID_NO_SAVE,
-                    LT_TRACE,
-                    0
+                    gstQItemTrans,
+                    actualEntity,
+                    segmentInfo,
+                    workerThreadId
+                )
+                if (notiRes < 0) {
+                    dbInsertOk = false
+                    smsQLib.InsqStat(
+                        gstQItem,
+                        MESSAGE_MO,
+                        0,
+                        gServerID,
+                        MODULEID_GIPEVENT_C,
+                        SERVICEID_GIPEVENT,
+                        ERRORID_CP_MO_FAIL,
+                        ST_DB_NO_DATA_MONOTISEND,
+                        moQItemUtilService.getNInforNo(gstQItem),
+                        TID_NO_SAVE,
+                        LT_TRACE,
+                        0
+                    )
+                } else {
+                    // MO 단계 MO_NOTISEND 저장 성공 시 smstrc(VBILLMO 성공(MONOTISEND)) 기록
+                    smsQLib.InsqStat(
+                        gstQItem,
+                        MESSAGE_MO,
+                        0,
+                        gServerID,
+                        MODULEID_VBILLMO,
+                        SERVICEID_GIPEVENT,
+                        ERRORID_CP_TR_SUCCESS,
+                        ST_VBILLMO_NOTISEND_OK,
+                        moQItemUtilService.getNInforNo(gstQItem),
+                        TID_NO_SAVE,
+                        LT_BOTH,
+                        0
+                    )
+                }
+            } else {
+                witcomLog.c_write(
+                    loggerName,
+                    Level.INFO,
+                    String.format(
+                        "[DB Insert 분기] 안심문자(NotiPlus) 도메인 진입: destCID(%s), MOTRBILL=N, DB 저장 스킵(MO_NOTISEND 미저장, MOCALLINFO 미저장)",
+                        destCIDForDBInsert
+                    ),
+                    workerThreadId
+                )
+            }
+        } else if (isNotiType) {
+            if (gMOTRBILL) {
+                witcomLog.c_write(
+                    loggerName,
+                    Level.INFO,
+                    String.format(
+                        "[DB Insert 분기] 등기문자(NotiRegistered) 도메인 진입: destCID(%s), MOTRBILL=Y, MO_NOTISEND 저장",
+                        destCIDForDBInsert
+                    ),
+                    workerThreadId
+                )
+                val notiRes = moDbInsertService.insertMO_NOTISEND_NotiRegistered(
+                    gstQItem,
+                    gstQItemTrans,
+                    actualEntity,
+                    segmentInfo,
+                    workerThreadId
+                )
+                if (notiRes < 0) {
+                    dbInsertOk = false
+                    smsQLib.InsqStat(
+                        gstQItem,
+                        MESSAGE_MO,
+                        0,
+                        gServerID,
+                        MODULEID_GIPEVENT_C,
+                        SERVICEID_GIPEVENT,
+                        ERRORID_CP_MO_FAIL,
+                        ST_DB_NO_DATA_MONOTISEND,
+                        moQItemUtilService.getNInforNo(gstQItem),
+                        TID_NO_SAVE,
+                        LT_TRACE,
+                        0
+                    )
+                } else {
+                    // MO 단계 MO_NOTISEND 저장 성공 시 smstrc(VBILLMO 성공(MONOTISEND)) 기록
+                    smsQLib.InsqStat(
+                        gstQItem,
+                        MESSAGE_MO,
+                        0,
+                        gServerID,
+                        MODULEID_VBILLMO,
+                        SERVICEID_GIPEVENT,
+                        ERRORID_CP_TR_SUCCESS,
+                        ST_VBILLMO_NOTISEND_OK,
+                        moQItemUtilService.getNInforNo(gstQItem),
+                        TID_NO_SAVE,
+                        LT_BOTH,
+                        0
+                    )
+                }
+            } else {
+                witcomLog.c_write(
+                    loggerName,
+                    Level.INFO,
+                    String.format(
+                        "[DB Insert 분기] 등기문자(NotiRegistered) 도메인 진입: destCID(%s), MOTRBILL=N, DB 저장 스킵(MO_NOTISEND 미저장, MOCALLINFO 미저장)",
+                        destCIDForDBInsert
+                    ),
+                    workerThreadId
                 )
             }
         } else if (isRelayMo) {

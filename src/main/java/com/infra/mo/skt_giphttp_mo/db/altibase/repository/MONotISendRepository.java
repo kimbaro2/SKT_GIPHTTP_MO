@@ -75,31 +75,49 @@ public interface MONotISendRepository extends JpaRepository<MONotISendEntity, MO
     );
     
     /**
-     * SelectTRMO_NOTISEND 함수 (VBILL_MO용)
-     * 
-     * C 코드: VBILL\GIDBLib.c LINE 2709-3207
-     * SELECT TO_CHAR(MOSUBTIME, 'YYMMDDHH24MISS'), TO_CHAR(MOSUBTIME,'MM/DD HH24:MI'), MSGLEN, CB, ESMCLASS,
-     *        TRUNC((SYSDATE - MOSUBTIME)*(24*60)), W_ZONE, TRACE_ID, ORIG_MVNO_INFO, DEST_MVNO_INFO, DCS_TYPE, ORG_MSGLEN, MORECVTIME
-     * FROM MO_NOTISEND
-     * WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ? AND NOTI_FLAG <> 9 AND SERVERTYPE = 'V'
-     * 
-     * DELETE FROM MO_NOTISEND
-     * WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ? AND SERVERTYPE = 'V' (조회 후 삭제)
-     * 
-     * 주의: 실제로는 SELECT 후 DELETE를 수행하지만, Repository에서는 SELECT만 수행
-     * DELETE는 별도 함수로 구현
+     * MO_NOTISEND 단일 조회 (SERVERTYPE='V' 전용)
+     *
+     * HTTP 수신 인자 3가지만 사용: traceId, srcCid, destCid
+     *
+     * @param traceId TRACE_ID (필수)
+     * @param srcCid  SRCCID (필수)
+     * @param destCid DESTCID (필수)
      */
     @Query(value = "SELECT * FROM (SELECT * FROM SMS.MO_NOTISEND " +
-            "WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId " +
-            "AND (NOTI_FLAG IS NULL OR NOTI_FLAG <> 9) AND SERVERTYPE = 'V' " +
-            "ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
+            "WHERE SERVERTYPE = 'V' " +
+            "AND (NOTI_FLAG IS NULL OR NOTI_FLAG <> 9) " +
+            "AND TRACE_ID = :traceId AND SRCCID = :srcCid AND DESTCID = :destCid " +
+            "ORDER BY MOSUBTIME DESC) A WHERE ROWNUM <= 1",
             nativeQuery = true)
-    Optional<MONotISendEntity> findBySrcCallNoAndDestCIdAndMsgIdAndServerType(
-            @Param("srcCallNo") String srcCallNo,
-            @Param("destCId") String destCId,
-            @Param("msgId") String msgId
+    Optional<MONotISendEntity> findOneForV(
+            @Param("traceId") String traceId,
+            @Param("srcCid") String srcCid,
+            @Param("destCid") String destCid
     );
-    
+
+    /**
+     * mo-report API용: MSGID + SRCCID + DESTCID + SRCCALLNO + DESTCALLNO 조합으로 조회 (SERVERTYPE='V')
+     *
+     * MSGID + srcCid + destCid + srcCallNo + destCallNo 조합으로
+     * MO_NOTISEND 레코드를 1건 조회한다.
+     */
+    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MO_NOTISEND " +
+            "WHERE SERVERTYPE = 'V' " +
+            "AND MSGID = :msgId " +
+            "AND SRCCID = :srcCid " +
+            "AND DESTCID = :destCid " +
+            "AND SRCCALLNO = :srcCallNo " +
+            "AND DESTCALLNO = :destCallNo " +
+            "ORDER BY MOSUBTIME DESC) A WHERE ROWNUM <= 1",
+            nativeQuery = true)
+    Optional<MONotISendEntity> findOneForVByMsgAndCidAndCallNo(
+            @Param("msgId") String msgId,
+            @Param("srcCid") String srcCid,
+            @Param("destCid") String destCid,
+            @Param("srcCallNo") String srcCallNo,
+            @Param("destCallNo") String destCallNo
+    );
+
     /**
      * SelectTRMO_NOTISEND 함수 - 원본 레코드 삭제 (VBILL_MO용)
      * 
@@ -115,6 +133,59 @@ public interface MONotISendRepository extends JpaRepository<MONotISendEntity, MO
             @Param("srcCallNo") String srcCallNo,
             @Param("destCId") String destCId,
             @Param("msgId") String msgId
+    );
+
+    /**
+     * MO_NOTISEND 삭제 — MSGID, SRCCID, DESTCID, SRCCALLNO, DESTCALLNO 5키 + SERVERTYPE='V' (traceId 미사용)
+     */
+    @Modifying
+    @Query(value = "DELETE FROM SMS.MO_NOTISEND " +
+            "WHERE MSGID = :msgId AND SRCCID = :srcCId AND DESTCID = :destCId " +
+            "AND SRCCALLNO = :srcCallNo AND DESTCALLNO = :destCallNo AND SERVERTYPE = 'V'",
+            nativeQuery = true)
+    int deleteByMsgIdAndSrcCIdAndDestCIdAndSrcCallNoAndDestCallNoAndServerType(
+            @Param("msgId") String msgId,
+            @Param("srcCId") String srcCId,
+            @Param("destCId") String destCId,
+            @Param("srcCallNo") String srcCallNo,
+            @Param("destCallNo") String destCallNo
+    );
+
+    /**
+     * MO_NOTISEND 삭제 — SRCCALLNO + DESTCID + MSGID + TRACE_ID + SERVERTYPE='V' (deprecated: 5키 삭제 사용 권장)
+     */
+    @Modifying
+    @Query(value = "DELETE FROM SMS.MO_NOTISEND " +
+            "WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId AND TRACE_ID = :traceId AND SERVERTYPE = 'V'",
+            nativeQuery = true)
+    int deleteBySrcCallNoAndDestCIdAndMsgIdAndTraceIdAndServerType(
+            @Param("srcCallNo") String srcCallNo,
+            @Param("destCId") String destCId,
+            @Param("msgId") String msgId,
+            @Param("traceId") String traceId
+    );
+
+    /**
+     * MO_NOTISEND MSGID 업데이트 (HTTP 환경용)
+     *
+     * C 코드의 UpdateMO_NOTISEND는 INSERT 후 DELETE 패턴을 사용하지만,
+     * HTTP 환경에서는 동일 레코드를 UPDATE 하는 것이 더 안전하다.
+     *
+     * - 대상: SERVERTYPE = 'V' 인 원본 레코드
+     * - 조건: SRCCID + DESTCID (+ SERVERTYPE='V')
+     * - 동작: MSGID를 :newMsgId 로 변경 (SERVERTYPE는 변경하지 않음)
+     */
+    @Modifying
+    @Query(value = "UPDATE SMS.MO_NOTISEND " +
+            "SET MSGID = :newMsgId " +
+            "WHERE SRCCID = :srcCid " +
+            "AND DESTCID = :destCId " +
+            "AND SERVERTYPE = 'V'",
+            nativeQuery = true)
+    int updateMsgIdForHttpEnv(
+            @Param("newMsgId") String newMsgId,
+            @Param("srcCid") String srcCid,
+            @Param("destCId") String destCId
     );
 }
 

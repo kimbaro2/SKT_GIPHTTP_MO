@@ -3,6 +3,8 @@ package com.infra.mo.skt_giphttp_mo.controller
 import ch.qos.logback.classic.Level
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.infra.mo.skt_giphttp_mo.config.application.WitcomLog
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.MOCallInfoEntity
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.MONotISendEntity
 import com.infra.mo.skt_giphttp_mo.db.altibase.repository.GipHttpMoAccessRepository
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_8BIT
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_ASCII7
@@ -14,15 +16,11 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_DEC_UCS2
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_GSM7
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_KSC5601
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_UCS2
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.GI_RES_NO_ERR
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_SIMPLE
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_TRANS_RESULT
-import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.dto.smsController.MoReportRequest
 import com.infra.mo.skt_giphttp_mo.service.SmsResService
 import com.infra.mo.skt_giphttp_mo.db.altibase.repository.MOCallInfoRepository
+import com.infra.mo.skt_giphttp_mo.db.altibase.repository.MONotISendRepository
 import kotlinx.coroutines.runBlocking
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ServerWebExchange
@@ -39,7 +37,8 @@ class SmsController(
     private val smsResService: SmsResService,
     private val witcomLog: WitcomLog,
     private val gipHttpMoAccessRepository: GipHttpMoAccessRepository,
-    private val moCallInfoRepository: MOCallInfoRepository
+    private val moCallInfoRepository: MOCallInfoRepository,
+    private val moNotISendRepository: MONotISendRepository,
 ) {
     private val gServerID = System.getenv("SMSS_NO")?.trim()?.toIntOrNull() ?: 0
 
@@ -114,8 +113,12 @@ class SmsController(
         witcomLog.p_write(
             Level.INFO,
             String.format(
-                "[mo-report] API 인입: cid(%s), msgId(%s), status(%d), traceId(%s), msgType(%d)",
-                request.data?.cid ?: "null",
+                "[mo-report] API 인입: cid(%s), srcCid(%s), destCid(%s), srcCallNo(%s), destCallNo(%s), msgId(%s), status(%d), traceId(%s), msgType(%d)",
+                request.data?.accessCid ?: "null",
+                request.data?.srcCid ?: "null",
+                request.data?.destCid ?: "null",
+                request.data?.srcCallNo ?: "null",
+                request.data?.destCallNo ?: "null",
                 request.data?.msgId ?: "null",
                 request.data?.status ?: -1,
                 request.data?.traceId ?: "null",
@@ -133,9 +136,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = ""
+                        accessCid = ""
+                        srcCid = ""
+                        destCid = ""
+                        srcCallNo = ""
+                        destCallNo = ""
                         msgId = ""
-                        traceId = ""
                         status = 5  // UNDELIVERABLE
                         msgType = null
                     }
@@ -151,9 +157,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid ?: ""
+                        accessCid = request.data.accessCid ?: ""
+                        srcCid = request.data.srcCid ?: ""
+                        destCid = request.data.destCid ?: ""
+                        srcCallNo = request.data.srcCallNo ?: ""
+                        destCallNo = request.data.destCallNo ?: ""
                         msgId = request.data.msgId ?: ""
-                        traceId = request.data.traceId ?: ""
                         status = 5  // UNDELIVERABLE
                         msgType = null  // 에러 응답에서는 제외됨
                     }
@@ -169,9 +178,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid ?: ""
+                        accessCid = request.data.accessCid ?: ""
+                        srcCid = request.data.srcCid ?: ""
+                        destCid = request.data.destCid ?: ""
+                        srcCallNo = request.data.srcCallNo ?: ""
+                        destCallNo = request.data.destCallNo ?: ""
                         msgId = request.data.msgId ?: ""
-                        traceId = request.data.traceId ?: ""
                         status = 5  // UNDELIVERABLE
                         msgType = null  // 에러 응답에서는 제외됨
                     }
@@ -179,17 +191,19 @@ class SmsController(
                 return ResponseEntity.ok(errorResponse)
             }
 
-            if (request.data.traceId.isNullOrBlank()) {
-                val errorMsg = "Missing required parameter: data.traceId"
+            if (request.data.accessCid.isNullOrBlank()) {
+                val errorMsg = "Missing required parameter: data.accessCid"
                 witcomLog.p_write(Level.INFO, errorMsg)
-                // 요청값 그대로 반환하되 status를 5로 변경
                 val errorResponse = MoReportRequest().apply {
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid ?: ""
+                        accessCid = request.data.accessCid ?: ""
+                        srcCid = request.data.srcCid ?: ""
+                        destCid = request.data.destCid ?: ""
+                        srcCallNo = request.data.srcCallNo ?: ""
+                        destCallNo = request.data.destCallNo ?: ""
                         msgId = request.data.msgId ?: ""
-                        traceId = request.data.traceId ?: ""
                         status = 5  // UNDELIVERABLE
                         msgType = null  // 에러 응답에서는 제외됨
                     }
@@ -197,18 +211,83 @@ class SmsController(
                 return ResponseEntity.ok(errorResponse)
             }
 
-            if (request.data.cid.isNullOrBlank()) {
-                val errorMsg = "Missing required parameter: data.cid"
+            // srcCid / destCid 필수 검증 (traceId + srcCid + destCid로 DB 조회)
+            if (request.data.srcCid.isNullOrBlank()) {
+                val errorMsg = "Missing required parameter: data.srcCid"
                 witcomLog.p_write(Level.INFO, errorMsg)
                 val errorResponse = MoReportRequest().apply {
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid ?: ""
+                        accessCid = request.data.accessCid ?: ""
+                        srcCid = request.data.srcCid ?: ""
+                        destCid = request.data.destCid ?: ""
+                        srcCallNo = request.data.srcCallNo ?: ""
+                        destCallNo = request.data.destCallNo ?: ""
                         msgId = request.data.msgId ?: ""
-                        traceId = request.data.traceId ?: ""
                         status = 5  // UNDELIVERABLE
-                        msgType = null  // 에러 응답에서는 제외됨
+                        msgType = null
+                    }
+                }
+                return ResponseEntity.ok(errorResponse)
+            }
+
+            if (request.data.destCid.isNullOrBlank()) {
+                val errorMsg = "Missing required parameter: data.destCid"
+                witcomLog.p_write(Level.INFO, errorMsg)
+                val errorResponse = MoReportRequest().apply {
+                    msgVerId = request.msgVerId ?: 510
+                    encFlag = request.encFlag ?: 0
+                    data = MoReportRequest.DataBody().apply {
+                        accessCid = request.data.accessCid ?: ""
+                        srcCid = request.data.srcCid ?: ""
+                        destCid = request.data.destCid ?: ""
+                        srcCallNo = request.data.srcCallNo ?: ""
+                        destCallNo = request.data.destCallNo ?: ""
+                        msgId = request.data.msgId ?: ""
+                        status = 5  // UNDELIVERABLE
+                        msgType = null
+                    }
+                }
+                return ResponseEntity.ok(errorResponse)
+            }
+
+            // srcCallNo / destCallNo 필수 검증 (msgId + srcCid + destCid + srcCallNo + destCallNo 조합으로 식별)
+            if (request.data.srcCallNo.isNullOrBlank()) {
+                val errorMsg = "Missing required parameter: data.srcCallNo"
+                witcomLog.p_write(Level.INFO, errorMsg)
+                val errorResponse = MoReportRequest().apply {
+                    msgVerId = request.msgVerId ?: 510
+                    encFlag = request.encFlag ?: 0
+                    data = MoReportRequest.DataBody().apply {
+                        accessCid = request.data.accessCid ?: ""
+                        srcCid = request.data.srcCid ?: ""
+                        destCid = request.data.destCid ?: ""
+                        srcCallNo = request.data.srcCallNo ?: ""
+                        destCallNo = request.data.destCallNo ?: ""
+                        msgId = request.data.msgId ?: ""
+                        status = 5  // UNDELIVERABLE
+                        msgType = null
+                    }
+                }
+                return ResponseEntity.ok(errorResponse)
+            }
+
+            if (request.data.destCallNo.isNullOrBlank()) {
+                val errorMsg = "Missing required parameter: data.destCallNo"
+                witcomLog.p_write(Level.INFO, errorMsg)
+                val errorResponse = MoReportRequest().apply {
+                    msgVerId = request.msgVerId ?: 510
+                    encFlag = request.encFlag ?: 0
+                    data = MoReportRequest.DataBody().apply {
+                        accessCid = request.data.accessCid ?: ""
+                        srcCid = request.data.srcCid ?: ""
+                        destCid = request.data.destCid ?: ""
+                        srcCallNo = request.data.srcCallNo ?: ""
+                        destCallNo = request.data.destCallNo ?: ""
+                        msgId = request.data.msgId ?: ""
+                        status = 5  // UNDELIVERABLE
+                        msgType = null
                     }
                 }
                 return ResponseEntity.ok(errorResponse)
@@ -223,9 +302,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid
+                        accessCid = request.data.accessCid
+                        srcCid = request.data.srcCid
+                        destCid = request.data.destCid
+                        srcCallNo = request.data.srcCallNo
+                        destCallNo = request.data.destCallNo
                         msgId = request.data.msgId
-                        traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
                         msgType = null  // 에러 응답에서는 제외됨
                     }
@@ -254,9 +336,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid
+                        accessCid = request.data.accessCid
+                        srcCid = request.data.srcCid
+                        destCid = request.data.destCid
+                        srcCallNo = request.data.srcCallNo
+                        destCallNo = request.data.destCallNo
                         msgId = request.data.msgId
-                        traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
                         msgType = null
                     }
@@ -271,9 +356,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid
+                        accessCid = request.data.accessCid
+                        srcCid = request.data.srcCid
+                        destCid = request.data.destCid
+                        srcCallNo = request.data.srcCallNo
+                        destCallNo = request.data.destCallNo
                         msgId = request.data.msgId
-                        traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
                         msgType = null
                     }
@@ -290,9 +378,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid
+                        accessCid = request.data.accessCid
+                        srcCid = request.data.srcCid
+                        destCid = request.data.destCid
+                        srcCallNo = request.data.srcCallNo
+                        destCallNo = request.data.destCallNo
                         msgId = request.data.msgId
-                        traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
                         msgType = null
                     }
@@ -309,9 +400,12 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = request.data.cid
+                        accessCid = request.data.accessCid
+                        srcCid = request.data.srcCid
+                        destCid = request.data.destCid
+                        srcCallNo = request.data.srcCallNo
+                        destCallNo = request.data.destCallNo
                         msgId = request.data.msgId
-                        traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
                         msgType = null
                     }
@@ -320,7 +414,7 @@ class SmsController(
             }
 
             // cid, 요청자 IP 선검증 후 MOCALLINFO 조회 (cid, msgId, traceId, 요청자 IP 4가지 활용)
-            val destCId = request.data.cid!!
+            val destCId = request.data.accessCid!!
             val loggerName = "${destCId}-${clientIp}-${serverPort}"
 
             // 1. HTTP_MOSEND_ACCESS에서 CID, 요청자 IP, PORT로 허용 여부 검증 (요청자 IP 활용)
@@ -359,7 +453,7 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = destCId
+                        accessCid = destCId
                         msgId = request.data.msgId
                         traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
@@ -378,7 +472,7 @@ class SmsController(
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = destCId
+                        accessCid = destCId
                         msgId = request.data.msgId
                         traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
@@ -388,31 +482,83 @@ class SmsController(
                 return ResponseEntity.ok(errorResponse)
             }
 
-            // 2. MOCALLINFO에서 msgId, traceId 2가지 값으로 레코드 조회
-            val moCallInfo = runBlocking {
-                moCallInfoRepository.findByMsgIdAndTraceId(
-                    request.data.msgId,
-                    request.data.traceId
-                )
+            // 2. MOCALLINFO / MO_NOTISEND 조회 및 비즈니스 로직: 한 번의 runBlocking에서 조회·갱신·processMoReport까지 수행 (객체 재사용)
+            // 조회/삭제/추가/업데이트 시 동일 키 사용: srcCID, srcCallNoForKey, destCID, destCallNoForKey, cpMsgId
+            val srcCID = request.data.srcCid!!
+            val destCID = request.data.destCid!!
+            val srcCallNoForKey = request.data.srcCallNo!!
+            val destCallNoForKey = request.data.destCallNo!!
+            val cpMsgId = request.data.msgId!!
+
+            data class MoReportResolved(
+                val moCallInfo: MOCallInfoEntity,
+                val moNotiToDelete: MONotISendEntity?,
+                val skipMoNotiDelete: Boolean = false
+            )
+
+            val resolved = runBlocking {
+                // 1차: MOCALLINFO 에서 msgId + srcCallNo + destCid 로 조회 후 srcCid/destCallNo 일치 여부 확인
+                var moCallInfo = moCallInfoRepository.findBySrcAndDestAndMsgId(
+                    srcCID,
+                    srcCallNoForKey,
+                    destCID,
+                    destCallNoForKey,
+                    cpMsgId,
+                )?.takeIf { it.srcCId == srcCID && (it.destCallNo ?: "") == destCallNoForKey }
+
+                val moNoti = if (moCallInfo == null) {
+                    moNotISendRepository.findOneForVByMsgAndCidAndCallNo(
+                        cpMsgId,
+                        srcCID,
+                        destCID,
+                        srcCallNoForKey,
+                        destCallNoForKey
+                    ).orElse(null)
+                } else null
+
+                if (moCallInfo == null && moNoti == null) return@runBlocking null
+
+                val pair = if (moCallInfo != null) {
+                    // mo-report에서 수신한 msgId를 최종 MSGID로 사용
+                    moCallInfo.msgId = cpMsgId
+                    moCallInfoRepository.save(moCallInfo)
+                    MoReportResolved(moCallInfo, null, false)
+                } else {
+                    // mo-report 경로: MO_NOTISEND UPDATE 없이 조회+삭제만 (buildMoCallInfoFromMoNotiForReport 사용)
+                    val result = smsResService.buildMoCallInfoFromMoNotiForReport(cpMsgId, moNoti!!)
+                    MoReportResolved(result.moCallInfo, result.moNotiToDelete, result.skipMoNotiDelete)
+                }
+                if (pair.moNotiToDelete != null) {
+                    //안심/등기 로직
+                    smsResService.processMoReportForNoti(request, pair.moCallInfo, gipHttpMoAccess, clientIp, serverPort, pair.moNotiToDelete, pair.skipMoNotiDelete)
+                } else {
+                    //그외 메시지 타입 로직
+                    smsResService.processMoReportForGeneralMo(request, pair.moCallInfo, gipHttpMoAccess, clientIp, serverPort)
+                }
+                pair
             }
 
-            if (moCallInfo == null) {
+            if (resolved == null) {
                 val errorMsg =
-                    "MOCALLINFO not found: msgId=${request.data.msgId}, traceId=${request.data.traceId}, clientIp=$clientIp"
+                    "No record found in MOCALLINFO/MO_NOTISEND: msgId=$cpMsgId, srcCID=$srcCID, destCID=$destCID, srcCallNo=$srcCallNoForKey, destCallNo=$destCallNoForKey, clientIp=$clientIp"
                 witcomLog.p_write(Level.INFO, errorMsg)
-                val errorResponse = MoReportRequest().apply {
+                return ResponseEntity.ok(MoReportRequest().apply {
                     msgVerId = request.msgVerId ?: 510
                     encFlag = request.encFlag ?: 0
                     data = MoReportRequest.DataBody().apply {
-                        cid = destCId
+                        accessCid = destCId
+                        this.srcCid = srcCID
+                        destCid = destCID
+                        srcCallNo = srcCallNoForKey
+                        destCallNo = destCallNoForKey
                         msgId = request.data.msgId
-                        traceId = request.data.traceId
                         status = 5  // UNDELIVERABLE
                         msgType = null
                     }
-                }
-                return ResponseEntity.ok(errorResponse)
+                })
             }
+
+            val (moCallInfo, _, _) = resolved
 
             // =================================================================================
             // [LOGGING START] REQ/RES 로그 구성을 위한 변수 설정
@@ -478,20 +624,6 @@ class SmsController(
             witcomLog.c_write(loggerName, Level.INFO, reqLogContent, Thread.currentThread().getId())
 
             // =================================================================================
-            // [PROCESS] 비즈니스 로직 수행
-            // =================================================================================
-
-            runBlocking {
-                smsResService.processMoReport(
-                    request,
-                    moCallInfo,
-                    gipHttpMoAccess,
-                    clientIp,
-                    serverPort
-                )
-            }
-
-            // =================================================================================
             // [LOGGING END] RES 로그 작성 MoSendToCpServiceImpl RES_TRANS_RESULT와 동일: [VSMSS#%d->%s] + logNo, cid, msgId, status, traceId, ResponseStatus, ResponseBody
             // =================================================================================
 
@@ -516,9 +648,12 @@ class SmsController(
                 msgVerId = request.msgVerId ?: 510
                 encFlag = request.encFlag ?: 0
                 data = MoReportRequest.DataBody().apply {
-                    cid = destCId
+                    accessCid = destCId
+                    srcCid = srcCID
+                    destCid = destCID
+                    srcCallNo = srcCallNoForKey
+                    destCallNo = destCallNoForKey
                     msgId = request.data.msgId
-                    traceId = request.data.traceId
                     status = request.data.status
                     msgType = validatedMsgType
                     this.moCallInfo = moCallInfoBody
@@ -554,9 +689,12 @@ class SmsController(
                 msgVerId = request.msgVerId ?: 510
                 encFlag = request.encFlag ?: 0
                 data = MoReportRequest.DataBody().apply {
-                    cid = request.data?.cid  // null 가능
+                    accessCid = request.data?.accessCid  // null 가능
+                    srcCid = request.data?.srcCid
+                    destCid = request.data?.destCid
+                    srcCallNo = request.data?.srcCallNo
+                    destCallNo = request.data?.destCallNo
                     msgId = request.data?.msgId ?: ""
-                    traceId = request.data?.traceId ?: ""
                     status = 5  // UNDELIVERABLE
                     msgType = null  // 에러 응답에서는 제외됨
                 }

@@ -66,7 +66,7 @@ class EsmClassHandler {
      * C 코드: GIPEVENT_c.c LINE 2236-2242
      * 
      * @param esmClass EsmClass 값
-     * @return true: UpdateMO_NOTISEND, false: UpdateGIPMOCallInfo
+     * @return true: MO_NOTISEND 삭제, false: UpdateGIPMOCallInfo
      */
     fun shouldUpdateMO_NOTISEND(esmClass: Int): Boolean {
         return isNotiPlus(esmClass)

@@ -1,6 +1,7 @@
 package com.infra.mo.skt_giphttp_mo.dto.smsController;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.MOCallInfoEntity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,9 +24,8 @@ import javax.validation.constraints.NotNull;
  *   "encFlag": 0,
  *   "data": {
  *     "logNo": "",
- *     "cid": "",
+ *     "accessCid": "",
  *     "msgId": "",
- *     "traceId": "",
  *     "status": "MSG_STATUS 상수값",
  *     "msgType": 4
  *   }
@@ -64,8 +64,32 @@ public class MoReportRequest {
          * HTTP_MOSEND_ACCESS의 CID (선택, 없으면 MOCALLINFO에서 destCId로 조회)
          */
         @JsonInclude(JsonInclude.Include.NON_NULL)
-        public String cid;
-        
+        public String accessCid;
+
+        /**
+         * 발신 사업자 CID (CP HTTP 발송 시 전달)
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public String srcCid;
+
+        /**
+         * 수신 사업자 CID (CP HTTP 발송 시 전달)
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public String destCid;
+
+        /**
+         * 발신 번호 (MO 전송 시 사용한 SRCCALLNO, mo-report 에서 동일 값 Echo)
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public String srcCallNo;
+
+        /**
+         * 수신 번호 (MO 전송 시 사용한 DESTCALLNO, mo-report 에서 동일 값 Echo)
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public String destCallNo;
+
         /**
          * MOCALLINFO에서 생성한 MSGID (필수)
          */
@@ -73,9 +97,12 @@ public class MoReportRequest {
         public String msgId;
         
         /**
-         * MOCALLINFO의 TRACE_ID (필수)
+         * MOCALLINFO의 TRACE_ID (DTO 내부용, 응답 JSON에는 노출하지 않음)
+         *
+         * 식별 키로는 더 이상 사용하지 않으며,
+         * mo-report 에서 전달될 경우 로깅/추적용으로만 사용한다.
          */
-        @NotBlank
+        @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
         public String traceId;
         
         /**

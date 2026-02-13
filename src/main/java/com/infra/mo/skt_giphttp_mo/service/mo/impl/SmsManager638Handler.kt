@@ -24,6 +24,7 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_GIP_MT_LIMIT_GIFT
 import com.infra.mo.skt_giphttp_mo.dto.smsController.Rsv4ProtocolItem
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.CfgEtcEntity
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ST_GIPEVENT_MOACK_BILL_OK
 import com.infra.mo.skt_giphttp_mo.service.MoBillTypeService
 import com.infra.mo.skt_giphttp_mo.service.MoBlockNotificationService
@@ -33,6 +34,7 @@ import com.infra.mo.skt_giphttp_mo.service.MoLimitCheckService
 import com.infra.mo.skt_giphttp_mo.service.MoQItemUtilService
 import com.infra.mo.skt_giphttp_mo.service.MoRequeueService
 import com.infra.mo.skt_giphttp_mo.service.MoRcsTrService
+import com.infra.mo.skt_giphttp_mo.service.MoSendInsqStatService
 import com.infra.mo.skt_giphttp_mo.service.MoSendToCpService
 import com.infra.mo.skt_giphttp_mo.service.MoTrSendService
 import com.infra.mo.skt_giphttp_mo.service.SmsResService
@@ -60,6 +62,7 @@ class SmsManager638Handler(
     private val moGipEventLogService: MoGipEventLogService,
     private val moSendToCpService: MoSendToCpService,
     private val moRequeueService: MoRequeueService,
+    private val moSendInsqStatService: MoSendInsqStatService,
     private val moDbInsertService: MoDbInsertService,
     private val smsResService: SmsResService,
     private val moTrSendService: MoTrSendService
@@ -162,16 +165,16 @@ class SmsManager638Handler(
             )
         }
 
-        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
-        recordMoSuccessInsqStat(gstQItem, context)
-
         if (!moSendSuccess) {
             moRequeueService.requeueMessage(
                 gstQResultObj, queueNo, smsQLib, loggerName, workerThreadId, gstQItemTrans
             )
+            moSendInsqStatService.recordMoFailedInsqStat(gstQItem, context)
             return
         }
 
+        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
+        recordMoSuccessInsqStat(gstQItem, context)
         var dbInsertOk = true
         if (isRelayMo) {
             val relayRes = moDbInsertService.insertRelayMOCallInfo(
@@ -303,9 +306,18 @@ class SmsManager638Handler(
         val smsQLib = context.smsQLib ?: return
         val gServerID = context.gServerID ?: return
         smsQLib.InsqStat(
-            qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
-            com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS, ST_GIPEVENT_MO_OK,
-            qItem.usSource, TID_NO_SAVE, LT_BOTH, 0
+            qItem,
+            MESSAGE_MO,
+            0,
+            gServerID,
+            MODULEID_GIPEVENT_C,
+            SERVICEID_GIPEVENT,
+            ERRORID_CP_MO_SUCCESS,
+            ST_GIPEVENT_MO_OK,
+            moQItemUtilService.getNInforNo(qItem),
+            TID_NO_SAVE,
+            LT_BOTH,
+            0
         )
     }
 

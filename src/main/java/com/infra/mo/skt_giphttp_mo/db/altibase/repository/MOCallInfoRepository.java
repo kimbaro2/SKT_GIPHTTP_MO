@@ -10,38 +10,46 @@ import org.springframework.stereotype.Repository;
 
 /**
  * MOCALLINFO 테이블 Repository
- * 
+ * <p>
  * C 코드 참고: GIDBLib.c
  * - SelectGIPMOCallInfo: LINE 2603-2607
  * - UpdateGIPMOCallInfo: LINE 3452-3459
  */
 @Repository
 public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, String> {
-    
+
     /**
      * SelectGIPMOCallInfo 함수
-     * 
+     * <p>
      * C 코드: GIDBLib.c LINE 2603-2607
-     * SELECT MOSUBTIME, MSGLEN, ROAMINGID, CB, ROAMPMN, W_ZONE, TRACE_ID, 
-     *        ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME
+     * SELECT MOSUBTIME, MSGLEN, ROAMINGID, CB, ROAMPMN, W_ZONE, TRACE_ID,
+     * ORIG_MVNO_INFO, DEST_MVNO_INFO, RCS, DCS_TYPE, ORG_MSGLEN, MORECVTIME
      * FROM MOCALLINFO
      * WHERE SRCCALLNO = ? AND DESTCID = ? AND MSGID = ?
-     * 
+     * <p>
      * 주의: 동일한 조합이 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
      * Altibase는 서브쿼리를 사용하여 ORDER BY 후 ROWNUM 적용
      * ROWNUM은 서브쿼리 내부에서 ORDER BY 전에 평가되므로, 외부 서브쿼리로 감싸서 처리
      */
-    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
+    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO " +
+            "WHERE SRCCID = :srcCId " +
+            "AND SRCCALLNO = :srcCallNo " +
+            "AND DESTCID = :destCId " +
+            "AND DESTCALLNO = :destCallNo " +
+            "AND MSGID = :msgId " +
+            "ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
             nativeQuery = true)
-    MOCallInfoEntity findBySrcCallNoAndDestCIdAndMsgId(
+    MOCallInfoEntity findBySrcAndDestAndMsgId(
+            @Param("srcCId") String srcCId,
             @Param("srcCallNo") String srcCallNo,
             @Param("destCId") String destCId,
+            @Param("destCallNo") String destCallNo,
             @Param("msgId") String msgId
     );
-    
+
     /**
      * UpdateGIPMOCallInfo 함수
-     * 
+     * <p>
      * C 코드: GIDBLib.c LINE 3452-3459
      * INSERT 시 EXPIRETIME은 원본 행 값을 복사 (nVldPrd 기반 만료 시간 유지)
      */
@@ -60,14 +68,14 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
             @Param("destCId") String destCId,
             @Param("msgId") String msgId
     );
-    
+
     /**
      * SelectGIPMOCallInfo 함수 - msgId만으로 조회
-     *
+     * <p>
      * SELECT * FROM MOCALLINFO
      * WHERE MSGID = :msgId
      * ORDER BY MOSUBTIME DESC
-     *
+     * <p>
      * 주의: 동일한 msgId가 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
      */
     @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO WHERE MSGID = :msgId ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
@@ -78,11 +86,11 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
 
     /**
      * mo-report API용: MSGID, TRACE_ID 2가지 값으로 조회
-     *
+     * <p>
      * SELECT * FROM MOCALLINFO
      * WHERE MSGID = :msgId AND TRACE_ID = :traceId
      * ORDER BY MOSUBTIME DESC
-     *
+     * <p>
      * 동일 조합이 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
      */
     @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO WHERE MSGID = :msgId AND TRACE_ID = :traceId ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
@@ -93,8 +101,27 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
     );
 
     /**
+     * mo-report API용: TRACE_ID + SRCCID + DESTCID 3가지 값으로 조회
+     * <p>
+     * SELECT * FROM MOCALLINFO
+     * WHERE TRACE_ID = :traceId AND SRCCID = :srcCid AND DESTCID = :destCId
+     * ORDER BY MOSUBTIME DESC
+     * <p>
+     * 동일 조합이 여러 개일 수 있으므로 첫 번째 결과만 반환 (가장 최근 것)
+     */
+    @Query(value = "SELECT * FROM (SELECT * FROM SMS.MOCALLINFO " +
+            "WHERE TRACE_ID = :traceId AND SRCCID = :srcCid AND DESTCID = :destCId " +
+            "ORDER BY MOSUBTIME DESC) WHERE ROWNUM <= 1",
+            nativeQuery = true)
+    MOCallInfoEntity findByTraceIdAndSrcCIdAndDestCId(
+            @Param("traceId") String traceId,
+            @Param("srcCid") String srcCid,
+            @Param("destCId") String destCId
+    );
+
+    /**
      * UpdateGIPMOCallInfo 함수 - 원본 레코드 삭제
-     * 
+     * <p>
      * C 코드: GIDBLib.c LINE 3884-3899
      * DELETE FROM MOCALLINFO
      * WHERE SRCCALLNO = :srcCallNo AND DESTCID = :destCId AND MSGID = :msgId
@@ -108,10 +135,10 @@ public interface MOCallInfoRepository extends JpaRepository<MOCallInfoEntity, St
             @Param("destCId") String destCId,
             @Param("msgId") String msgId
     );
-    
+
     /**
      * DeleteGIPMOCallInfo 함수 - msgId만으로 삭제
-     * 
+     * <p>
      * DELETE FROM MOCALLINFO
      * WHERE MSGID = :msgId
      */

@@ -6,23 +6,16 @@ import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
 import com.infra.mo.skt_giphttp_mo.dto.SegmentInfo
 import com.infra.mo.skt_giphttp_mo.dto.jna.QITEM
 import com.infra.mo.skt_giphttp_mo.dto.jna.SMReqTransResult
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_FAIL
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MSG_CODE_SM_RES
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MODULEID_GIPEVENT_C
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SERVICEID_GIPEVENT
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_REQ_SIMPLE
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SM_STATE_DELIVERED
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MESSAGE_MO
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.TID_NO_SAVE
-import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.LT_TRACE
-import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_GIP_SOCK_MAX_RETRY_FAIL
-import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_GIP_SOCK_SEND_FAIL
 import com.infra.mo.skt_giphttp_mo.dto.smsController.MoReportRequest
 import com.infra.mo.skt_giphttp_mo.service.MoSendToCpService
 import com.infra.mo.skt_giphttp_mo.utils.cLibrary.QItemServiceUtil
 import com.infra.mo.skt_giphttp_mo.utils.cLibrary.SmsQLib
 import io.netty.channel.ChannelOption
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.reactive.awaitSingle
 import org.springframework.http.HttpHeaders
@@ -60,10 +53,12 @@ class MoSendToCpServiceImpl(
 
         for (attempt in 1..totalAttempts) {
             if (attempt > 1) {
+                val backoffMillis = maxRetryCount * 1000L
+                delay(backoffMillis)
                 witcomLog.c_write(
                     loggerName,
                     Level.INFO,
-                    String.format("MO HTTP 전송 재시도: 시도(%d/%d), CP_URL(%s), MsgSeqNo(%d)", attempt, totalAttempts, entity.cpUrl, qItem?.uMsgSerialNo?.toInt() ?: 0),
+                    String.format("MO HTTP 전송 재시도: 시도(%d/%d), CP_URL(%s), MsgSeqNo(%d), 백오프(%dms)", attempt, totalAttempts, entity.cpUrl, qItem?.uMsgSerialNo?.toInt() ?: 0, backoffMillis),
                     workerThreadId
                 )
             }
@@ -89,22 +84,7 @@ class MoSendToCpServiceImpl(
             }
         }
 
-        if (qItem != null) {
-            smsQLib.InsqStat(
-                qItem,
-                MESSAGE_MO,
-                0,
-                gServerID,
-                MODULEID_GIPEVENT_C,
-                SERVICEID_GIPEVENT,
-                ERRORID_CP_MO_FAIL,
-                ST_GIP_SOCK_MAX_RETRY_FAIL,
-                maxRetryCount,
-                TID_NO_SAVE,
-                LT_TRACE,
-                0
-            )
-        }
+        // MO 전송 실패 InsqStat은 호출부(공통 recordMoFailedInsqStat)에서만 수행 (중복 방지)
         return false
     }
 
@@ -121,6 +101,9 @@ class MoSendToCpServiceImpl(
         val gServerID = System.getenv("SMSS_NO")?.trim()?.toIntOrNull() ?: 0
 
         for (attempt in 1..totalAttempts) {
+            if (attempt > 1) {
+                delay(maxRetryCount * 1000L)
+            }
             val success = doSendMoTr(
                 qItem,
                 moResult,
@@ -155,15 +138,33 @@ class MoSendToCpServiceImpl(
             val msgId = qItem?.let { QItemServiceUtil.byteArrayToKString(it.ucMsgId) } ?: ""
             val traceId = qItem?.let { QItemServiceUtil.byteArrayToKString(it.szTraceId) } ?: ""
             val gipverid = entity.gipverid ?: 510
+            val srcCidForBody = qItem?.let { QItemServiceUtil.byteArrayToKString(it.szSrcCId) }
+                ?.takeIf { it.isNotBlank() }
+                ?: moResult.srcCid
+            val destCidForBody = qItem?.let { QItemServiceUtil.byteArrayToKString(it.szCId) }
+                ?.takeIf { it.isNotBlank() }
+                ?: moResult.destCid
+            // 번호 정보 (MO 전송 시 사용한 발신/수신 번호)
+            val srcCallNoForBody = qItem?.let { QItemServiceUtil.byteArrayToKString(it.szSrcMinNo) }
+                ?.takeIf { it.isNotBlank() }
+                ?: moResult.srcMinNo
+            val destCallNoForBody = qItem?.let { QItemServiceUtil.byteArrayToKString(it.szMinNo) }
+                ?.takeIf { it.isNotBlank() }
+                ?: moResult.destMinNo
 
             val moReportRequest = MoReportRequest().apply {
                 msgVerId = gipverid
                 encFlag = 0
                 data = MoReportRequest.DataBody().apply {
-                    this.cid = cid
+                    this.accessCid = cid
+                    // CP 전송 바디에 srcCid/destCid + srcCallNo/destCallNo 포함 (qItem 값 우선)
+                    this.srcCid = srcCidForBody
+                    this.destCid = destCidForBody
+                    this.srcCallNo = srcCallNoForBody
+                    this.destCallNo = destCallNoForBody
                     this.msgId = msgId
-                    this.traceId = traceId
                     this.status = SM_STATE_DELIVERED
+                    // traceId 는 바디에는 포함하지 않고, 필요 시 로그에서만 사용
                 }
             }
 
@@ -241,9 +242,7 @@ class MoSendToCpServiceImpl(
             isSuccess
         } catch (e: Exception) {
             witcomLog.c_write(loggerName, Level.INFO, String.format("MO 메시지 전송 중 예외 발생: CP_URL(%s), 시도(%d/%d)", entity.cpUrl, attempt, totalAttempts), workerThreadId)
-            if (qItem != null) {
-                smsQLib.InsqStat(qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT, ERRORID_CP_MO_FAIL, ST_GIP_SOCK_SEND_FAIL, attempt, TID_NO_SAVE, LT_TRACE, 0)
-            }
+            // MO 전송 실패 InsqStat은 호출부(공통 recordMoFailedInsqStat)에서만 수행 (중복 방지)
             false
         }
     }
@@ -264,15 +263,24 @@ class MoSendToCpServiceImpl(
             val traceId = QItemServiceUtil.byteArrayToKString(qItem.szTraceId)
             val cid = entity.cid ?: ""
             val msgStatus = qItem.ucMsgStatus.toInt()
+            val srcCidForBody = QItemServiceUtil.byteArrayToKString(qItem.szSrcCId)
+            val destCidForBody = QItemServiceUtil.byteArrayToKString(qItem.szCId)
+            val srcCallNoForBody = QItemServiceUtil.byteArrayToKString(qItem.szSrcMinNo)
+            val destCallNoForBody = QItemServiceUtil.byteArrayToKString(qItem.szMinNo)
 
             val moReportRequest = MoReportRequest().apply {
                 msgVerId = 510
                 encFlag = 0
                 data = MoReportRequest.DataBody().apply {
-                    this.cid = cid
+                    this.accessCid = cid
+                    // CP 전송 바디에 srcCid/destCid + srcCallNo/destCallNo 포함
+                    this.srcCid = srcCidForBody
+                    this.destCid = destCidForBody
+                    this.srcCallNo = srcCallNoForBody
+                    this.destCallNo = destCallNoForBody
                     this.msgId = msgId
-                    this.traceId = traceId
                     this.status = msgStatus
+                    // traceId 는 바디에는 포함하지 않고, 필요 시 로그에서만 사용
                 }
             }
 
@@ -296,8 +304,20 @@ class MoSendToCpServiceImpl(
                 loggerName,
                 Level.INFO,
                 String.format(
-                    "MO-TR HTTP POST 요청 전송: CP_URL(%s), 시도(%d/%d), logNo(%s), cid(%s), msgId(%s), status(%d), traceId(%s), BodySize(%d bytes)",
-                    entity.cpUrl, attempt, totalAttempts, logNoForLog, moReportRequest.data.cid, moReportRequest.data.msgId, moReportRequest.data.status ?: -1, moReportRequest.data.traceId, moReportRequest.toString().length
+                    "MO-TR HTTP POST 요청 전송: CP_URL(%s), 시도(%d/%d), logNo(%s), cid(%s), srcCid(%s), destCid(%s), srcCallNo(%s), destCallNo(%s), msgId(%s), status(%d), traceId(%s), BodySize(%d bytes)",
+                    entity.cpUrl,
+                    attempt,
+                    totalAttempts,
+                    logNoForLog,
+                    moReportRequest.data.accessCid,
+                    moReportRequest.data.srcCid,
+                    moReportRequest.data.destCid,
+                    moReportRequest.data.srcCallNo,
+                    moReportRequest.data.destCallNo,
+                    moReportRequest.data.msgId,
+                    moReportRequest.data.status ?: -1,
+                    traceId,
+                    moReportRequest.toString().length
                 ),
                 workerThreadId
             )
@@ -334,8 +354,19 @@ class MoSendToCpServiceImpl(
                                 else -> "$statusValue:UNKNOWN"
                             }
                             val resTransResultLog = String.format(
-                                "[GIPALL_C_%s] [RES_TRANS_RESULT] [VSMSS#%d->%s] logNo(%s) cid(%s) msgId(%s) status(%s) traceId(%s) ResponseStatus(%s) ResponseBody(%s)",
-                                reportLogNo, gServerID, cpName, reportLogNo, moReportRequest.data.cid, moReportRequest.data.msgId, statusStr, moReportRequest.data.traceId,
+                                "[GIPALL_C_%s] [RES_TRANS_RESULT] [VSMSS#%d->%s] logNo(%s) cid(%s) srcCid(%s) destCid(%s) srcCallNo(%s) destCallNo(%s) msgId(%s) status(%s) traceId(%s) ResponseStatus(%s) ResponseBody(%s)",
+                                reportLogNo,
+                                gServerID,
+                                cpName,
+                                reportLogNo,
+                                moReportRequest.data.accessCid,
+                                moReportRequest.data.srcCid,
+                                moReportRequest.data.destCid,
+                                moReportRequest.data.srcCallNo,
+                                moReportRequest.data.destCallNo,
+                                moReportRequest.data.msgId,
+                                statusStr,
+                                traceId,
                                 clientResponse.statusCode().toString(),
                                 if (body.length > 200) body.substring(0, 200) + "..." else body
                             )
