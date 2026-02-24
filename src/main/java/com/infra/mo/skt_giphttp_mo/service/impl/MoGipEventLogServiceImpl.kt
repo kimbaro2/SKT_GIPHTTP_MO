@@ -59,8 +59,9 @@ class MoGipEventLogServiceImpl(
     ): String {
         val logNo = entity.logNo?.let { String.format("%04d", it.toIntOrNull() ?: 0) } ?: "0000"
         val messageType = getMessageType(msgHdr.msgCode, msgHdr.msgSubCode)
-        val cpName = entity.cpName ?: ""
-        val serverInfo = String.format("VSMSS#%d->%s", gServerID, cpName)
+        val description = entity.description ?: ""
+        // 방향성 지정: VSMSS#서버ID->CP명 (c_write 로그용)
+        val serverInfo = String.format("VSMSS#%d->%s", gServerID, description)
         val dataEncoding = formatDataEncoding(msgHdr.dataEncoding)
         val gBILLTYPE = moBillTypeService.getBillTypeChar(entity, '0')
         val gMOTRBILL = if (moBillTypeService.isMoTrBillEnabled(entity)) '1' else '0'
@@ -72,14 +73,20 @@ class MoGipEventLogServiceImpl(
             "${sent}:${effective}"
         } else "0:$MAX_VAILD_PERIOD"
         val orgMsgTotalLen = if (qItem != null && qItem.uOrgMsgLen > 0) qItem.uOrgMsgLen else 0
+        // BodyDataLen = MsgBodyLen(QITEM 레이아웃 전체 크기). MsgLen = ucMsgLen(szMsg 유효 바이트 수)
+        val bodyDataLen = if (qItem != null) QITEM.LAYOUT_SIZE else 0
+        val msgLen = if (qItem != null) qItem.ucMsgLen else msgHdr.msgLen
+        // ConcatenateFlag = qItem.totalSeg, ConcatenateInfo = qItem.segSeq
+        val concatenateFlag = if (qItem != null) qItem.totalSeg.toInt() else 0
+        val concatenateInfo = if (qItem != null) qItem.segSeq.toInt() else 0
         return String.format(
             "[GIPHTTPMO_C_%s] [%s] [%s] MsgVerId(%d) SrcCId(%s) SrcCallNo(%s) DestCId(%s) DestCallNo(%s) MsgCode(%d) MsgSubCode(%d) TId(%d) BodyDataLen(%d) MsgSeqNo(%d) DataEncoding(%s) TermType(%d) ConcatenateFlag(%d) ConcatenateInfo(%d) VldPrd(%s) RgtDlvFlg(%d) CallBack(%s) MsgLen(%d) OrgMsgTotalLen(%d) BILLTYPE(%c) REPLY_FLAG(%c) MO_TR_BILL(%c) ESMCLASS(%d)",
             logNo, messageType, serverInfo,
             msgHdr.msgVerId, msgHdr.srcCid, msgHdr.srcMinNo, msgHdr.destCid, msgHdr.destMinNo,
             msgHdr.msgCode.toInt(), msgHdr.msgSubCode.toInt(), msgHdr.msgCodeReserved0.toInt(),
-            msgHdr.msgLen, msgHdr.msgSerialNo, dataEncoding, msgHdr.termType.toInt(),
-            if (qItem != null) qItem.totalSeg.toInt() else 0, if (qItem != null) qItem.segSeq.toInt() else 0,
-            vldPrd, msgHdr.rgtDlvFlg.toInt(), msgHdr.callback, msgHdr.msgLen, orgMsgTotalLen,
+            bodyDataLen, msgHdr.msgSerialNo, dataEncoding, msgHdr.termType.toInt(),
+            concatenateFlag, concatenateInfo,
+            vldPrd, msgHdr.rgtDlvFlg.toInt(), msgHdr.callback, msgLen, orgMsgTotalLen,
             gBILLTYPE, 'Y', gMOTRBILL, gESMCLASS
         )
     }

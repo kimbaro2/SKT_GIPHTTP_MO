@@ -96,5 +96,11 @@ public class MONotISendEntity {
     
     @Column(name = "MORECVTIME", length = 16)
     public String moRecvTime;  // MO 수신 시간 (2020 1Q 추가)
+    
+    @Column(name = "SRC_TYPE", length = 1)
+    public String srcType;  // SRC Type (default '1')
+    
+    @Column(name = "VIRTUAL_NUM", length = 20)
+    public String virtualNum;  // Virtual Number
 }
 

@@ -201,13 +201,13 @@ class MoSendToCpServiceImpl(
                             val isSuccess = statusCode.is2xxSuccessful
                             val statusText = String.format("%d:%s", statusCode.value(), statusCode.reasonPhrase)
                             val logNo = entity.logNo?.let { String.format("%04d", it.toIntOrNull() ?: 0) } ?: "0000"
-                            val cpName = entity.cpName ?: ""
+                            val description = entity.description ?: ""
                             // 응답 바디가 비어있으면 "EMPTY"로 표기 (HTTP Status는 별도 필드로 항상 출력)
                             val resBodyForLog = if (body.isNotBlank()) body else "EMPTY"
                             val resLog = String.format(
                                 "[GIPHTTPMO_C_%s] [RES_SIMPLE] [%s->SMSS#%d] SrcCId(%s) SrcCallNo(%s) DestCId(%s) DestCallNo(%s) MsgID(%s) HttpStatus(%s) MsgCode(%d) MsgSubCode(%d) HttpBody(%s)",
                                 logNo,
-                                cpName,
+                                description,
                                 gServerID,
                                 moResult.srcCid,
                                 moResult.srcMinNo,
@@ -330,7 +330,7 @@ class MoSendToCpServiceImpl(
                         .defaultIfEmpty("")
                         .map { body ->
                             val reportLogNo = entity.logNo?.let { String.format("%04d", it.toIntOrNull() ?: 0) } ?: "0000"
-                            val cpName = entity.cpName ?: ""
+                            val description = entity.description ?: ""
                             val statusValue = moReportRequest.data.status ?: -1
                             val statusStr = when (statusValue) {
                                 0 -> "0:FWD_DETECT_CID"
@@ -353,11 +353,12 @@ class MoSendToCpServiceImpl(
                                 20 -> "20:ADMCANC"
                                 else -> "$statusValue:UNKNOWN"
                             }
+                            // 방향성 지정: [VSMSS#%d->%s] (c_write 로그)
                             val resTransResultLog = String.format(
                                 "[GIPALL_C_%s] [RES_TRANS_RESULT] [VSMSS#%d->%s] logNo(%s) cid(%s) srcCid(%s) destCid(%s) srcCallNo(%s) destCallNo(%s) msgId(%s) status(%s) traceId(%s) ResponseStatus(%s) ResponseBody(%s)",
                                 reportLogNo,
                                 gServerID,
-                                cpName,
+                                description,
                                 reportLogNo,
                                 moReportRequest.data.accessCid,
                                 moReportRequest.data.srcCid,

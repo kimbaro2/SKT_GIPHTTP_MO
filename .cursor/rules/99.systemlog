@@ -1,0 +1,29 @@
+[16:29:58:0733] [INFO ] [ESMCLASS 분기 진입] ESMCLASS(20) -> serviceType(NOTI_PLUS), DestCID(1584)
+[16:29:58:0738] [INFO ] [SELECT CONTEXT] NotiPlusHandler doProcessSMReqSimpleInHandler()
+[16:29:58:0781] [INFO ] [GIPHTTPMO_C_0001] [REQ_SIMPLE] [VSMSS#1->JWS_TEST] MsgVerId(0) SrcCId(010) SrcCallNo(41907189) DestCId(1
+584) DestCallNo(1041901346) MsgCode(11) MsgSubCode(10) TId(0) BodyDataLen(704) MsgSeqNo(0) DataEncoding(0E:CP949) TermType(0) Con
+catenateFlag(0) ConcatenateInfo(0) VldPrd(0:86400) RgtDlvFlg(0) CallBack(01033847189) MsgLen(59) OrgMsgTotalLen(0) BILLTYPE(2) RE
+PLY_FLAG(Y) MO_TR_BILL(0) ESMCLASS(20)
+[16:29:58:0782] [INFO ] [InsqStat 추적] 호출클래스=NormalMoHandler, 호출라인=346, nErrorID=15, nStatusNo=80
+[16:29:58:0804] [INFO ] [processMOBilling] 함수 진입: destCID(1584), srcCallNo(41907189), msgSeqNo(0)
+[16:29:58:0804] [INFO ] [processMOBilling] SelectGIPMOCallInfo 호출 시작: msgId(001D9959), srcCID(010), destCID(1584), srcCallNo(
+41907189), destCallNo(1041901346)
+[16:29:58:0816] [INFO ] [processMOBilling] SelectGIPMOCallInfo 결과: moCallInfo(NOT_FOUND), msgId(001D9959)
+[16:29:58:0816] [INFO ] [processMOBilling] ?? MOCALLINFO 레코드 없음: srcCID(010), destCID(1584), srcCallNo(41907189), destCallNo
+(1041901346), msgId(001D9959) - MO_NOTISEND fallback 조회 시도 (동일 5키)
+[16:29:58:0822] [INFO ] [processMOBilling] effectiveMoInfo 분기 체크: effectiveMoInfo(NULL), isFromMOCallInfo(NO), isFromMONotISe
+nd(NO)
+[16:29:58:0846] [INFO ] MO Send Request JSON: MoReportRequest(msgVerId=510, encFlag=0, data=MoReportRequest.DataBody(accessCid=15
+71700212, srcCid=010, destCid=1584, srcCallNo=41907189, destCallNo=1041901346, msgId=001D9959, traceId=null, status=2, msgType=nu
+ll, moCallInfo=null))
+[16:29:58:0903] [INFO ] MO HTTP POST 요청 전송: CP_URL(http://175.125.130.76:7500/mo/callback), 시도(1/4), MsgSeqNo(0), BodySize(
+233 bytes)
+[16:29:59:0288] [INFO ] [GIPHTTPMO_C_0001] [RES_SIMPLE] [JWS_TEST->SMSS#1] SrcCId(010) SrcCallNo(41907189) DestCId(1584) DestCall
+No(1041901346) MsgID(001D9959) HttpStatus(200:OK) MsgCode(12) MsgSubCode(10) HttpBody(<h1>PowerShell HTTP Server</h1><p>Received
+your request!</p>)
+[16:29:59:0289] [INFO ] MO HTTP POST 응답 수신: CP_URL(http://175.125.130.76:7500/mo/callback), StatusCode(200), 시도(1/4), 성공(
+YES), BodySize(60 bytes)
+[16:29:59:0295] [INFO ] MO HTTP 전송 최종 결과: CP_URL(http://175.125.130.76:7500/mo/callback), 시도(1/4), 결과(SUCCESS), StatusC
+ode(200)
+[16:29:59:0297] [INFO ] [InsqStat 추적] 호출클래스=NotiPlusHandler, 호출라인=344, nErrorID=15, nStatusNo=56
+[16:29:59:0319] [INFO ] [서비스 분기] serviceType(NOTI_PLUS) -> handler 호출 완료

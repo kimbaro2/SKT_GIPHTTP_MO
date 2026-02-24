@@ -28,6 +28,10 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_GIP_MT_LIMIT_GIFT
 import com.infra.mo.skt_giphttp_mo.dto.smsController.Rsv4ProtocolItem
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.CfgEtcEntity
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SEND_OK
+import com.infra.mo.skt_giphttp_mo.utils.cLibrary.SmsQLib
+import com.infra.mo.skt_giphttp_mo.utils.BillTypeValidator
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MODULEID_NOTISEND
@@ -94,6 +98,12 @@ class NotiRegisteredHandler(
         val gstQResultObj = context.gstQResultObj as? QueueResult ?: return
         val gBILLTYPE = moBillTypeService.getBillTypeChar(context.entity, '0')
 
+        witcomLog.c_write(
+            loggerName, Level.INFO,
+            String.format("[SELECT CONTEXT] %s doProcessSMReqSimpleInHandler()", this.javaClass.simpleName),
+            workerThreadId
+        );
+
         if (!checkQItemVariables(gstQItem, context)) return
 
         val msgRefId = gstQItem.ucRsv[0].toInt() and 0xFF
@@ -117,6 +127,7 @@ class NotiRegisteredHandler(
                     blockNotiQItem, gstQItem, smsQLib, gServerID, loggerName, workerThreadId
                 )
             }
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "NotiRegisteredHandler", 127, ERRORID_CP_MO_LIMIT, ST_GIP_MO_LIMIT), workerThreadId)
             smsQLib.InsqStat(
                 gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
                 ERRORID_CP_MO_LIMIT, ST_GIP_MO_LIMIT, moQItemUtilService.getNInforNo(gstQItem),
@@ -142,6 +153,7 @@ class NotiRegisteredHandler(
                     blockNotiQItem, gstQItem, smsQLib, gServerID, loggerName, workerThreadId
                 )
             }
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "NotiRegisteredHandler", 153, ERRORID_CP_GIVEBILL_LIMIT, ST_GIP_MT_LIMIT_GIFT), workerThreadId)
             smsQLib.InsqStat(
                 gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
                 ERRORID_CP_GIVEBILL_LIMIT, ST_GIP_MT_LIMIT_GIFT, moQItemUtilService.getNInforNo(gstQItem),
@@ -158,6 +170,10 @@ class NotiRegisteredHandler(
 
         val reqSimpleLog = moGipEventLogService.formatGipEventLog(actualEntity, gServerID, gstQItemTrans, gstQItem)
         witcomLog.c_write(loggerName, Level.INFO, reqSimpleLog, workerThreadId)
+
+        val gMOTRBILL = moBillTypeService.isMoTrBillEnabled(actualEntity)
+        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
+        recordMoAckBilling(gstQItem, context, gBILLTYPE)
 
         val moSendSuccess = withContext(Dispatchers.IO) {
             moSendToCpService.sendMoMessageToCp(
@@ -176,12 +192,13 @@ class NotiRegisteredHandler(
 
         gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
         recordMoSuccessInsqStat(gstQItem, context)
-        val gMOTRBILL = moBillTypeService.isMoTrBillEnabled(actualEntity)
+        // gMOTRBILL은 MO 전송 직전에 이미 설정됨
         val dbInsertOk = if (gMOTRBILL) {
             val notiRes = moDbInsertService.insertMO_NOTISEND_NotiRegistered(
                 gstQItem, gstQItemTrans, actualEntity, segmentInfo, workerThreadId
             )
             if (notiRes < 0) {
+                witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "NotiRegisteredHandler", 193, ERRORID_CP_MO_FAIL, ST_DB_NO_DATA_MONOTISEND), workerThreadId)
                 smsQLib.InsqStat(
                     gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
                     ERRORID_CP_MO_FAIL, ST_DB_NO_DATA_MONOTISEND,
@@ -255,11 +272,6 @@ class NotiRegisteredHandler(
                 )
             }
         }
-
-        if (!moBillTypeService.isFreeBill(gBILLTYPE)) {
-            gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
-//            recordMoAckBilling(gstQItem, context, gBILLTYPE)
-        }
     }
 
     override fun checkQItemVariables(qItem: QITEM, context: MoServiceContext): Boolean {
@@ -273,6 +285,7 @@ class NotiRegisteredHandler(
         val msgId = QItemServiceUtil.byteArrayToKString(qItem.ucMsgId)
         if (msgId.isBlank()) {
             witcomLog.c_write(loggerName, Level.INFO, String.format("[CRITICAL] QITEM 변수체크 실패(msgId): msgId 비어있음. serviceType(%s) CP_URL(%s) MsgSeqNo(%d) SrcCID(%s) DestCID(%s)", st.name, entity?.cpUrl, qItem.uMsgSerialNo.toInt(), QItemServiceUtil.byteArrayToKString(qItem.szSrcCId), QItemServiceUtil.byteArrayToKString(qItem.szCId)), workerThreadId)
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "NotiRegisteredHandler", 285, ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK), workerThreadId)
             smsQLib.InsqStat(qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT, ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK, qItem.usSource, TID_NO_SAVE, LT_BOTH, 0)
             return false
         }
@@ -280,6 +293,7 @@ class NotiRegisteredHandler(
         val hasTraceId = traceId.isNotBlank() && !traceId.all { it == '\u0000' }
         if (!hasTraceId) {
             witcomLog.c_write(loggerName, Level.INFO, String.format("[CRITICAL] QITEM 변수체크 실패(traceId): traceId 없음. serviceType(%s) CP_URL(%s) MsgSeqNo(%d) SrcCID(%s) DestCID(%s)", st.name, entity?.cpUrl, qItem.uMsgSerialNo.toInt(), QItemServiceUtil.byteArrayToKString(qItem.szSrcCId), QItemServiceUtil.byteArrayToKString(qItem.szCId)), workerThreadId)
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "NotiRegisteredHandler", 292, ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK), workerThreadId)
             smsQLib.InsqStat(qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT, ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK, qItem.usSource, TID_NO_SAVE, LT_BOTH, 0)
             return false
         }
@@ -289,6 +303,8 @@ class NotiRegisteredHandler(
     override fun recordMoSuccessInsqStat(qItem: QITEM, context: MoServiceContext) {
         val smsQLib = context.smsQLib ?: return
         val gServerID = context.gServerID ?: return
+        val witcomLog = context.witcomLog ?: return
+        witcomLog.c_write(context.loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "NotiRegisteredHandler", 303, ERRORID_CP_MO_SUCCESS, ST_GIPEVENT_MO_OK), context.workerThreadId)
         smsQLib.InsqStat(
             qItem,
             MESSAGE_MO,
@@ -308,11 +324,31 @@ class NotiRegisteredHandler(
     override fun recordMoAckBilling(qItem: QITEM, context: MoServiceContext, billType: Char) {
         val smsQLib = context.smsQLib ?: return
         val gServerID = context.gServerID ?: return
+        val witcomLog = context.witcomLog ?: return
+        witcomLog.c_write(context.loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "NotiRegisteredHandler", 322, com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS, ST_GIPEVENT_MOACK_BILL_OK), context.workerThreadId)
         smsQLib.InsqStat(
             qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
             com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS, ST_GIPEVENT_MOACK_BILL_OK,
             qItem.usSource, TID_NO_SAVE, LT_BOTH, 0
         )
+
+        if (!moBillTypeService.isMoTrBillEnabled(context.entity) && billType != '1') {
+            val request = smsResService.buildMoAckRequestFromQItem(qItem)
+            runBlocking { smsResService.processMOBilling(qItem, request, context.entity, smsQLib, context.loggerName, isMoAckContext = true) }
+        }
     }
+
+    /**
+     * 등기문자 MO-TR 과금. MOTRBILL=Y 인 경우 MO-TR 단계에서 3분 이내/이후, 성공/실패 조건에 따라 bprintf 호출 분기 결정.
+     * 현재: msgStatus==SEND_OK(2) && MOTRBILL=Y && BillType!=1 일 때 processMOBilling 호출.
+     * 확장 시: MOSUBTIME 기준 3분 경과 여부, 성공/실패(msgStatus) 조합으로 분기 추가.
+     */
+    override fun recordMoTrBilling(qItem: QITEM, request: ResponseTR, gipHttpMoAccess: GipHttpMoAccessEntity?, smsQLib: SmsQLib, loggerName: String) {
+        if (!moBillTypeService.isMoTrBillEnabled(gipHttpMoAccess) || BillTypeValidator.validateAndNormalize(gipHttpMoAccess?.billType) == "1") return
+        val msgStatus = qItem.ucMsgStatus.toInt()
+        if (msgStatus != SEND_OK) return
+        runBlocking { smsResService.processMOBilling(qItem, request, gipHttpMoAccess, smsQLib, loggerName, isMoAckContext = false) }
+    }
+
     override fun shouldSkipBprintf(): Boolean = false
 }

@@ -56,13 +56,15 @@ interface SmsResService {
      * @param gipHttpMoAccess GipHttpMoAccessEntity (MOTRBILL 확인용)
      * @param smsQLib SmsQLib (InsqStat 호출용)
      * @param loggerName 로거 이름
+     * @param isMoAckContext true = MO-ACK 단계 호출, false = MO-TR 단계 호출 (MO-TR에서는 MOTRBILL=Y일 때만 bprintf)
      */
     suspend fun processMOBilling(
         qItem: QITEM,
         request: ResponseTR,
         gipHttpMoAccess: GipHttpMoAccessEntity?,
         smsQLib: SmsQLib,
-        loggerName: String
+        loggerName: String,
+        isMoAckContext: Boolean
     )
     
     /**
@@ -143,4 +145,19 @@ interface SmsResService {
         moNoti: MONotISendEntity,
         loggerName: String
     ): MoReportCallInfoResult
+
+    /**
+     * C 코드 DBGet_GIENQ_CID: CID로 GIENQ 조회 후 유효 CID 길이 반환.
+     * MO-ACK 도메인별 bprintf 시 cdrCId 산출에 사용.
+     * @param tmpCid CID 문자열 (예: destCID)
+     * @param loggerName 로거 이름 (선택)
+     * @return 유효 길이 (성공), -1 (실패)
+     */
+    suspend fun dbGetGIENQCID(tmpCid: String, loggerName: String? = null): Int
+
+    /**
+     * recordMoAckBilling에서 processMOBilling 호출 시 사용할 MO-ACK용 ResponseTR 생성.
+     * qItem에서 msgId, srcCID, destCID, srcCallNo, destCallNo를 채워 processMOBilling 5키 조회에 사용.
+     */
+    fun buildMoAckRequestFromQItem(qItem: QITEM): ResponseTR
 }

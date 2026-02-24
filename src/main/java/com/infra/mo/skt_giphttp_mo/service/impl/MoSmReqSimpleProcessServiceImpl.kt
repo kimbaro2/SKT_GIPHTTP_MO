@@ -782,25 +782,10 @@ class MoSmReqSimpleProcessServiceImpl(
             loggerName,
             Level.INFO,
             String.format(
-                "[MO 전송 성공] bprintf 스킵: processSMReqSimple/processMOBilling에서 이미 호출됨 - MsgId(%s)",
+                "[MO 전송 성공] recordMoAckBilling·bprintf는 각 도메인 핸들러에서 처리, 공통 서비스에서는 호출 안 함 - MsgId(%s)",
                 actualMsgId
             ),
             workerThreadId
         )
-        if (moBillTypeService.isFreeBill(gBILLTYPE)) {
-            witcomLog.c_write(
-                loggerName,
-                Level.INFO,
-                "[TRC 전송 성공] BILLTYPE='1' 비과금: ST_GIPEVENT_MOACK_BILL_OK TRC 호출 스킵 - 과금성공(MOACK) TRC 미출력"
-            )
-        } else {
-            gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
-            (moServiceHandlerRegistry.getHandler(
-                moServiceTypeResolver.resolve(
-                    context.esmClass,
-                    context.destCID
-                )
-            ) as MoServiceTypeAwareHandler).recordMoAckBilling(gstQItem, context, gBILLTYPE)
-        }
     }
 }

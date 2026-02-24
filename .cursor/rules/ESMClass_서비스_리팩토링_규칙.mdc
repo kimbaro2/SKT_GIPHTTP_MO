@@ -67,6 +67,13 @@ handler.handle(qItem, context)
 - **한 서비스 = 한 책임**: 일반 MO, 1584 캐릭터문자, 638 문자매니저, 2580 문자매신저, CDMA 로밍, GSM 로밍, 안심문자, 등기문자 등 **서비스별로 전용 클래스(또는 전용 메서드)**를 두고, 분기부에서는 그 클래스만 호출.
 - **파일 분리**: 서비스별 로직을 하나의 큰 파일에 모으지 말고, `service/handler` 또는 `service/mo` 아래 서비스별 클래스로 나눈다.
 
+### 3.4 도메인별 과금 처리
+
+- **도메인별 과금처리 로직은 `recordMoAckBilling` 함수로 둔다.**
+- 각 핸들러(`service/mo/impl/*Handler.kt`)가 `recordMoAckBilling(qItem, context, billType)`를 오버라이드하여, 해당 서비스 타입에 맞는 MO-ACK 단계 과금·통계(InsqStat/VSTAT 15 등)만 수행한다.
+- 공용 영역(SmsResServiceImpl 등)에서는 MO-ACK 단계의 서비스별 InsqStat/bprintf를 직접 호출하지 않고, **도메인 핸들러의 recordMoAckBilling에 위임**한다.
+- MO-TR 단계 과금은 `processMOBilling` 등 공용 플로우에서 수행하며, 이때는 MOCALLINFO/MO_NOTISEND 조회·bprintf·InsqStat을 공통 처리한다.
+
 ---
 
 ## 4. 디렉터리/클래스 구조 예시
@@ -102,6 +109,7 @@ service/
 - [ ] 서비스 리스트(1~8)가 enum/상수로 정의되어 있고, 서비스별 클래스와 1:1로 매핑되는가?
 - [ ] 한 파일에 여러 서비스 로직을 몰아넣지 않고, 서비스별 클래스(또는 핸들러)로 분리되어 있는가?
 - [ ] ESMClass 분기부는 “분기 + 서비스 타입 결정 + 핸들러 호출”만 하고, 구체 비즈니스 로직은 서비스별 클래스에만 있는가?
+- [ ] **도메인별 과금처리(MO-ACK 단계 InsqStat/통계)가 각 핸들러의 `recordMoAckBilling`에만 있고, 공용 영역에 중복되지 않는가?**
 
 ### 새 서비스 타입 추가 시 (DDD 반영)
 1. **MoServiceType** enum에 값 추가.

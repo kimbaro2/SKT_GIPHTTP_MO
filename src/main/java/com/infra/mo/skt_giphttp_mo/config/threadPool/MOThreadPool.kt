@@ -402,6 +402,15 @@ open class MOThreadPool(
                                 minOf(szDestMvnoBeforeConvert.size, gstQItem.szDestMvnoInformation.size)
                             )
 
+                            // gstQItemTrans(Dequeue 시점 toSMReqTransResult) 기준으로 QITEM 보정 — DCS/기타 누락 방지
+                            gstQItem.ucDataEncoding = gstQItemTrans.dataEncoding
+                            gstQItem.ucTermType = gstQItemTrans.termType
+                            gstQItem.nVldPrd = gstQItemTrans.vldPrd
+                            gstQItem.ucPriority = gstQItemTrans.priority
+                            gstQItem.ucRepFlag = gstQItemTrans.repFlag
+                            gstQItem.ucRgtDlvFlg = gstQItemTrans.rgtDlvFlg
+                            gstQItem.ucMsgStatus = gstQItemTrans.msgStatus
+
                             // qItemToMsgHdr 호출 후 traceID 확인
                             val traceIdAfterConvert = QItemServiceUtil.byteArrayToKString(gstQItem.szTraceId)
                             witcomLog.c_write(

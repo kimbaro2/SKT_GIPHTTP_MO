@@ -25,6 +25,9 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_GIP_MT_LIMIT_GIFT
 import com.infra.mo.skt_giphttp_mo.dto.smsController.Rsv4ProtocolItem
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.CfgEtcEntity
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
+import com.infra.mo.skt_giphttp_mo.utils.cLibrary.SmsQLib
+import com.infra.mo.skt_giphttp_mo.utils.BillTypeValidator
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS
 import com.infra.mo.skt_giphttp_mo.service.Mo1584EntityResolveService
 import com.infra.mo.skt_giphttp_mo.service.MoBillTypeService
@@ -102,6 +105,12 @@ class CdmaRoamingHandler(
         val destCID = context.destCID
         val gBILLTYPE = moBillTypeService.getBillTypeChar(context.entity, '0')
 
+        witcomLog.c_write(
+            loggerName, Level.INFO,
+            String.format("[SELECT CONTEXT] %s doProcessSMReqSimpleInHandler()", this.javaClass.simpleName),
+            workerThreadId
+        );
+
         if (!checkQItemVariables(gstQItem, context)) return
 
         val msgRefId = gstQItem.ucRsv[0].toInt() and 0xFF
@@ -167,6 +176,10 @@ class CdmaRoamingHandler(
         val reqSimpleLog = moGipEventLogService.formatGipEventLog(actualEntity, gServerID, gstQItemTrans, gstQItem)
         witcomLog.c_write(loggerName, Level.INFO, reqSimpleLog, workerThreadId)
 
+        val gMOTRBILL = moBillTypeService.isMoTrBillEnabled(actualEntity)
+        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
+        recordMoAckBilling(gstQItem, context, gBILLTYPE)
+
         val moSendSuccess = withContext(Dispatchers.IO) {
             moSendToCpService.sendMoMessageToCp(
                 gstQItemTrans, actualEntity, gstQItem, smsQLib, gServerID,
@@ -184,17 +197,20 @@ class CdmaRoamingHandler(
 
         gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
         recordMoSuccessInsqStat(gstQItem, context)
-        val callRes = moDbInsertService.insertGIPMOCallInfo(
-            gstQItem, gstQItemTrans, actualEntity, workerThreadId
-        )
-        val dbInsertOk = callRes >= 0
-        if (!dbInsertOk) {
-            smsQLib.InsqStat(
-                gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
-                ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO,
-                moQItemUtilService.getNInforNo(gstQItem), TID_NO_SAVE, LT_TRACE, 0
+        // 규칙 §1: MOCALLINFO는 MOTRBILL=Y일 때만 저장
+        val dbInsertOk = if (gMOTRBILL) {
+            val callRes = moDbInsertService.insertGIPMOCallInfo(
+                gstQItem, gstQItemTrans, actualEntity, workerThreadId
             )
-        }
+            if (callRes < 0) {
+                smsQLib.InsqStat(
+                    gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
+                    ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO,
+                    moQItemUtilService.getNInforNo(gstQItem), TID_NO_SAVE, LT_TRACE, 0
+                )
+                false
+            } else true
+        } else true
 
         val actualMsgId = QItemServiceUtil.byteArrayToKString(gstQItem.ucMsgId)
         if (dbInsertOk && moSendSuccess) {
@@ -242,11 +258,6 @@ class CdmaRoamingHandler(
                     workerThreadId
                 )
             }
-        }
-
-        if (!moBillTypeService.isFreeBill(gBILLTYPE)) {
-            gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
-            recordMoAckBilling(gstQItem, context, gBILLTYPE)
         }
     }
 
@@ -309,6 +320,17 @@ class CdmaRoamingHandler(
         val smsQLib = context.smsQLib ?: return
         val gServerID = context.gServerID ?: return
         smsQLib.InsqStat(qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT, com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS, ST_GIPEVENT_MOACK_BILL_OK, qItem.usSource, TID_NO_SAVE, LT_TRACE, 0)
+
+        if (!moBillTypeService.isMoTrBillEnabled(context.entity) && billType != '1') {
+            val request = smsResService.buildMoAckRequestFromQItem(qItem)
+            runBlocking { smsResService.processMOBilling(qItem, request, context.entity, smsQLib, context.loggerName, isMoAckContext = true) }
+        }
+    }
+
+    override fun recordMoTrBilling(qItem: QITEM, request: ResponseTR, gipHttpMoAccess: GipHttpMoAccessEntity?, smsQLib: SmsQLib, loggerName: String) {
+        if (moBillTypeService.isMoTrBillEnabled(gipHttpMoAccess) && BillTypeValidator.validateAndNormalize(gipHttpMoAccess?.billType) != "1") {
+            runBlocking { smsResService.processMOBilling(qItem, request, gipHttpMoAccess, smsQLib, loggerName, isMoAckContext = false) }
+        }
     }
 
     override fun shouldSkipBprintf(): Boolean = false

@@ -1026,8 +1026,12 @@ object SmsDef {
     const val ST_GIPALL_SMSMGR_OK = 72
 
     const val ERRORID_CP_MO_SUCCESS = 15
+    const val ERRORID_CENTER_MT_SUCCESS = 32
+    const val ST_SMSMOT_SOCK_SEND_FAIL = -341
 
     const val ERRORID_MO_SUCCESS = 35
+    const val ERRORID_CENTER_MTQ_FULL = 40
+    const val ERRORID_CENTER_MTQ_FAIL = 41
 
     // MO-TR 관련 통계/에러 코드 (C inc/StatDef.h, inc/TraceDef.h 기준)
     const val ERRORID_CP_MO_TR_FAIL = 28            /* MO-TR 과금/처리 실패 */
@@ -1058,6 +1062,7 @@ object SmsDef {
     const val SERVICEID_GIPEVENT = 45
     const val SERVICEID_GIPM = 41  // GIPM 서비스 ID
     const val SERVICEID_NOTISENDING = 61
+    const val SERVICEID_NOTISENT = 62
     const val ERRORID_CP_MO_FAIL = 16
     const val ERRORID_CENTER_MO_SUCCESS = 35  // Center MO 성공
     const val ST_Q_INSERT_FAIL_POLL = -299
@@ -1086,8 +1091,8 @@ object SmsDef {
     // - ST_DB_NO_DATA_GIPMOCALLINFO = -125
     // - ST_GIP_MORS_FAIL = -154
     // - ST_GIP_INVALID_CID = -144
-    const val ERRORID_CP_MO_NODATA = 25              /* MO 데이터 없음 */
     const val ST_GIPEVENT_MO_OK = 56                 /* 성공(MO) */
+    const val ST_GIPEVENT_MT_OK = 46                 /* 성공(MT) */
     const val ST_GIPEVENT_MORS_OK = 61               /* 성공 (MO RES) */
     const val ST_GIP_MORS_FAIL = -154                /* MO RES 실패 */
     const val ST_GIPEVENT_MTTR_OK = 71               /* 성공 (MT TR) */

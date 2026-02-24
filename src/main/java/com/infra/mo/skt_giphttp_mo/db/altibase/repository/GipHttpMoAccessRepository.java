@@ -37,6 +37,18 @@ public interface GipHttpMoAccessRepository extends JpaRepository<GipHttpMoAccess
     @Transactional(readOnly = true)
     public Optional<GipHttpMoAccessEntity> findByCidAndIpAddr(String cid, String ipAddr);
 
+    // QUEUE_NO로 조회 (MO dequeue용)
+    @Transactional(readOnly = true)
+    public Optional<GipHttpMoAccessEntity> findByQueueNo(int queueNo);
+
+    // PORT_NO + QUEUE_NO로 조회 (MO dequeue용)
+    @Transactional(readOnly = true)
+    public Optional<GipHttpMoAccessEntity> findByPortNoAndQueueNo(int portNo, int queueNo);
+
+    // IP + PORT + QUEUE_NO로 조회 (MO-TR HTTP 인입용)
+    @Transactional(readOnly = true)
+    public Optional<GipHttpMoAccessEntity> findByIpAddrAndPortNoAndQueueNo(String ipAddr, int portNo, int queueNo);
+
     // NOTE: MSG_TYPE 컬럼 삭제됨. 관련 조회/쿼리는 모두 제거되었으며, 분기 기준은 MO_TR_BILL로 처리한다.
 
     // AES 키와 IV 업데이트를 위한 커스텀 쿼리

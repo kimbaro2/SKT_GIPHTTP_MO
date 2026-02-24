@@ -24,6 +24,9 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.TraceDef.ST_GIP_MT_LIMIT_GIFT
 import com.infra.mo.skt_giphttp_mo.dto.smsController.Rsv4ProtocolItem
 import com.infra.mo.skt_giphttp_mo.dto.smsController.ResponseTR
 import com.infra.mo.skt_giphttp_mo.db.altibase.entity.CfgEtcEntity
+import com.infra.mo.skt_giphttp_mo.db.altibase.entity.GipHttpMoAccessEntity
+import com.infra.mo.skt_giphttp_mo.utils.cLibrary.SmsQLib
+import com.infra.mo.skt_giphttp_mo.utils.BillTypeValidator
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.ERRORID_CP_MO_SUCCESS
 import com.infra.mo.skt_giphttp_mo.service.MoBillTypeService
 import com.infra.mo.skt_giphttp_mo.service.MoBlockNotificationService
@@ -87,6 +90,12 @@ class SmsMessenger2580Handler(
         val gstQResultObj = context.gstQResultObj as? QueueResult ?: return
         val gBILLTYPE = moBillTypeService.getBillTypeChar(context.entity, '0')
 
+        witcomLog.c_write(
+            loggerName, Level.INFO,
+            String.format("[SELECT CONTEXT] %s doProcessSMReqSimpleInHandler()", this.javaClass.simpleName),
+            workerThreadId
+        );
+
         if (!checkQItemVariables(gstQItem, context)) return
 
         val msgRefId = gstQItem.ucRsv[0].toInt() and 0xFF
@@ -111,6 +120,7 @@ class SmsMessenger2580Handler(
                     blockNotiQItem, gstQItem, smsQLib, gServerID, loggerName, workerThreadId
                 )
             }
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "SmsMessenger2580Handler", 121, ERRORID_CP_MO_LIMIT, ST_GIP_MO_LIMIT), workerThreadId)
             smsQLib.InsqStat(
                 gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
                 ERRORID_CP_MO_LIMIT, ST_GIP_MO_LIMIT, moQItemUtilService.getNInforNo(gstQItem),
@@ -137,6 +147,7 @@ class SmsMessenger2580Handler(
                     blockNotiQItem, gstQItem, smsQLib, gServerID, loggerName, workerThreadId
                 )
             }
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "SmsMessenger2580Handler", 148, ERRORID_CP_GIVEBILL_LIMIT, ST_GIP_MT_LIMIT_GIFT), workerThreadId)
             smsQLib.InsqStat(
                 gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
                 ERRORID_CP_GIVEBILL_LIMIT, ST_GIP_MT_LIMIT_GIFT, moQItemUtilService.getNInforNo(gstQItem),
@@ -156,6 +167,10 @@ class SmsMessenger2580Handler(
         val reqSimpleLog = moGipEventLogService.formatGipEventLog(actualEntity, gServerID, gstQItemTrans, gstQItem)
         witcomLog.c_write(loggerName, Level.INFO, reqSimpleLog, workerThreadId)
 
+        val gMOTRBILL = moBillTypeService.isMoTrBillEnabled(actualEntity)
+        gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
+        recordMoAckBilling(gstQItem, context, gBILLTYPE)
+
         /*MO 송신*/
         val moSendSuccess = withContext(Dispatchers.IO) {
             moSendToCpService.sendMoMessageToCp(
@@ -174,32 +189,37 @@ class SmsMessenger2580Handler(
 
         gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
         recordMoSuccessInsqStat(gstQItem, context)
+        // 규칙 §1: MOCALLINFO/Relay는 MOTRBILL=Y일 때만 저장 (gMOTRBILL은 MO 전송 직전에 이미 설정됨)
         var dbInsertOk = true
-        if (isRelayMo) {
-            val relayRes = moDbInsertService.insertRelayMOCallInfo(
-                gstQItem, gstQItemTrans, actualEntity, serialNo
-            )
-            if (relayRes < 0) {
-                dbInsertOk = false
-                smsQLib.InsqStat(
-                    gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO,
-                    moQItemUtilService.getNInforNo(gstQItem), TID_NO_SAVE, LT_TRACE, 0
+        if (gMOTRBILL) {
+            if (isRelayMo) {
+                val relayRes = moDbInsertService.insertRelayMOCallInfo(
+                    gstQItem, gstQItemTrans, actualEntity, serialNo
                 )
+                if (relayRes < 0) {
+                    dbInsertOk = false
+                    witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "SmsMessenger2580Handler", 193, ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO), workerThreadId)
+                    smsQLib.InsqStat(
+                        gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
+                        ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO,
+                        moQItemUtilService.getNInforNo(gstQItem), TID_NO_SAVE, LT_TRACE, 0
+                    )
+                } else {
+                    gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
+                }
             } else {
-                gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
-            }
-        } else {
-            val callRes = moDbInsertService.insertGIPMOCallInfo(
-                gstQItem, gstQItemTrans, actualEntity, workerThreadId
-            )
-            if (callRes < 0) {
-                dbInsertOk = false
-                smsQLib.InsqStat(
-                    gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
-                    ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO,
-                    moQItemUtilService.getNInforNo(gstQItem), TID_NO_SAVE, LT_TRACE, 0
+                val callRes = moDbInsertService.insertGIPMOCallInfo(
+                    gstQItem, gstQItemTrans, actualEntity, workerThreadId
                 )
+                if (callRes < 0) {
+                    dbInsertOk = false
+                    witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "SmsMessenger2580Handler", 207, ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO), workerThreadId)
+                    smsQLib.InsqStat(
+                        gstQItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
+                        ERRORID_CP_MO_FAIL, ST_DB_INS_FAIL_GIPMOCALLINFO,
+                        moQItemUtilService.getNInforNo(gstQItem), TID_NO_SAVE, LT_TRACE, 0
+                    )
+                }
             }
         }
 
@@ -250,11 +270,6 @@ class SmsMessenger2580Handler(
                 )
             }
         }
-
-        if (!moBillTypeService.isFreeBill(gBILLTYPE)) {
-            gstQItem.ucServerType = VSMSS_TYPE.code.toByte()
-            recordMoAckBilling(gstQItem, context, gBILLTYPE)
-        }
     }
     override fun checkQItemVariables(qItem: QITEM, context: MoServiceContext): Boolean {
         val witcomLog = context.witcomLog ?: return false
@@ -283,6 +298,7 @@ class SmsMessenger2580Handler(
                     QItemServiceUtil.byteArrayToKString(qItem.szSrcCId), QItemServiceUtil.byteArrayToKString(qItem.szCId)
                 ), workerThreadId
             )
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "SmsMessenger2580Handler", 295, ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK), workerThreadId)
             smsQLib.InsqStat(
                 qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
                 ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK, qItem.usSource, TID_NO_SAVE, LT_BOTH, 0
@@ -300,6 +316,7 @@ class SmsMessenger2580Handler(
                     QItemServiceUtil.byteArrayToKString(qItem.szSrcCId), QItemServiceUtil.byteArrayToKString(qItem.szCId)
                 ), workerThreadId
             )
+            witcomLog.c_write(loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "SmsMessenger2580Handler", 313, ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK), workerThreadId)
             smsQLib.InsqStat(
                 qItem, MESSAGE_MO, 0, gServerID, MODULEID_GIPEVENT_C, SERVICEID_GIPEVENT,
                 ERRORID_CP_MO_FAIL, ST_GIPEVENT_MO_OK, qItem.usSource, TID_NO_SAVE, LT_BOTH, 0
@@ -311,6 +328,8 @@ class SmsMessenger2580Handler(
     override fun recordMoSuccessInsqStat(qItem: QITEM, context: MoServiceContext) {
         val smsQLib = context.smsQLib ?: return
         val gServerID = context.gServerID ?: return
+        val witcomLog = context.witcomLog ?: return
+        witcomLog.c_write(context.loggerName, Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "SmsMessenger2580Handler", 324, ERRORID_CP_MO_SUCCESS, ST_GIPEVENT_MO_OK), context.workerThreadId)
         smsQLib.InsqStat(
             qItem,
             MESSAGE_MO,
@@ -337,7 +356,21 @@ class SmsMessenger2580Handler(
             ),
             context.workerThreadId
         )
+
+        if (!moBillTypeService.isMoTrBillEnabled(context.entity) && billType != '1') {
+            val smsQLib = context.smsQLib
+            if (smsQLib != null) {
+                val request = smsResService.buildMoAckRequestFromQItem(qItem)
+                runBlocking { smsResService.processMOBilling(qItem, request, context.entity, smsQLib, context.loggerName, isMoAckContext = true) }
+            }
+        }
     }
 
-    override fun shouldSkipBprintf(): Boolean = true
+    override fun recordMoTrBilling(qItem: QITEM, request: ResponseTR, gipHttpMoAccess: GipHttpMoAccessEntity?, smsQLib: SmsQLib, loggerName: String) {
+        if (moBillTypeService.isMoTrBillEnabled(gipHttpMoAccess) && BillTypeValidator.validateAndNormalize(gipHttpMoAccess?.billType) != "1") {
+            runBlocking { smsResService.processMOBilling(qItem, request, gipHttpMoAccess, smsQLib, loggerName, isMoAckContext = false) }
+        }
+    }
+
+    override fun shouldSkipBprintf(): Boolean = false
 }

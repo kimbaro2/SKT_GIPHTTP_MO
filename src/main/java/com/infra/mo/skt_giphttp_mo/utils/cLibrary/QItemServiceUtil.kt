@@ -272,7 +272,7 @@ object QItemServiceUtil {
                 qItem.usMsgCodeReserved.getOrNull(
                     0
                 ) ?: 0
-            }>"
+            }> SrcType<${qItem.ucAgingCnt}> AgingCnt<${qItem.ucAgingCnt}> DoNotFwd<${qItem.ucDoNotFwd}>"
         )
 
         // ✅ 실제 DataEncoding 값에 따라 인코딩 이름 결정
@@ -294,6 +294,7 @@ object QItemServiceUtil {
         log(
             "Sending Flags : VldPrd<${qItem.nVldPrd}> Priority<${qItem.ucPriority}> RepFlag<${qItem.ucRepFlag}> RgtDlvFlg<${qItem.ucRgtDlvFlg}>"
         )
+        // ConcatenateFlag = qItem.totalSeg, ConcatenateInfo = qItem.segSeq
         log(
             "ConcatenateFlag<${qItem.totalSeg}> ConcatenateInfo<${qItem.segSeq}> SmDefaultMsgID/CALLFW count<${qItem.ucMsgId.firstOrNull() ?: 0}>"
         )
@@ -366,6 +367,7 @@ object QItemServiceUtil {
         sb.appendLine(
             "[$time] [DEBUG] ### Sending Flags : VldPrd<${q.nVldPrd}> Priority<${q.ucPriority}> RepFlag<${q.ucRepFlag}> RgtDlvFlg<${q.ucRgtDlvFlg}>"
         )
+        // ConcatenateFlag = q.totalSeg, ConcatenateInfo = q.segSeq
         sb.appendLine(
             "[$time] [DEBUG] ### ConcatenateFlag<${q.totalSeg}> ConcatenateInfo<${q.segSeq}> SmDefaultMsgID/CALLFW count<${q.ucFlagReserved[1].toInt()}>"
         )
@@ -1132,6 +1134,7 @@ object QItemServiceUtil {
                 //InsqStat 호출 필요 (C 코드 LINE 3540-3541)
                 // nInforNo: ptrQItem.usSource 사용 (dequeue된 QITEM의 usSource는 항상 유효한 값)
                 // IF_NULL은 에러 케이스이므로 사용하지 않음
+                witcomLog.p_write(Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "QItemServiceUtil", 1139, ERRORID_CP_INVALID_SUBSCRIBER, ST_GIP_INVALID_SMIN_SMSMANAGER))
                 smsQLib.InsqStat(
                     ptrQItem,
                     MESSAGE_MO,
@@ -1458,6 +1461,7 @@ object QItemServiceUtil {
             witcomLog.p_write(Level.INFO, "[ERROR] InsertIntoASPQ ERROR : InsertIntoSmsQ [Q_FULL]")
             val szCIdInt = byteArrayToKString(ptrQItem.szCId).toIntOrNull() ?: 0
             //InsqStat 호출 필요 (C 코드 LINE 3737-3738)
+            witcomLog.p_write(Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "QItemServiceUtil", 1466, ERRORID_CP_INSERTQ_FAIL, ST_Q_FULL_SMSMANAGER))
             smsQLib.InsqStat(
                 ptrQItem,
                 MESSAGE_MO,
@@ -1484,6 +1488,7 @@ object QItemServiceUtil {
             )
             val szCIdInt = byteArrayToKString(ptrQItem.szCId).toIntOrNull() ?: 0
             //InsqStat 호출 필요 (C 코드 LINE 3750-3751)
+            witcomLog.p_write(Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "QItemServiceUtil", 1492, ERRORID_CP_INSERTQ_FAIL, ST_Q_INSERT_FAIL_SMSMANAGER))
             smsQLib.InsqStat(
                 ptrQItem,
                 MESSAGE_MO,
@@ -1511,6 +1516,7 @@ object QItemServiceUtil {
             )
             val szCIdInt = byteArrayToKString(ptrQItem.szCId).toIntOrNull() ?: 0
             //InsqStat 호출 필요 (C 코드 LINE 3757-3758)
+            witcomLog.p_write(Level.INFO, String.format("[InsqStat 추적] 호출클래스=%s, 호출라인=%d, nErrorID=%d, nStatusNo=%d", "QItemServiceUtil", 1519, ERRORID_CP_MO_SUCCESS, ST_GIPALL_SMSMGR_OK))
             smsQLib.InsqStat(
                 ptrQItem,
                 MESSAGE_MO,

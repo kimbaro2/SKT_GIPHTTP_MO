@@ -120,6 +120,9 @@ public class MOCallInfoEntity {
     @Column(name = "ESMCLASS", columnDefinition = "NUMERIC(3)")
     public Integer esmClass;  // ESM Class (nRsv4Protocol[11])
     
+    @Column(name = "SRC_TYPE", length = 1)
+    public String srcType;  // SRC Type (default '1')
+    
     // DB 테이블에 없을 수 있는 필드들 (C 모듈에서 저장하지 않음) - @Transient로 표시
     @Transient
     public Integer notiFlag;  // NOTI 타입 여부 (0: 일반, 1: NOTI)

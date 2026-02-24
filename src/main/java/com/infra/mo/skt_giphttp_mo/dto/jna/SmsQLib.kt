@@ -229,6 +229,16 @@ open class QITEM : Structure() {
         return swapped
     }
 
+    /**
+     * QITEM 구조체의 네이티브 레이아웃 전체 크기(MsgBodyLen).
+     * 인스턴스가 작은 버퍼를 가리킬 때 size()가 버퍼 크기를 반환할 수 있으므로,
+     * 로깅 시 BodyDataLen에는 이 상수 사용을 권장.
+     */
+    companion object {
+        @JvmStatic
+        val LAYOUT_SIZE: Int by lazy { QITEM().size() }
+    }
+
     class ByReference : QITEM(), Structure.ByReference
     class ByValue : QITEM(), Structure.ByValue
 }

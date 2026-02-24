@@ -597,6 +597,7 @@ class SmsController(
             val encodingStr = toEncodingStr(moCallInfo.dcsType)
 
             // 4. [REQ 로그 작성] SmsResServiceImpl REQ_TRANS_RESULT와 동일: [GIPEVENT_C_%s] [REQ_TRANS_RESULT] [%s->VSMSS#%d] + 동일 필드/인자
+            // ConcatenateFlag/ConcatenateInfo: QITEM 사용 시에는 qItem.totalSeg.toInt(), qItem.segSeq.toInt() 사용. 본 경로는 qItem 없음.
             val logNo = String.format("%04d", serverIdStr.toIntOrNull() ?: 1)
             val reqLogContent = String.format(
                 "[GIPHTTPMO_C_%s] [REQ_TRANS_RESULT] [%s->VSMSS#%d] MsgVerId(%d) EncFlag(%d) SrcCId(%s) SrcCallNo(%s) DestCId(%s) DestCallNo(%s) MsgCode(%d) MsgSubCode(%d) BodyDataLen(%d) MsgSeqNo(%d) DataEncoding(%s) TermType(%s) ConcatenateFlag(%s) ConcatenateInfo(%s) Result(%d) Status(%s) MsgId(%s)",
@@ -614,9 +615,9 @@ class SmsController(
                 0,
                 0,
                 toLogStr(encodingStr),
-                "",
-                "",
-                "",
+                "",  // TermType (qItem 없음)
+                "",  // ConcatenateFlag: qItem 있으면 qItem.totalSeg.toInt()
+                "",  // ConcatenateInfo: qItem 있으면 qItem.segSeq.toInt()
                 0,
                 statusStr,
                 toLogStr(request.data.msgId)
@@ -624,7 +625,7 @@ class SmsController(
             witcomLog.c_write(loggerName, Level.INFO, reqLogContent, Thread.currentThread().getId())
 
             // =================================================================================
-            // [LOGGING END] RES 로그 작성 MoSendToCpServiceImpl RES_TRANS_RESULT와 동일: [VSMSS#%d->%s] + logNo, cid, msgId, status, traceId, ResponseStatus, ResponseBody
+            // [LOGGING END] RES 로그 작성 MoSendToCpServiceImpl RES_TRANS_RESULT와 동일. 방향성 지정: [VSMSS#%d->%s] + logNo, cid, msgId, status, traceId, ResponseStatus, ResponseBody
             // =================================================================================
 
             val resLogContent = String.format(

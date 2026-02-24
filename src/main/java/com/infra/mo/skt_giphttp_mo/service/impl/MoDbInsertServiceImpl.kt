@@ -20,6 +20,9 @@ import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_GSM7
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_KSC5601
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.MAX_VAILD_PERIOD
 import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.DCS_TYPE_UCS2
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.HSMSS_TYPE
+import com.infra.mo.skt_giphttp_mo.dto.jna.SmsDef.SMSMOR
+import com.infra.mo.skt_giphttp_mo.dto.jna.CallTypeRelay
 import com.infra.mo.skt_giphttp_mo.service.MoDbInsertService
 import com.infra.mo.skt_giphttp_mo.service.SmsResService
 import com.infra.mo.skt_giphttp_mo.utils.cLibrary.QItemServiceUtil
@@ -39,6 +42,25 @@ open class MoDbInsertServiceImpl(
     private val moNotISendRepository: MONotISendRepository,
     private val smsResService: SmsResService
 ) : MoDbInsertService {
+
+    /**
+     * MO_NOTISEND 저장 시 SRC_TYPE 계산 (C GIDBLib.sc InsertMO_NOTISEND LINE 1444-1454 동일)
+     * - nRsv4Protocol[0],[1] != 0 이면 Relay: ucServerType + nModuleNo 로 '5'/'6'/'7' 결정
+     * - 아니면 '1'
+     */
+    private fun srcTypeForMoNotISend(qItem: QITEM): String {
+        val p0 = qItem.nRsv4Protocol.getOrNull(0) ?: 0
+        val p1 = qItem.nRsv4Protocol.getOrNull(1) ?: 0
+        if (p0 == 0 || p1 == 0) return "1"
+        return when {
+            qItem.ucServerType.toInt().toChar() == HSMSS_TYPE && qItem.nModuleNo == SMSMOR ->
+                CallTypeRelay.HSMSS_RELAY_MO.codeAsString  // '7' 050 MO
+            qItem.ucServerType.toInt().toChar() == HSMSS_TYPE ->
+                CallTypeRelay.HSMSS_RELAY_MT.codeAsString  // '6'
+            else ->
+                CallTypeRelay.VSMSS_RELAY_MT.codeAsString  // '5'
+        }
+    }
 
     override fun insertGIPMOCallInfo(
         qItem: QITEM,
@@ -143,11 +165,13 @@ open class MoDbInsertServiceImpl(
             val cb = QItemServiceUtil.byteArrayToKString(qItem.szCB)
 
             val serverType = qItem.ucServerType.toInt().toChar().toString()
+            val srcType = srcTypeForMoNotISend(qItem)
+            val virtualNum = ""  // QITEM에 szVirtualNum 미매핑 시 빈 문자열 (C: ptrQItem->szVirtualNum)
             witcomLog.c_write(
                 loggerName,
                 Level.INFO,
                 String.format(
-                    "InsertMO_NOTISEND() ServerType(%s) szSrcCID(%s) szSrcCallNo(%s) szDestCID(%s) szDestCallNo(%s) szMsgId(%s) szCB(%s) EsmClass(%d) DCSType(%d) SrcType(%d) VirtualNum(%s)",
+                    "InsertMO_NOTISEND() ServerType(%s) szSrcCID(%s) szSrcCallNo(%s) szDestCID(%s) szDestCallNo(%s) szMsgId(%s) szCB(%s) EsmClass(%d) DCSType(%d) SrcType(%s) VirtualNum(%s)",
                     serverType,
                     srcCId,
                     srcCallNo,
@@ -157,8 +181,8 @@ open class MoDbInsertServiceImpl(
                     cb,
                     esmClass,
                     dcsType,
-                    qItem.ucServerType.toInt(),
-                    ""
+                    srcType,
+                    virtualNum
                 ),
                 workerThreadId
             )
@@ -187,6 +211,8 @@ open class MoDbInsertServiceImpl(
                 this.dcsType = dcsType
                 this.orgMsgLen = orgMsgLen
                 this.moRecvTime = moRecvTime
+                this.srcType = srcType
+                this.virtualNum = virtualNum.takeIf { it.isNotBlank() }
             }
 
             witcomLog.c_write(
@@ -354,6 +380,7 @@ open class MoDbInsertServiceImpl(
                 this.dcsType = dcsType
                 this.orgMsgLen = orgMsgLen
                 this.moRecvTime = moRecvTime
+                this.srcType = srcTypeForMoNotISend(qItem)
             }
             moNotISendRepository.save(moNotISend)
             witcomLog.c_write(
@@ -484,6 +511,7 @@ open class MoDbInsertServiceImpl(
                 this.dcsType = dcsType
                 this.orgMsgLen = orgMsgLen
                 this.moRecvTime = moRecvTime
+                this.srcType = srcTypeForMoNotISend(qItem)
             }
             moNotISendRepository.save(moNotISend)
             witcomLog.c_write(
